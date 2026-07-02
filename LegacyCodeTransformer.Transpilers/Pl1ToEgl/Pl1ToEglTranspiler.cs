@@ -6,6 +6,7 @@ using LegacyCodeTransformer.Egl.Types;
 using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
+using LegacyCodeTransformer.Transpilers.Naming;
 
 namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 {
@@ -38,6 +39,64 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     public sealed class Pl1ToEglTranspiler
     {
         private readonly DiagnosticBag _diagnostics = new();
+        private readonly IdentifierNamingOptions _namingOptions;
+
+        /// <summary>
+        /// PL/I → EGL Transpiler instance'ını oluşturur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Transpiler, PL/I syntax tree modelini EGL syntax tree modeline dönüştürür.
+        /// Bu dönüşüm sırasında identifier isimleri de hedef dil standardına göre
+        /// dönüştürülmelidir.
+        ///
+        /// Varsayılan olarak PascalCase naming strategy kullanılır.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Application pipeline içerisinde
+        /// - Unit testlerde modelden modele dönüşüm doğrulamasında
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// CLI veya UI üzerinden farklı naming style seçimi geldiğinde bu constructor
+        /// üzerinden Transpiler'a options verilebilecektir.
+        /// </summary>
+        public Pl1ToEglTranspiler()
+            : this(IdentifierNamingOptions.Default)
+        {
+        }
+
+        /// <summary>
+        /// PL/I → EGL Transpiler instance'ını verilen naming options ile oluşturur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I identifier adlarının EGL tarafında Preserve, CamelCase veya
+        /// PascalCase gibi farklı stratejilerle üretilebilmesi gerekir.
+        ///
+        /// Örnek:
+        ///
+        /// MUST_NO
+        ///
+        /// PascalCase:
+        /// MustNo
+        ///
+        /// CamelCase:
+        /// mustNo
+        ///
+        /// Preserve:
+        /// MUST_NO
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Unit testlerde farklı naming strategy davranışlarını doğrulamada
+        /// - Application pipeline içerisinde kullanıcı seçimi geldiğinde
+        /// </summary>
+        public Pl1ToEglTranspiler(IdentifierNamingOptions namingOptions)
+        {
+            _namingOptions = namingOptions;
+        }
 
         public Pl1ToEglTranspilationResult Transpile(Pl1SyntaxTree syntaxTree)
         {
@@ -87,7 +146,9 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             }
 
             return new EglVariableDeclaration(
-                ToLowerCamelCase(declaration.Name),
+                IdentifierNameTransformer.Transform(
+                    declaration.Name,
+                    _namingOptions.Style),
                 dataType,
                 declaration.Location);
         }
@@ -143,29 +204,6 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 
                 _ => null
             };
-        }
-
-        private static string ToLowerCamelCase(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var parts = value
-                .Split('_', StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.ToLowerInvariant())
-                .ToArray();
-
-            if (parts.Length == 0)
-            {
-                return value.ToLowerInvariant();
-            }
-
-            return parts[0] + string.Concat(
-                parts
-                    .Skip(1)
-                    .Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
         }
     }
 }

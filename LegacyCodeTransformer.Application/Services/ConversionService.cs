@@ -5,6 +5,7 @@ using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Normalization;
 using LegacyCodeTransformer.Pl1.Parsing;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
+using LegacyCodeTransformer.Transpilers.Naming;
 
 namespace LegacyCodeTransformer.Application.Services
 {
@@ -34,9 +35,71 @@ namespace LegacyCodeTransformer.Application.Services
     public sealed class ConversionService
     {
         /// <summary>
-        /// PL/I kaynak kodunu EGL kaynak koduna dönüştürür.
+        /// PL/I kaynak kodunu varsayılan dönüşüm ayarlarıyla EGL kaynak koduna dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Dış dünya için en basit kullanım bu method üzerinden sağlanır.
+        /// Naming strategy verilmediğinde firma standardına uygun varsayılan
+        /// PascalCase davranışı kullanılır.
+        ///
+        /// Örnek:
+        ///
+        /// DCL MUST_NO FIXED DECIMAL(8);
+        ///
+        /// Beklenen varsayılan EGL:
+        ///
+        /// MustNo decimal(8,0);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CLI projesinde
+        /// - Unit testlerde varsayılan uçtan uca dönüşüm senaryolarında
+        /// - Gelecekte GUI veya IDE entegrasyonlarında
         /// </summary>
         public ConversionResult ConvertPl1ToEgl(string source)
+        {
+            return ConvertPl1ToEgl(
+                source,
+                IdentifierNamingOptions.Default);
+        }
+
+        /// <summary>
+        /// PL/I kaynak kodunu verilen identifier naming ayarlarıyla EGL kaynak koduna dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I → EGL dönüşümünde identifier casing kuralı proje veya kurum
+        /// standardına göre değişebilir.
+        ///
+        /// Bu overload, dönüşüm pipeline'ına naming strategy verilmesini sağlar.
+        ///
+        /// Örnek:
+        ///
+        /// DCL MUST_NO FIXED DECIMAL(8);
+        ///
+        /// PascalCase:
+        /// MustNo decimal(8,0);
+        ///
+        /// CamelCase:
+        /// mustNo decimal(8,0);
+        ///
+        /// Preserve:
+        /// MUST_NO decimal(8,0);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Application unit testlerinde farklı naming strategy doğrulamalarında
+        /// - Gelecekte CLI parametresi veya UI seçimi ile dönüşüm yapılırken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Dönüşüm ayarları arttıkça bu method options tabanlı pipeline giriş noktası
+        /// olarak genişletilebilir.
+        /// </summary>
+        public ConversionResult ConvertPl1ToEgl(
+            string source,
+            IdentifierNamingOptions namingOptions)
         {
             var diagnostics = new List<Diagnostic>();
 
@@ -63,7 +126,7 @@ namespace LegacyCodeTransformer.Application.Services
                 return new ConversionResult(null, diagnostics);
             }
 
-            var transpiler = new Pl1ToEglTranspiler();
+            var transpiler = new Pl1ToEglTranspiler(namingOptions);
             var transpilationResult = transpiler.Transpile(normalizationResult.SyntaxTree);
 
             diagnostics.AddRange(transpilationResult.Diagnostics);

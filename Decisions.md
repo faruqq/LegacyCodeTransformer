@@ -1410,3 +1410,31 @@ PL/I tarafındaki CHAR(n) ve CHARACTER(n) karakter veri tipi tanımları, EGL ta
 
 ```pli
 DCL PARAM CHAR(08);
+
+---
+
+## Decision 043 - PL/I → EGL identifier isimlendirme dönüşümü strategy tabanlı yapılacaktır.
+
+### Karar
+
+PL/I → EGL dönüşümünde değişken, parametre ve field isimleri hardcoded tek bir casing kuralına göre dönüştürülmeyecektir.
+
+Identifier isim dönüşümü strategy tabanlı yapılacaktır.
+
+İlk desteklenecek naming style değerleri:
+
+- Preserve
+- CamelCase
+- PascalCase
+
+Varsayılan PL/I → EGL dönüşüm kuralı PascalCase olacaktır.
+
+Örnekler:
+
+```text
+PL/I adı        Preserve        CamelCase       PascalCase
+MUST_NO         MUST_NO         mustNo          MustNo
+CUSTOMER_NO     CUSTOMER_NO     customerNo      CustomerNo
+DIZI_PARAM1     DIZI_PARAM1     diziParam1      DiziParam1
+PARAM           PARAM           param           Param
+PARAM2          PARAM2          param2          Param2

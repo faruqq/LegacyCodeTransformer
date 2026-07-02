@@ -1,4 +1,5 @@
 ﻿using LegacyCodeTransformer.Application.Services;
+using LegacyCodeTransformer.Transpilers.Naming;
 
 namespace LegacyCodeTransformer.Application.Tests
 {
@@ -26,7 +27,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("mustNo decimal(8,0);" + Environment.NewLine, result.Output);
+            Assert.Equal("MustNo decimal(8,0);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -42,7 +43,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("customerNo decimal(10,2);" + Environment.NewLine, result.Output);
+            Assert.Equal("CustomerNo decimal(10,2);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -61,7 +62,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// param char(25);
+        /// Param char(25);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -85,7 +86,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("param char(25);" + Environment.NewLine, result.Output);
+            Assert.Equal("Param char(25);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -105,7 +106,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// param char(8);
+        /// Param char(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -129,7 +130,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("param char(8);" + Environment.NewLine, result.Output);
+            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -149,7 +150,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// param char(8);
+        /// Param char(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -173,7 +174,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("param char(8);" + Environment.NewLine, result.Output);
+            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -193,7 +194,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// param char(8);
+        /// Param char(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -217,7 +218,7 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("param char(8);" + Environment.NewLine, result.Output);
+            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
@@ -237,7 +238,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// param char(8);
+        /// Param char(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -261,7 +262,55 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             Assert.True(result.Success);
-            Assert.Equal("param char(8);" + Environment.NewLine, result.Output);
+            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// ConversionService üzerinden CamelCase naming strategy verildiğinde
+        /// EGL çıktısının camelCase üretildiğini doğrular.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Varsayılan naming strategy PascalCase olsa da, dönüşüm pipeline'ı
+        /// farklı casing kurallarını destekleyebilmelidir.
+        ///
+        /// Test edilen PL/I:
+        ///
+        /// DCL MUST_NO FIXED DECIMAL(8);
+        ///
+        /// Beklenen EGL:
+        ///
+        /// mustNo decimal(8,0);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Application uçtan uca dönüşüm testlerinde
+        /// - Naming options bilgisinin Application katmanından Transpiler'a
+        ///   taşındığını doğrulamada
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// CLI veya UI üzerinden naming style seçimi geldiğinde bu uçtan uca
+        /// davranış korunacaktır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithCamelCaseNamingOptions_ShouldGenerateCamelCaseIdentifier()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL MUST_NO FIXED DECIMAL(8);";
+            var namingOptions = new IdentifierNamingOptions(
+                IdentifierNamingStyle.CamelCase);
+
+            // Act
+            var result = service.ConvertPl1ToEgl(
+                source,
+                namingOptions);
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.Equal("mustNo decimal(8,0);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
     }

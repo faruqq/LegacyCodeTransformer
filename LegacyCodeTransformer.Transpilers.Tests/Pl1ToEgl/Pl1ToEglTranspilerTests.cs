@@ -4,6 +4,7 @@ using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
+using LegacyCodeTransformer.Transpilers.Naming;
 
 namespace LegacyCodeTransformer.Transpilers.Tests.Pl1ToEgl;
 
@@ -45,7 +46,7 @@ public sealed class Pl1ToEglTranspilerTests
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
 
-        Assert.Equal("mustNo", declaration.Name);
+        Assert.Equal("MustNo", declaration.Name);
 
         var dataType = Assert.IsType<EglDecimalType>(declaration.DataType);
 
@@ -79,7 +80,7 @@ public sealed class Pl1ToEglTranspilerTests
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
 
-        Assert.Equal("customerNo", declaration.Name);
+        Assert.Equal("CustomerNo", declaration.Name);
 
         var dataType = Assert.IsType<EglDecimalType>(declaration.DataType);
 
@@ -107,7 +108,7 @@ public sealed class Pl1ToEglTranspilerTests
     ///
     /// Beklenen EGL:
     /// - EglVariableDeclaration
-    /// - Name: processCode
+    /// - Name: ProcessCode
     /// - DataType: EglCharacterType(6)
     ///
     /// Nerede kullanılır?
@@ -146,10 +147,164 @@ public sealed class Pl1ToEglTranspilerTests
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
 
-        Assert.Equal("processCode", declaration.Name);
+        Assert.Equal("ProcessCode", declaration.Name);
 
         var dataType = Assert.IsType<EglCharacterType>(declaration.DataType);
 
         Assert.Equal(6, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I identifier adının varsayılan olarak PascalCase üretildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Firma EGL kod standardında çoğunlukla PascalCase kullanıldığı için
+    /// varsayılan naming strategy PascalCase olarak belirlenmiştir.
+    ///
+    /// Test edilen PL/I adı:
+    ///
+    /// MUST_NO
+    ///
+    /// Beklenen EGL adı:
+    ///
+    /// MustNo
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - PL/I → EGL Transpiler testlerinde
+    /// - Varsayılan naming strategy davranışını doğrulamada
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDefaultNamingOptions_ShouldCreatePascalCaseIdentifier()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "MUST_NO",
+                new Pl1FixedDecimalType(8, 0, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+
+        Assert.Equal("MustNo", declaration.Name);
+    }
+
+    /// <summary>
+    /// PL/I identifier adının CamelCase strategy ile camelCase üretildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Önceki dönüşüm davranışı lower camel case idi.
+    /// Strategy yapısına geçildikten sonra bu davranış opsiyonel olarak
+    /// desteklenmeye devam etmelidir.
+    ///
+    /// Test edilen PL/I adı:
+    ///
+    /// MUST_NO
+    ///
+    /// Beklenen EGL adı:
+    ///
+    /// mustNo
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - PL/I → EGL Transpiler testlerinde
+    /// - Geriye dönük camelCase davranışını doğrulamada
+    /// </summary>
+    [Fact]
+    public void Transpile_WithCamelCaseNamingOptions_ShouldCreateCamelCaseIdentifier()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "MUST_NO",
+                new Pl1FixedDecimalType(8, 0, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler(
+            new IdentifierNamingOptions(IdentifierNamingStyle.CamelCase));
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+
+        Assert.Equal("mustNo", declaration.Name);
+    }
+
+    /// <summary>
+    /// PL/I identifier adının Preserve strategy ile değiştirilmeden korunduğunu doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Bazı dönüşüm senaryolarında kaynak sistemdeki identifier adlarının aynen
+    /// korunması gerekebilir.
+    /// Strategy yapısı bu davranışı da desteklemelidir.
+    ///
+    /// Test edilen PL/I adı:
+    ///
+    /// MUST_NO
+    ///
+    /// Beklenen EGL adı:
+    ///
+    /// MUST_NO
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - PL/I → EGL Transpiler testlerinde
+    /// - Preserve naming strategy davranışını doğrulamada
+    /// </summary>
+    [Fact]
+    public void Transpile_WithPreserveNamingOptions_ShouldPreserveIdentifier()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "MUST_NO",
+                new Pl1FixedDecimalType(8, 0, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler(
+            new IdentifierNamingOptions(IdentifierNamingStyle.Preserve));
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+
+        Assert.Equal("MUST_NO", declaration.Name);
     }
 }
