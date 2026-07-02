@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LegacyCodeTransformer.Core\LegacyCodeTransformer.Core.csproj" />
+    <ProjectReference Include="..\LegacyCodeTransformer.Egl\LegacyCodeTransformer.Egl.csproj" />
+    <ProjectReference Include="..\LegacyCodeTransformer.PL1\LegacyCodeTransformer.Pl1.csproj" />
+    <ProjectReference Include="..\LegacyCodeTransformer.Transformations\LegacyCodeTransformer.Transpilers.csproj" />
+  </ItemGroup>
+
+</Project>
