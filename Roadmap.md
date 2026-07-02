@@ -209,6 +209,26 @@ PL/I veri tipi desteğini gerçek projelerde kullanılabilecek seviyeye çıkarm
 * FLOAT
 * BIT
 
+## Tamamlananlar
+
+- ✅ CHAR / CHARACTER veri tipi desteği
+- ✅ CHAR / CHARACTER → EGL char dönüşümü
+- ✅ CHAR uzunluk normalizasyonu
+- ✅ INIT / INITIAL parse desteği
+- ✅ INIT repeat factor parse desteği
+- ✅ INIT bilgisinin PL/I Syntax Tree üzerinde korunması
+
+## Aktif Alt Hedef
+
+- Structure declaration desteği
+
+## Sıradaki Alt Hedefler
+
+- Structure array desteği
+- VARCHAR desteği
+- FIXED BINARY desteği
+- BIT desteği
+
 ## Başarı Kriteri
 
 Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini uçtan uca desteklemesi.

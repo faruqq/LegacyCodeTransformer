@@ -189,3 +189,31 @@ Sonrasında;
 * DECLARE varyasyonları
 
 gibi PL/I yapıları adım adım sisteme eklenecektir.
+
+---
+
+# 2026-07-02 — P04-A / P04-B PL/I CHAR ve INIT Desteği
+
+## Durum
+
+✅ Tamamlandı
+
+## Özet
+
+PL/I veri tipi desteğini genişletme fazı kapsamında CHAR / CHARACTER veri tipi desteği ve INIT / INITIAL başlangıç değeri parse desteği eklendi.
+
+Bu geliştirme ile basit PL/I karakter declaration ifadeleri EGL char tipine dönüştürülebilir hale geldi. Ayrıca PL/I tarafındaki başlangıç değeri bilgisi EGL çıktısına henüz yazdırılmadan PL/I Syntax Tree üzerinde korunmaya başlandı.
+
+## Desteklenen PL/I Kodları
+
+```pli
+DCL PARAM CHAR(25);
+DCL PARAM CHAR(08);
+DCL PARAM CHARACTER(08);
+DECLARE PARAM CHARACTER(08);
+
+DCL PARAM CHAR(08) INIT(' ');
+DCL PARAM2 CHAR(01) INIT(';');
+DCL PARAM3 CHAR(8) INIT((08)' ');
+DCL PARAM4 CHAR(8) INIT((*)' ');
+DCL PARAM5 CHAR(4) INITIAL('ABCD');

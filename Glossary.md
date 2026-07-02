@@ -50,3 +50,13 @@ Bu projede ilk Transpiler, Pl1SyntaxTree modelini EglSyntaxTree modeline dönüþtü
 Hedef dilin syntax tree modelini gerçek kaynak koda dönüþtüren bileþendir.
 
 Bu projede EglCodeGenerator, EglSyntaxTree modelinden EGL kaynak kodu üretir.
+
+## CHAR / CHARACTER
+
+PL/I tarafýnda sabit uzunluklu karakter alanlarý tanýmlamak için kullanýlan veri tipidir.
+
+Örnek:
+
+```pli
+DCL PARAM CHAR(08);
+DCL PARAM2 CHARACTER(25);
