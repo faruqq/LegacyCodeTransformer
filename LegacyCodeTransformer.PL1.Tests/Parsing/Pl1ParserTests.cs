@@ -1,4 +1,5 @@
-﻿using LegacyCodeTransformer.Pl1.Lexing;
+﻿using LegacyCodeTransformer.Pl1.Declarations;
+using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Parsing;
 using LegacyCodeTransformer.Pl1.Types;
 
@@ -34,10 +35,11 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("MUST_NO", declaration.Name);
+        Assert.Equal("MUST_NO", variableDeclaration.Name);
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(declaration.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
 
         Assert.Equal(8, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
@@ -59,10 +61,11 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("CUSTOMER_NO", declaration.Name);
+        Assert.Equal("CUSTOMER_NO", variableDeclaration.Name);
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(declaration.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
 
         Assert.Equal(10, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
@@ -128,10 +131,11 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM", declaration.Name);
+        Assert.Equal("PARAM", variableDeclaration.Name);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
 
         Assert.Equal(25, dataType.Length);
     }
@@ -150,6 +154,9 @@ public sealed class Pl1ParserTests
     /// DCL PARAM CHAR(08);
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM
+    /// - DataType: Pl1CharacterType
     /// - Length: 8
     ///
     /// Nerede kullanılır?
@@ -178,10 +185,11 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM", declaration.Name);
+        Assert.Equal("PARAM", variableDeclaration.Name);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
 
         Assert.Equal(8, dataType.Length);
     }
@@ -199,7 +207,9 @@ public sealed class Pl1ParserTests
     /// DECLARE PARAM CHARACTER(08);
     ///
     /// Beklenen model:
-    /// - Pl1CharacterType
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM
+    /// - DataType: Pl1CharacterType
     /// - Length: 8
     ///
     /// Nerede kullanılır?
@@ -228,10 +238,11 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM", declaration.Name);
+        Assert.Equal("PARAM", variableDeclaration.Name);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
 
         Assert.Equal(8, dataType.Length);
     }
@@ -251,6 +262,8 @@ public sealed class Pl1ParserTests
     /// DCL PARAM CHAR(08) INIT(' ');
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM
     /// - InitialValue.Value: " "
     /// - InitialValue.RepeatCount: null
     /// - InitialValue.AppliesToAllElements: false
@@ -281,12 +294,13 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM", declaration.Name);
-        Assert.NotNull(declaration.InitialValue);
-        Assert.Equal(" ", declaration.InitialValue!.Value);
-        Assert.Null(declaration.InitialValue.RepeatCount);
-        Assert.False(declaration.InitialValue.AppliesToAllElements);
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal(" ", variableDeclaration.InitialValue!.Value);
+        Assert.Null(variableDeclaration.InitialValue.RepeatCount);
+        Assert.False(variableDeclaration.InitialValue.AppliesToAllElements);
     }
 
     /// <summary>
@@ -303,7 +317,11 @@ public sealed class Pl1ParserTests
     /// DCL PARAM2 CHAR(01) INIT(';');
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM2
     /// - InitialValue.Value: ";"
+    /// - InitialValue.RepeatCount: null
+    /// - InitialValue.AppliesToAllElements: false
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -331,12 +349,13 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM2", declaration.Name);
-        Assert.NotNull(declaration.InitialValue);
-        Assert.Equal(";", declaration.InitialValue!.Value);
-        Assert.Null(declaration.InitialValue.RepeatCount);
-        Assert.False(declaration.InitialValue.AppliesToAllElements);
+        Assert.Equal("PARAM2", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal(";", variableDeclaration.InitialValue!.Value);
+        Assert.Null(variableDeclaration.InitialValue.RepeatCount);
+        Assert.False(variableDeclaration.InitialValue.AppliesToAllElements);
     }
 
     /// <summary>
@@ -353,6 +372,8 @@ public sealed class Pl1ParserTests
     /// DCL PARAM3 CHAR(8) INIT((08)' ');
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM3
     /// - InitialValue.Value: " "
     /// - InitialValue.RepeatCount: 8
     /// - InitialValue.AppliesToAllElements: false
@@ -383,12 +404,13 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM3", declaration.Name);
-        Assert.NotNull(declaration.InitialValue);
-        Assert.Equal(" ", declaration.InitialValue!.Value);
-        Assert.Equal(8, declaration.InitialValue.RepeatCount);
-        Assert.False(declaration.InitialValue.AppliesToAllElements);
+        Assert.Equal("PARAM3", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal(" ", variableDeclaration.InitialValue!.Value);
+        Assert.Equal(8, variableDeclaration.InitialValue.RepeatCount);
+        Assert.False(variableDeclaration.InitialValue.AppliesToAllElements);
     }
 
     /// <summary>
@@ -407,6 +429,8 @@ public sealed class Pl1ParserTests
     /// DCL PARAM4 CHAR(8) INIT((*)' ');
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM4
     /// - InitialValue.Value: " "
     /// - InitialValue.RepeatCount: null
     /// - InitialValue.AppliesToAllElements: true
@@ -437,12 +461,13 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM4", declaration.Name);
-        Assert.NotNull(declaration.InitialValue);
-        Assert.Equal(" ", declaration.InitialValue!.Value);
-        Assert.Null(declaration.InitialValue.RepeatCount);
-        Assert.True(declaration.InitialValue.AppliesToAllElements);
+        Assert.Equal("PARAM4", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal(" ", variableDeclaration.InitialValue!.Value);
+        Assert.Null(variableDeclaration.InitialValue.RepeatCount);
+        Assert.True(variableDeclaration.InitialValue.AppliesToAllElements);
     }
 
     /// <summary>
@@ -460,7 +485,11 @@ public sealed class Pl1ParserTests
     /// DCL PARAM5 CHAR(4) INITIAL('ABCD');
     ///
     /// Beklenen model:
+    /// - Pl1VariableDeclaration
+    /// - Name: PARAM5
     /// - InitialValue.Value: "ABCD"
+    /// - InitialValue.RepeatCount: null
+    /// - InitialValue.AppliesToAllElements: false
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -488,11 +517,124 @@ public sealed class Pl1ParserTests
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
 
-        Assert.Equal("PARAM5", declaration.Name);
-        Assert.NotNull(declaration.InitialValue);
-        Assert.Equal("ABCD", declaration.InitialValue!.Value);
-        Assert.Null(declaration.InitialValue.RepeatCount);
-        Assert.False(declaration.InitialValue.AppliesToAllElements);
+        Assert.Equal("PARAM5", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal("ABCD", variableDeclaration.InitialValue!.Value);
+        Assert.Null(variableDeclaration.InitialValue.RepeatCount);
+        Assert.False(variableDeclaration.InitialValue.AppliesToAllElements);
+    }
+
+    /// <summary>
+    /// PL/I structure declaration ifadesinin Pl1StructureDeclaration olarak parse edildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// DCL sonrasında seviye numarası geldiğinde parser tekil değişken değil,
+    /// structure declaration üretmelidir.
+    ///
+    /// Test edilen PL/I:
+    ///
+    /// DCL 1 PARAME_LIST,
+    ///     5 PARAM CHAR(08) INIT(' '),
+    ///     5 PARAM2 CHAR(01) INIT(';');
+    ///
+    /// Beklenen model:
+    /// - Pl1StructureDeclaration
+    /// - Name: PARAME_LIST
+    /// - Members.Count: 2
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - PL/I Parser testlerinde
+    /// - Structure declaration desteğini doğrulamada
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureDeclaration_ShouldCreateStructureDeclaration()
+    {
+        // Arrange
+        var source =
+            "DCL 1 PARAME_LIST, " +
+            "5 PARAM CHAR(08) INIT(' '), " +
+            "5 PARAM2 CHAR(01) INIT(';');";
+
+        var tokens = new Pl1Lexer(source).Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+
+        Assert.Equal(1, structureDeclaration.Level);
+        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
+        Assert.Equal(2, structureDeclaration.Members.Count);
+    }
+
+    /// <summary>
+    /// PL/I structure member alanlarının veri tipi ve INIT bilgileriyle parse edildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Structure declaration yalnızca ana structure adından ibaret değildir.
+    /// Alt member alanların level, name, data type ve initial value bilgileri
+    /// de syntax tree üzerinde korunmalıdır.
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - PL/I Parser testlerinde
+    /// - Structure member parse davranışını doğrulamada
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureDeclaration_ShouldCreateStructureMembers()
+    {
+        // Arrange
+        var source =
+            "DCL 1 PARAME_LIST, " +
+            "5 PARAM CHAR(08) INIT(' '), " +
+            "5 PARAM2 CHAR(01) INIT(';');";
+
+        var tokens = new Pl1Lexer(source).Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+
+        var firstMember = structureDeclaration.Members[0];
+
+        Assert.Equal(5, firstMember.Level);
+        Assert.Equal("PARAM", firstMember.Name);
+
+        var firstMemberType = Assert.IsType<Pl1CharacterType>(firstMember.DataType);
+        Assert.Equal(8, firstMemberType.Length);
+
+        Assert.NotNull(firstMember.InitialValue);
+        Assert.Equal(" ", firstMember.InitialValue!.Value);
+
+        var secondMember = structureDeclaration.Members[1];
+
+        Assert.Equal(5, secondMember.Level);
+        Assert.Equal("PARAM2", secondMember.Name);
+
+        var secondMemberType = Assert.IsType<Pl1CharacterType>(secondMember.DataType);
+        Assert.Equal(1, secondMemberType.Length);
+
+        Assert.NotNull(secondMember.InitialValue);
+        Assert.Equal(";", secondMember.InitialValue!.Value);
     }
 }

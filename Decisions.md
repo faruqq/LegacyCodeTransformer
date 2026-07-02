@@ -1485,7 +1485,7 @@ PL/I tarafındaki seviye numaralı structure declaration ifadeleri, EGL tarafın
 
 İlk desteklenecek PL/I structure kapsamı:
 
-```pli
+``pli
 DCL 1 PARAME_LIST,
     5 PARAM CHAR(08) INIT(' '),
     5 PARAM2 CHAR(01) INIT(';');

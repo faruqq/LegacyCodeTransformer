@@ -313,5 +313,57 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Equal("mustNo decimal(8,0);" + Environment.NewLine, result.Output);
             Assert.Empty(result.Diagnostics);
         }
+
+        /// <summary>
+        /// PL/I structure declaration ifadesinin uçtan uca EGL record çıktısına dönüştüğünü doğrular.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Structure desteği yalnızca parser veya transpiler seviyesinde değil,
+        /// tüm dönüşüm pipeline'ında çalışmalıdır.
+        ///
+        /// Test edilen PL/I:
+        ///
+        /// DCL 1 PARAME_LIST,
+        ///     5 PARAM CHAR(08) INIT(' '),
+        ///     5 PARAM2 CHAR(01) INIT(';');
+        ///
+        /// Beklenen EGL:
+        ///
+        /// record ParameList type BasicRecord
+        ///     10 Param char(8);
+        ///     10 Param2 char(1);
+        /// end
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Application uçtan uca dönüşüm testlerinde
+        /// - Parser + Transpiler + Generator entegrasyonunu doğrulamada
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithStructureDeclaration_ShouldGenerateEglRecord()
+        {
+            // Arrange
+            var service = new ConversionService();
+
+            var source =
+                "DCL 1 PARAME_LIST, " +
+                "5 PARAM CHAR(08) INIT(' '), " +
+                "5 PARAM2 CHAR(01) INIT(';');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record ParameList type BasicRecord" + Environment.NewLine +
+                "    10 Param char(8);" + Environment.NewLine +
+                "    10 Param2 char(1);" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
     }
 }

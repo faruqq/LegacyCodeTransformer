@@ -115,4 +115,68 @@ public sealed class EglCodeGeneratorTests
         // Assert
         Assert.Equal("processCode char(6);" + Environment.NewLine, result);
     }
+
+    /// <summary>
+    /// EGL record declaration modelinden record kaynak kodu üretildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// PL/I structure dönüşümü sonucunda oluşan EglRecordDeclaration modeli
+    /// gerçek EGL record syntax'ına yazdırılmalıdır.
+    ///
+    /// Beklenen EGL:
+    ///
+    /// record ParameList type BasicRecord
+    ///     10 Param char(8);
+    ///     10 Param2 char(1);
+    /// end
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - EGL Code Generator testlerinde
+    /// - Record kaynak kodu üretimini doğrulamada
+    /// </summary>
+    [Fact]
+    public void Generate_WithRecordDeclaration_ShouldGenerateEglRecord()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new EglDeclaration[]
+            {
+            new EglRecordDeclaration(
+                "ParameList",
+                "BasicRecord",
+                new[]
+                {
+                    new EglRecordFieldDeclaration(
+                        10,
+                        "Param",
+                        new EglCharacterType(8, SourceLocation.Unknown),
+                        SourceLocation.Unknown),
+
+                    new EglRecordFieldDeclaration(
+                        10,
+                        "Param2",
+                        new EglCharacterType(1, SourceLocation.Unknown),
+                        SourceLocation.Unknown)
+                },
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        var expected =
+            "record ParameList type BasicRecord" + Environment.NewLine +
+            "    10 Param char(8);" + Environment.NewLine +
+            "    10 Param2 char(1);" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
+
 }

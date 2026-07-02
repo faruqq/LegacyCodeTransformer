@@ -1,11 +1,13 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using LegacyCodeTransformer.Core.Diagnostics;
 using LegacyCodeTransformer.Core.Results;
 using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Pl1.Declarations;
+using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
-using LegacyCodeTransformer.Pl1.InitialValues;
 
 namespace LegacyCodeTransformer.Pl1.Parsing
 {
@@ -17,13 +19,25 @@ namespace LegacyCodeTransformer.Pl1.Parsing
     /// Lexer yalnızca kaynak kodu token'lara ayırır.
     /// Ancak token listesi henüz anlamlı bir program modeli değildir.
     ///
-    /// Parser, token listesini okuyarak PL/I diline ait yapıları oluşturur.
-    /// Örneğin:
+    /// Parser, token listesini okuyarak PL/I diline ait declaration
+    /// modellerini oluşturur.
+    ///
+    /// Örnek PL/I:
     ///
     /// DCL MUST_NO FIXED DECIMAL(8);
+    /// DCL PARAM CHAR(08) INIT(' ');
+    /// DCL 1 PARAME_LIST,
+    ///     5 PARAM CHAR(08) INIT(' '),
+    ///     5 PARAM2 CHAR(01) INIT(';');
     ///
-    /// ifadesini Pl1VariableDeclaration ve Pl1FixedDecimalType modellerine
-    /// dönüştürür.
+    /// Bu parser ilgili ifadeleri:
+    /// - Pl1VariableDeclaration
+    /// - Pl1StructureDeclaration
+    /// - Pl1FixedDecimalType
+    /// - Pl1CharacterType
+    /// - Pl1InitialValue
+    ///
+    /// modellerine dönüştürür.
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -34,9 +48,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing
     /// Gelecekte ne işe yarayacak?
     /// ----------------------
     /// PL/I desteği genişledikçe IF, CALL, DO/END, PROCEDURE, assignment,
-    /// embedded SQL gibi yapılar bu parser üzerinden SyntaxTree'ye çevrilecektir.
-    ///
-    /// İlk sürümde yalnızca DCL FIXED DECIMAL declaration parse edilir.
+    /// embedded SQL, array declaration ve nested structure gibi yapılar
+    /// bu parser üzerinden SyntaxTree'ye çevrilecektir.
     /// </summary>
     public sealed class Pl1Parser
     {
@@ -45,6 +58,21 @@ namespace LegacyCodeTransformer.Pl1.Parsing
 
         private int _position;
 
+        /// <summary>
+        /// PL/I parser instance'ını oluşturur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parser, lexer tarafından üretilen token listesini sırayla okuyarak
+        /// syntax tree üretir.
+        ///
+        /// Token listesi null gelirse boş liste olarak ele alınır.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Application conversion pipeline içerisinde
+        /// - Parser unit testlerinde
+        /// </summary>
         public Pl1Parser(IReadOnlyList<Pl1Token> tokens)
         {
             _tokens = tokens ?? Array.Empty<Pl1Token>();
@@ -52,16 +80,36 @@ namespace LegacyCodeTransformer.Pl1.Parsing
 
         /// <summary>
         /// Token listesini okuyarak Pl1SyntaxTree üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodundan gelen token listesi, dönüşüm pipeline'ında
+        /// kullanılabilecek güçlü tipli syntax tree modeline çevrilmelidir.
+        ///
+        /// Bu method şu anda declaration odaklı çalışır:
+        /// - Tekil variable declaration
+        /// - Basit structure declaration
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ConversionService içerisinde
+        /// - Parser unit testlerinde
+        /// - Normalizer ve Transpiler öncesinde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// PL/I program yapısı genişledikçe declaration dışındaki statement
+        /// türleri de bu ana parse akışı üzerinden yönlendirilecektir.
         /// </summary>
         public ParseResult<Pl1SyntaxTree> Parse()
         {
-            var declarations = new List<Pl1VariableDeclaration>();
+            var declarations = new List<Pl1Declaration>();
 
             while (!IsAtEnd())
             {
                 if (Current.Kind == Pl1TokenKind.DclKeyword)
                 {
-                    var declaration = ParseVariableDeclaration();
+                    var declaration = ParseDeclaration();
 
                     if (declaration is not null)
                     {
@@ -71,7 +119,9 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                     continue;
                 }
 
-                AddUnexpectedTokenDiagnostic(Current, "DCL");
+                AddUnexpectedTokenDiagnostic(
+                    Current,
+                    "DCL");
 
                 Advance();
             }
@@ -86,13 +136,44 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         }
 
         /// <summary>
+        /// PL/I declaration ifadesinin tekil değişken mi yoksa structure mı olduğunu belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I tarafında DCL / DECLARE ifadesi hem tekil değişken hem de
+        /// seviye numaralı structure declaration için kullanılabilir.
+        ///
+        /// DCL sonrasında Identifier gelirse tekil değişken, Number gelirse
+        /// structure declaration parse edilir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Parse ana akışı DclKeyword gördüğünde
+        /// - PL/I SyntaxTree declaration listesi oluşturulurken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// File declaration, based declaration, factored declaration ve farklı
+        /// DCL varyasyonları eklendiğinde declaration dispatch sorumluluğu
+        /// bu method üzerinde genişletilecektir.
+        /// </summary>
+        private Pl1Declaration? ParseDeclaration()
+        {
+            if (Peek(1).Kind == Pl1TokenKind.Number)
+            {
+                return ParseStructureDeclaration();
+            }
+
+            return ParseVariableDeclaration();
+        }
+
+        /// <summary>
         /// PL/I değişken declaration ifadesini parse eder.
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I kaynak kodunda DCL / DECLARE ile başlayan ifadeler değişken
-        /// tanımı oluşturur.
-        /// Parser bu ifadeyi okuyarak Pl1VariableDeclaration modeli üretmelidir.
+        /// PL/I kaynak kodunda DCL / DECLARE ile başlayan ve seviye numarası
+        /// içermeyen ifadeler tekil değişken tanımı oluşturur.
         ///
         /// Örnek PL/I:
         ///
@@ -110,15 +191,13 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - Parse ana akışı DclKeyword gördüğünde
-        /// - PL/I SyntaxTree declaration listesi oluşturulurken
+        /// - ParseDeclaration dispatch methodunda
+        /// - Tekil PL/I variable declaration üretiminde
         ///
         /// Gelecekte ne işe yarayacak?
         /// ----------------------
-        /// Array dimension, structure declaration ve çoklu declaration desteği
-        /// eklendiğinde bu method genişletilecektir.
-        /// Ancak veri tipi ve başlangıç değeri parse sorumlulukları ayrı
-        /// methodlarda kalacaktır.
+        /// Array dimension ve çoklu declaration desteği eklendiğinde bu method
+        /// kontrollü şekilde genişletilecektir.
         /// </summary>
         private Pl1VariableDeclaration? ParseVariableDeclaration()
         {
@@ -131,7 +210,6 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 "Değişken adı bekleniyordu.");
 
             var dataType = ParseDataType();
-
             var initialValue = ParseOptionalInitialValue();
 
             Consume(
@@ -153,14 +231,412 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         }
 
         /// <summary>
+        /// PL/I seviye numaralı structure declaration ifadesini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I structure declaration ifadeleri DCL sonrasında seviye numarası
+        /// ile başlar ve altında member alanlar içerir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL 1 PARAME_LIST,
+        ///     5 PARAM CHAR(08) INIT(' '),
+        ///     5 PARAM2 CHAR(01) INIT(';');
+        ///
+        /// Bu method:
+        /// - DCL keyword'ünü okur
+        /// - ana structure level değerini okur
+        /// - ana structure adını okur
+        /// - member alanları parse eder
+        /// - son semicolon karakterini doğrular
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDeclaration methodu DCL sonrasında Number gördüğünde
+        /// - PL/I SyntaxTree içerisinde Pl1StructureDeclaration üretmek için
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Structure array, nested structure ve multi-level hierarchy desteği
+        /// geldiğinde bu methodun kapsamı kontrollü şekilde genişletilecektir.
+        /// </summary>
+        private Pl1StructureDeclaration? ParseStructureDeclaration()
+        {
+            var dclToken = Consume(
+                Pl1TokenKind.DclKeyword,
+                "DCL bekleniyordu.");
+
+            var levelToken = Consume(
+                Pl1TokenKind.Number,
+                "Structure seviye numarası bekleniyordu.");
+
+            var nameToken = Consume(
+                Pl1TokenKind.Identifier,
+                "Structure adı bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.Comma,
+                "',' bekleniyordu.");
+
+            var members = new List<Pl1StructureMember>();
+
+            while (!IsAtEnd() &&
+                   Current.Kind != Pl1TokenKind.Semicolon)
+            {
+                var member = ParseStructureMember();
+
+                if (member is not null)
+                {
+                    members.Add(member);
+                }
+
+                if (Current.Kind == Pl1TokenKind.Comma)
+                {
+                    Advance();
+                    continue;
+                }
+
+                if (Current.Kind == Pl1TokenKind.Semicolon)
+                {
+                    break;
+                }
+
+                AddUnexpectedTokenDiagnostic(
+                    Current,
+                    "',' veya ';'");
+
+                Advance();
+            }
+
+            Consume(
+                Pl1TokenKind.Semicolon,
+                "';' bekleniyordu.");
+
+            if (dclToken is null ||
+                levelToken is null ||
+                nameToken is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(levelToken.Text, out var level))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Structure seviye numarası sayısal olmalıdır: {levelToken.Text}",
+                    levelToken.Location));
+
+                return null;
+            }
+
+            return new Pl1StructureDeclaration(
+                level,
+                nameToken.Text,
+                members,
+                dclToken.Location);
+        }
+
+        /// <summary>
+        /// PL/I structure içerisindeki member declaration satırını parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Structure declaration içindeki her field ayrı bir member olarak
+        /// modellenmelidir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// 5 PARAM CHAR(08) INIT(' ')
+        /// 5 PARAM2 CHAR(01) INIT(';')
+        ///
+        /// Bu method:
+        /// - member level değerini okur
+        /// - member adını okur
+        /// - member veri tipini ParseDataType ile okur
+        /// - varsa INIT / INITIAL bilgisini parse eder
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseStructureDeclaration içerisinde
+        /// - Pl1StructureDeclaration.Members listesini oluştururken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Nested structure, member array ve field-level attribute desteği
+        /// eklendiğinde bu method genişletilecektir.
+        /// </summary>
+        private Pl1StructureMember? ParseStructureMember()
+        {
+            var levelToken = Consume(
+                Pl1TokenKind.Number,
+                "Structure member seviye numarası bekleniyordu.");
+
+            var nameToken = Consume(
+                Pl1TokenKind.Identifier,
+                "Structure member adı bekleniyordu.");
+
+            var dataType = ParseDataType();
+            var initialValue = ParseOptionalInitialValue();
+
+            if (levelToken is null ||
+                nameToken is null ||
+                dataType is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(levelToken.Text, out var level))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Structure member seviye numarası sayısal olmalıdır: {levelToken.Text}",
+                    levelToken.Location));
+
+                return null;
+            }
+
+            return new Pl1StructureMember(
+                level,
+                nameToken.Text,
+                dataType,
+                levelToken.Location,
+                initialValue);
+        }
+
+        /// <summary>
+        /// PL/I değişken tanımındaki veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// DCL ifadesinde değişken adı veya structure member adı okunduktan
+        /// sonra gelen bölüm veri tipini temsil eder.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL MUST_NO FIXED DECIMAL(8);
+        /// DCL PARAM CHAR(08);
+        /// DCL CUSTOMER_NAME CHARACTER(25);
+        ///
+        /// Bu method:
+        /// - FIXED DECIMAL için Pl1FixedDecimalType
+        /// - CHAR / CHARACTER için Pl1CharacterType
+        ///
+        /// üretir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Tekil DCL declaration parse edilirken
+        /// - Structure member parse edilirken
+        /// - Hatalı veya desteklenmeyen veri tipleri için diagnostic üretiminde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// BIT, FIXED BINARY, PIC / PICTURE, VARYING gibi yeni veri tipleri
+        /// desteklendikçe bu method ilgili parse methodlarına yönlendirme
+        /// yapacak şekilde genişletilecektir.
+        /// </summary>
+        private Pl1DataType? ParseDataType()
+        {
+            if (Current.Kind == Pl1TokenKind.FixedKeyword)
+            {
+                return ParseFixedDecimalType();
+            }
+
+            if (Current.Kind == Pl1TokenKind.CharKeyword ||
+                Current.Kind == Pl1TokenKind.CharacterKeyword)
+            {
+                return ParseCharacterType();
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
+                Current.Location));
+
+            return null;
+        }
+
+        /// <summary>
+        /// PL/I FIXED DECIMAL veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kodunda numerik alanlar sıklıkla FIXED DECIMAL(p) veya
+        /// FIXED DECIMAL(p,s) söz dizimi ile tanımlanır.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL MUST_NO FIXED DECIMAL(8);
+        /// DCL AMOUNT FIXED DECIMAL(18,2);
+        ///
+        /// Bu method ilgili veri tipini:
+        /// - Precision
+        /// - Scale
+        ///
+        /// bilgileriyle Pl1FixedDecimalType modeline dönüştürür.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType methodu FixedKeyword gördüğünde
+        /// - Basit DCL declaration parse edilirken
+        /// - Structure member veri tipi parse edilirken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// DECIMAL kısaltması, FIXED DECIMAL scale desteği ve farklı numeric
+        /// varyasyonlar bu method üzerinden genişletilecektir.
+        /// </summary>
+        private Pl1FixedDecimalType? ParseFixedDecimalType()
+        {
+            var fixedToken = Consume(
+                Pl1TokenKind.FixedKeyword,
+                "FIXED bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.DecimalKeyword,
+                "DECIMAL bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            var precisionToken = Consume(
+                Pl1TokenKind.Number,
+                "Precision değeri bekleniyordu.");
+
+            var scale = 0;
+
+            if (Current.Kind == Pl1TokenKind.Comma)
+            {
+                Advance();
+
+                var scaleToken = Consume(
+                    Pl1TokenKind.Number,
+                    "Scale değeri bekleniyordu.");
+
+                if (scaleToken is not null &&
+                    int.TryParse(scaleToken.Text, out var parsedScale))
+                {
+                    scale = parsedScale;
+                }
+            }
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (fixedToken is null ||
+                precisionToken is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(precisionToken.Text, out var precision))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Precision değeri sayısal olmalıdır: {precisionToken.Text}",
+                    precisionToken.Location));
+
+                return null;
+            }
+
+            return new Pl1FixedDecimalType(
+                precision,
+                scale,
+                fixedToken.Location);
+        }
+
+        /// <summary>
+        /// PL/I CHAR(n) veya CHARACTER(n) veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodunda sabit uzunluklu karakter alanlar CHAR veya
+        /// CHARACTER keyword'ü ile tanımlanır.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL PARAM CHAR(08);
+        /// DCL CUSTOMER_NAME CHARACTER(25);
+        ///
+        /// Bu method ilgili veri tipini:
+        ///
+        /// Pl1CharacterType
+        /// - Length: 8
+        /// - Length: 25
+        ///
+        /// olarak syntax tree'ye taşır.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType methodu CHAR veya CHARACTER token gördüğünde
+        /// - Basit DCL declaration parse edilirken
+        /// - Structure member veri tipi parse edilirken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// CHAR(n) VARYING, INIT(' '), INITIAL((4)'*') gibi ek söz dizimleri
+        /// desteklendiğinde bu method veya bu methodun çağırdığı alt parser
+        /// yapıları genişletilecektir.
+        /// </summary>
+        private Pl1CharacterType? ParseCharacterType()
+        {
+            var typeToken = Current;
+
+            if (Current.Kind == Pl1TokenKind.CharKeyword)
+            {
+                Consume(
+                    Pl1TokenKind.CharKeyword,
+                    "CHAR bekleniyordu.");
+            }
+            else
+            {
+                Consume(
+                    Pl1TokenKind.CharacterKeyword,
+                    "CHARACTER bekleniyordu.");
+            }
+
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            var lengthToken = Consume(
+                Pl1TokenKind.Number,
+                "CHAR uzunluğu bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (lengthToken is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(lengthToken.Text, out var length))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"CHAR uzunluğu sayısal olmalıdır: {lengthToken.Text}",
+                    lengthToken.Location));
+
+                return null;
+            }
+
+            return new Pl1CharacterType(
+                length,
+                typeToken.Location);
+        }
+
+        /// <summary>
         /// PL/I declaration içindeki opsiyonel INIT / INITIAL başlangıç değerini parse eder.
         ///
         /// Neden var?
         /// ----------------------
         /// PL/I değişken tanımlarında veri tipinden sonra başlangıç değeri
         /// verilebilir.
-        /// Bu bilgi kaynak kodda semantic olarak önemlidir ve Syntax Tree üzerinde
-        /// kaybedilmeden korunmalıdır.
         ///
         /// Örnek PL/I:
         ///
@@ -179,6 +655,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         /// Nerede kullanılır?
         /// ----------------------
         /// - ParseVariableDeclaration içerisinde
+        /// - ParseStructureMember içerisinde
         /// - PL/I declaration modeline başlangıç değeri bilgisini eklemek için
         ///
         /// Gelecekte ne işe yarayacak?
@@ -318,237 +795,23 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 appliesToAllElements);
         }
 
-
-
         /// <summary>
-        /// PL/I değişken tanımındaki veri tipini parse eder.
+        /// Beklenen token türünü tüketir.
         ///
         /// Neden var?
         /// ----------------------
-        /// DCL ifadesinde değişken adı okunduktan sonra gelen bölüm veri tipini
-        /// temsil eder.
-        /// Parser bu bölümü okuyarak PL/I syntax tree üzerinde güçlü tipli bir
-        /// data type modeli üretmelidir.
+        /// Parser grammar ilerletirken belirli noktalarda belirli token
+        /// türlerini bekler.
         ///
-        /// Örnek PL/I:
-        ///
-        /// DCL MUST_NO FIXED DECIMAL(8);
-        /// DCL PARAM CHAR(08);
-        /// DCL CUSTOMER_NAME CHARACTER(25);
-        ///
-        /// Bu method:
-        /// - FIXED DECIMAL için Pl1FixedDecimalType
-        /// - CHAR / CHARACTER için Pl1CharacterType
-        ///
-        /// üretir.
+        /// Beklenen token gelirse token tüketilir.
+        /// Beklenen token gelmezse diagnostic üretilir ve null döner.
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - DCL declaration parse edilirken
-        /// - PL/I Syntax Tree oluşturulurken
-        /// - Hatalı veya desteklenmeyen veri tipleri için diagnostic üretiminde
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// BIT, FIXED BINARY, PIC / PICTURE, VARYING gibi yeni veri tipleri
-        /// desteklendikçe bu method ilgili parse methodlarına yönlendirme
-        /// yapacak şekilde genişletilecektir.
+        /// - Tüm parse methodlarında
+        /// - Grammar doğrulamasında
+        /// - Diagnostic üretiminde
         /// </summary>
-        private Pl1DataType? ParseDataType()
-        {
-            if (Current.Kind == Pl1TokenKind.FixedKeyword)
-            {
-                return ParseFixedDecimalType();
-            }
-
-            if (Current.Kind == Pl1TokenKind.CharKeyword ||
-                Current.Kind == Pl1TokenKind.CharacterKeyword)
-            {
-                return ParseCharacterType();
-            }
-
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
-                Current.Location));
-
-            return null;
-        }
-
-        /// <summary>
-        /// PL/I FIXED DECIMAL veri tipini parse eder.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I kodunda numerik alanlar sıklıkla FIXED DECIMAL(p) veya
-        /// FIXED DECIMAL(p,s) söz dizimi ile tanımlanır.
-        /// Bu yapı mevcut ilk POC kapsamının temel veri tipidir.
-        ///
-        /// Örnek PL/I:
-        ///
-        /// DCL MUST_NO FIXED DECIMAL(8);
-        /// DCL AMOUNT FIXED DECIMAL(18,2);
-        ///
-        /// Bu method ilgili veri tipini:
-        /// - Precision
-        /// - Scale
-        ///
-        /// bilgileriyle Pl1FixedDecimalType modeline dönüştürür.
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - ParseDataType methodu FixedKeyword gördüğünde
-        /// - Basit DCL declaration parse edilirken
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// DECIMAL kısaltması, FIXED DECIMAL scale desteği ve farklı numeric
-        /// varyasyonlar bu method üzerinden genişletilecektir.
-        /// </summary>
-        private Pl1FixedDecimalType? ParseFixedDecimalType()
-        {
-            var fixedToken = Consume(
-                Pl1TokenKind.FixedKeyword,
-                "FIXED bekleniyordu.");
-
-            Consume(
-                Pl1TokenKind.DecimalKeyword,
-                "DECIMAL bekleniyordu.");
-
-            Consume(
-                Pl1TokenKind.OpenParenthesis,
-                "'(' bekleniyordu.");
-
-            var precisionToken = Consume(
-                Pl1TokenKind.Number,
-                "Precision değeri bekleniyordu.");
-
-            var scale = 0;
-
-            if (Current.Kind == Pl1TokenKind.Comma)
-            {
-                Advance();
-
-                var scaleToken = Consume(
-                    Pl1TokenKind.Number,
-                    "Scale değeri bekleniyordu.");
-
-                if (scaleToken is not null &&
-                    int.TryParse(scaleToken.Text, out var parsedScale))
-                {
-                    scale = parsedScale;
-                }
-            }
-
-            Consume(
-                Pl1TokenKind.CloseParenthesis,
-                "')' bekleniyordu.");
-
-            if (fixedToken is null ||
-                precisionToken is null)
-            {
-                return null;
-            }
-
-            if (!int.TryParse(precisionToken.Text, out var precision))
-            {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Precision değeri sayısal olmalıdır: {precisionToken.Text}",
-                    precisionToken.Location));
-
-                return null;
-            }
-
-            return new Pl1FixedDecimalType(
-                precision,
-                scale,
-                fixedToken.Location);
-        }
-
-        /// <summary>
-        /// PL/I CHAR(n) veya CHARACTER(n) veri tipini parse eder.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I kaynak kodunda sabit uzunluklu karakter alanlar CHAR veya
-        /// CHARACTER keyword'ü ile tanımlanır.
-        /// Bu söz dizimi FIXED DECIMAL'dan farklı olduğu için ayrı bir parse
-        /// methodu ile ele alınmalıdır.
-        ///
-        /// Örnek PL/I:
-        ///
-        /// DCL PARAM CHAR(08);
-        /// DCL CUSTOMER_NAME CHARACTER(25);
-        ///
-        /// Bu method ilgili veri tipini:
-        ///
-        /// Pl1CharacterType
-        /// - Length: 8
-        /// - Length: 25
-        ///
-        /// olarak syntax tree'ye taşır.
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - ParseDataType methodu CHAR veya CHARACTER token gördüğünde
-        /// - Basit DCL declaration parse edilirken
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// CHAR(n) VARYING, INIT(' '), INITIAL((4)'*') gibi ek söz dizimleri
-        /// desteklendiğinde bu method veya bu methodun çağırdığı alt parser
-        /// yapıları genişletilecektir.
-        /// </summary>
-        private Pl1CharacterType? ParseCharacterType()
-        {
-            var typeToken = Current;
-
-            if (Current.Kind == Pl1TokenKind.CharKeyword)
-            {
-                Consume(
-                    Pl1TokenKind.CharKeyword,
-                    "CHAR bekleniyordu.");
-            }
-            else
-            {
-                Consume(
-                    Pl1TokenKind.CharacterKeyword,
-                    "CHARACTER bekleniyordu.");
-            }
-
-            Consume(
-                Pl1TokenKind.OpenParenthesis,
-                "'(' bekleniyordu.");
-
-            var lengthToken = Consume(
-                Pl1TokenKind.Number,
-                "CHAR uzunluğu bekleniyordu.");
-
-            Consume(
-                Pl1TokenKind.CloseParenthesis,
-                "')' bekleniyordu.");
-
-            if (lengthToken is null)
-            {
-                return null;
-            }
-
-            if (!int.TryParse(lengthToken.Text, out var length))
-            {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"CHAR uzunluğu sayısal olmalıdır: {lengthToken.Text}",
-                    lengthToken.Location));
-
-                return null;
-            }
-
-            return new Pl1CharacterType(
-                length,
-                typeToken.Location);
-        }
-
         private Pl1Token? Consume(
             Pl1TokenKind expectedKind,
             string errorMessage)
@@ -566,6 +829,20 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             return null;
         }
 
+        /// <summary>
+        /// Beklenmeyen token için diagnostic üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parser desteklenmeyen veya grammar dışı bir token gördüğünde
+        /// kullanıcıya anlamlı hata bilgisi üretmelidir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Parse ana akışında
+        /// - Structure member ayracı beklenirken
+        /// - Gelecekte statement parse hatalarında
+        /// </summary>
         private void AddUnexpectedTokenDiagnostic(
             Pl1Token token,
             string expectedText)
@@ -576,6 +853,45 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 token.Location));
         }
 
+        /// <summary>
+        /// Mevcut pozisyona göre ileri bakış token'ını döndürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// DCL sonrasında gelen token'a bakarak declaration tipini seçmemiz
+        /// gerekir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDeclaration içerisinde
+        /// - Gelecekte lookahead gerektiren grammar ayrımlarında
+        /// </summary>
+        private Pl1Token Peek(int offset)
+        {
+            var index = _position + offset;
+
+            if (index >= _tokens.Count)
+            {
+                return _tokens[^1];
+            }
+
+            return _tokens[index];
+        }
+
+        /// <summary>
+        /// Mevcut token'ı tüketip bir sonraki token'a ilerler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parser token listesinde sırayla ilerlemelidir.
+        /// Bu method Current token'ı tüketir ve tüketilen token'ı döndürür.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Consume methodunda
+        /// - Hata toparlama sırasında
+        /// - Ayracı manuel geçmek gerektiğinde
+        /// </summary>
         private Pl1Token Advance()
         {
             if (!IsAtEnd())
@@ -586,11 +902,17 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             return Previous;
         }
 
+        /// <summary>
+        /// Parser'ın kaynak sonu token'ına gelip gelmediğini belirtir.
+        /// </summary>
         private bool IsAtEnd()
         {
             return Current.Kind == Pl1TokenKind.EndOfFile;
         }
 
+        /// <summary>
+        /// Mevcut parser pozisyonundaki token'ı döndürür.
+        /// </summary>
         private Pl1Token Current
         {
             get
@@ -604,6 +926,9 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             }
         }
 
+        /// <summary>
+        /// Bir önce tüketilen token'ı döndürür.
+        /// </summary>
         private Pl1Token Previous => _tokens[_position - 1];
 
         /// <summary>
