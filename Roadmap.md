@@ -217,14 +217,18 @@ PL/I veri tipi desteğini gerçek projelerde kullanılabilecek seviyeye çıkarm
 - ✅ INIT / INITIAL parse desteği
 - ✅ INIT repeat factor parse desteği
 - ✅ INIT bilgisinin PL/I Syntax Tree üzerinde korunması
+- ✅ Identifier naming strategy desteği
+- ✅ PL/I basic structure declaration parse desteği
+- ✅ PL/I structure declaration → EGL record dönüşümü
+- ✅ EGL record generator desteği
 
 ## Aktif Alt Hedef
 
-- Structure declaration desteği
+- Structure array / dimension desteği
 
 ## Sıradaki Alt Hedefler
 
-- Structure array desteği
+- Nested structure desteği
 - VARCHAR desteği
 - FIXED BINARY desteği
 - BIT desteği

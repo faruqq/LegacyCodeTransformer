@@ -57,6 +57,67 @@ PL/I tarafýnda sabit uzunluklu karakter alanlarý tanýmlamak için kullanýlan veri
 
 Örnek:
 
-```pli
+``pli
 DCL PARAM CHAR(08);
 DCL PARAM2 CHARACTER(25);
+
+## Structure Declaration
+
+PL/I tarafýnda seviye numaralarýyla tanýmlanan veri grubu yapýsýdýr.
+
+Örnek:
+
+    DCL 1 PARAME_LIST,
+        5 PARAM CHAR(08),
+        5 PARAM2 CHAR(01);
+
+LegacyCodeTransformer içinde bu yapý `Pl1StructureDeclaration` modeliyle temsil edilir.
+
+Structure altýndaki alanlar `Pl1StructureMember` modeliyle taþýnýr.
+
+---
+
+## Structure Member
+
+PL/I structure declaration altýnda yer alan field/member alanýdýr.
+
+Örnek:
+
+    5 PARAM CHAR(08)
+
+Bu örnekte:
+
+- Level: 5
+- Name: PARAM
+- DataType: CHAR(08)
+
+bilgileri `Pl1StructureMember` modeli üzerinde tutulur.
+
+---
+
+## EGL Record Declaration
+
+EGL tarafýnda record tanýmýný temsil eden declaration modelidir.
+
+PL/I structure declaration ifadelerinin EGL karþýlýðý olarak kullanýlýr.
+
+Örnek:
+
+    record ParameList type BasicRecord
+        10 Param char(8);
+        10 Param2 char(1);
+    end
+
+LegacyCodeTransformer içinde bu yapý `EglRecordDeclaration` modeliyle temsil edilir.
+
+---
+
+## EGL Record Field Declaration
+
+EGL record içerisinde yer alan field declaration modelidir.
+
+Örnek:
+
+    10 Param char(8);
+
+LegacyCodeTransformer içinde bu yapý `EglRecordFieldDeclaration` modeliyle temsil edilir.
