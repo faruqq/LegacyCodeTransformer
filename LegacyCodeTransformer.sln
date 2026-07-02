@@ -21,8 +21,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Pl1.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Egl.Tests", "LegacyCodeTransformer.Egl.Tests\LegacyCodeTransformer.Egl.Tests.csproj", "{24354161-59E4-4EC2-A539-BBAB403412AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Transpilers.Tests", "LegacyCodeTransformer.Transformations.Tests\LegacyCodeTransformer.Transpilers.Tests.csproj", "{9084A250-7381-4019-92DF-18ACCC41A0D1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Application.Tests", "LegacyCodeTransformer.Application.Tests\LegacyCodeTransformer.Application.Tests.csproj", "{3D60451E-C276-4B56-BC61-CBC481D63D27}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2AE72334-902A-4B2D-AC23-DE3CAC256503}"
@@ -35,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2AE72334-9
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Transpilers", "LegacyCodeTransformer.Transpilers\LegacyCodeTransformer.Transpilers.csproj", "{78454C80-8CF8-CA4B-0A79-C947116792F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Transpilers.Tests", "LegacyCodeTransformer.Transpilers.Tests\LegacyCodeTransformer.Transpilers.Tests.csproj", "{B048D1D3-06E7-7A76-E29B-8EAE807612E9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -74,10 +74,6 @@ Global
 		{24354161-59E4-4EC2-A539-BBAB403412AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24354161-59E4-4EC2-A539-BBAB403412AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24354161-59E4-4EC2-A539-BBAB403412AD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9084A250-7381-4019-92DF-18ACCC41A0D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9084A250-7381-4019-92DF-18ACCC41A0D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9084A250-7381-4019-92DF-18ACCC41A0D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9084A250-7381-4019-92DF-18ACCC41A0D1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -86,6 +82,10 @@ Global
 		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B048D1D3-06E7-7A76-E29B-8EAE807612E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B048D1D3-06E7-7A76-E29B-8EAE807612E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B048D1D3-06E7-7A76-E29B-8EAE807612E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B048D1D3-06E7-7A76-E29B-8EAE807612E9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -93,8 +93,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{A9C1B941-6011-4590-B813-A2724EDA1238} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{24354161-59E4-4EC2-A539-BBAB403412AD} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{9084A250-7381-4019-92DF-18ACCC41A0D1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{3D60451E-C276-4B56-BC61-CBC481D63D27} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{B048D1D3-06E7-7A76-E29B-8EAE807612E9} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {62094D17-FA7B-479B-A470-CB70C3E23F3C}

@@ -64,4 +64,55 @@ public sealed class EglCodeGeneratorTests
         // Assert
         Assert.Equal("customerNo decimal(10,2);" + Environment.NewLine, result);
     }
+
+    /// <summary>
+    /// EGL karakter veri tipi modelinden char(n) kaynak kodu üretildiğini doğrular.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Transpiler tarafından üretilen EglCharacterType modelinin gerçek EGL
+    /// kaynak kodunda char(n) olarak yazdırılması gerekir.
+    ///
+    /// Test edilen EGL modeli:
+    ///
+    /// EglVariableDeclaration
+    /// - Name: processCode
+    /// - DataType: EglCharacterType(6)
+    ///
+    /// Beklenen EGL:
+    ///
+    /// processCode char(6);
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - EGL Code Generator testlerinde
+    /// - Hedef dil kaynak kodu üretimini doğrulamada
+    ///
+    /// Gelecekte ne işe yarayacak?
+    /// ----------------------
+    /// Record field ve metadata üretimi geldiğinde char veri tipi formatının
+    /// bozulmadığını garanti eder.
+    /// </summary>
+    [Fact]
+    public void Generate_WithCharacterDeclaration_ShouldGenerateEglCharDeclaration()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "processCode",
+                new EglCharacterType(6, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("processCode char(6);" + Environment.NewLine, result);
+    }
 }

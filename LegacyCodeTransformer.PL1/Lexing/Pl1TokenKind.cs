@@ -123,6 +123,74 @@
         /// Parser bu token sayesinde CHARACTER söz dizimini CHAR ile aynı
         /// veri tipi modeline dönüştürür.
         /// </summary>
-        CharacterKeyword = 12
+        CharacterKeyword = 12,
+
+        /// <summary>
+        /// PL/I INIT keyword'üdür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I declaration ifadelerinde değişkene başlangıç değeri vermek için
+        /// INIT keyword'ü kullanılır.
+        ///
+        /// Örnek:
+        ///
+        /// DCL PARAM CHAR(08) INIT(' ');
+        ///
+        /// Parser bu token sayesinde declaration içerisinde başlangıç değeri
+        /// parse adımına geçebilir.
+        /// </summary>
+        InitKeyword = 13,
+
+        /// <summary>
+        /// PL/I INITIAL keyword'üdür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I dilinde INITIAL, INIT keyword'ünün uzun kullanımıdır.
+        /// Bazı kaynak kodlarda INIT, bazı kaynak kodlarda INITIAL kullanılabilir.
+        ///
+        /// Örnek:
+        ///
+        /// DCL PARAM CHAR(04) INITIAL('ABCD');
+        ///
+        /// Parser iki kullanımı da aynı başlangıç değeri modeline dönüştürür.
+        /// </summary>
+        InitialKeyword = 14,
+
+        /// <summary>
+        /// Karakter sabitlerini temsil eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I INIT / INITIAL söz diziminde başlangıç değerleri çoğunlukla
+        /// tek tırnak içerisindeki karakter sabitleri olarak verilir.
+        ///
+        /// Örnek:
+        ///
+        /// INIT(' ')
+        /// INIT(';')
+        /// INITIAL('ABCD')
+        ///
+        /// Bu token, tırnak içindeki değerin parser'a taşınmasını sağlar.
+        /// </summary>
+        StringLiteral = 15,
+
+        /// <summary>
+        /// Yıldız karakterini temsil eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I INIT söz diziminde (*) kullanımı, başlangıç değerinin ilgili
+        /// tüm elemanlara uygulanacağını belirtir.
+        ///
+        /// Örnek:
+        ///
+        /// INIT((*)' ')
+        ///
+        /// Parser bu token sayesinde tekrar faktörünün tüm elemanlar anlamına
+        /// geldiğini anlayabilir.
+        /// </summary>
+        Asterisk = 16
     }
 }

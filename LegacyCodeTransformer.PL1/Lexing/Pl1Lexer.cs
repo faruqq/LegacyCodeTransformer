@@ -71,6 +71,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                     ')' => CreateSingleCharacterToken(Pl1TokenKind.CloseParenthesis),
                     ';' => CreateSingleCharacterToken(Pl1TokenKind.Semicolon),
                     ',' => CreateSingleCharacterToken(Pl1TokenKind.Comma),
+                    '*' => CreateSingleCharacterToken(Pl1TokenKind.Asterisk),
+                    '\'' => ReadStringLiteral(),
                     _ => CreateSingleCharacterToken(Pl1TokenKind.Unknown)
                 });
             }
@@ -81,6 +83,61 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 GetCurrentLocation()));
 
             return tokens;
+        }
+
+        /// <summary>
+        /// PL/I karakter sabitini okur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodunda karakter sabitleri tek tırnak içerisinde yazılır.
+        /// INIT / INITIAL söz diziminde başlangıç değerleri çoğunlukla bu formatta
+        /// gelir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// INIT(' ')
+        /// INIT(';')
+        /// INITIAL('ABCD')
+        ///
+        /// Lexer bu ifadelerdeki tırnak içi değeri StringLiteral token'ı olarak
+        /// parser'a taşımalıdır.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - INIT / INITIAL başlangıç değeri parse edilirken
+        /// - Gelecekte assignment ve string expression parse edilirken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// PL/I string operasyonları, assignment ifadeleri, karşılaştırmalar ve
+        /// concat işlemleri desteklendiğinde string literal okuma merkezi olarak
+        /// bu method üzerinden yapılacaktır.
+        /// </summary>
+        private Pl1Token ReadStringLiteral()
+        {
+            var location = GetCurrentLocation();
+
+            Advance();
+
+            var startPosition = _position;
+
+            while (!IsAtEnd() && Current != '\'')
+            {
+                Advance();
+            }
+
+            var text = _source[startPosition.._position];
+
+            if (!IsAtEnd())
+            {
+                Advance();
+            }
+
+            return new Pl1Token(
+                Pl1TokenKind.StringLiteral,
+                text,
+                location);
         }
 
         private char Current => IsAtEnd() ? '\0' : _source[_position];
@@ -153,6 +210,9 @@ namespace LegacyCodeTransformer.Pl1.Lexing
 
                 "CHAR" => Pl1TokenKind.CharKeyword,
                 "CHARACTER" => Pl1TokenKind.CharacterKeyword,
+
+                "INIT" => Pl1TokenKind.InitKeyword,
+                "INITIAL" => Pl1TokenKind.InitialKeyword,
 
                 _ => Pl1TokenKind.Identifier
             };

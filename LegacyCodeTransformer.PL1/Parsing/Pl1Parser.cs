@@ -5,6 +5,7 @@ using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
+using LegacyCodeTransformer.Pl1.InitialValues;
 
 namespace LegacyCodeTransformer.Pl1.Parsing
 {
@@ -97,12 +98,14 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         ///
         /// DCL MUST_NO FIXED DECIMAL(8);
         /// DCL PARAM CHAR(08);
-        /// DECLARE CUSTOMER_NAME CHARACTER(25);
+        /// DCL PARAM CHAR(08) INIT(' ');
+        /// DECLARE CUSTOMER_NAME CHARACTER(25) INITIAL(' ');
         ///
         /// Bu method:
         /// - declaration başlangıcını okur
         /// - değişken adını okur
         /// - veri tipini ParseDataType methoduna devreder
+        /// - varsa INIT / INITIAL başlangıç değerini parse eder
         /// - statement sonundaki noktalı virgülü doğrular
         ///
         /// Nerede kullanılır?
@@ -112,9 +115,10 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         ///
         /// Gelecekte ne işe yarayacak?
         /// ----------------------
-        /// INIT / INITIAL, array dimension, structure declaration ve çoklu
-        /// declaration desteği eklendiğinde bu method genişletilecektir.
-        /// Ancak veri tipi parse sorumluluğu ayrı methodlarda kalacaktır.
+        /// Array dimension, structure declaration ve çoklu declaration desteği
+        /// eklendiğinde bu method genişletilecektir.
+        /// Ancak veri tipi ve başlangıç değeri parse sorumlulukları ayrı
+        /// methodlarda kalacaktır.
         /// </summary>
         private Pl1VariableDeclaration? ParseVariableDeclaration()
         {
@@ -127,6 +131,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 "Değişken adı bekleniyordu.");
 
             var dataType = ParseDataType();
+
+            var initialValue = ParseOptionalInitialValue();
 
             Consume(
                 Pl1TokenKind.Semicolon,
@@ -142,8 +148,177 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             return new Pl1VariableDeclaration(
                 identifierToken.Text,
                 dataType,
-                dclToken.Location);
+                dclToken.Location,
+                initialValue);
         }
+
+        /// <summary>
+        /// PL/I declaration içindeki opsiyonel INIT / INITIAL başlangıç değerini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I değişken tanımlarında veri tipinden sonra başlangıç değeri
+        /// verilebilir.
+        /// Bu bilgi kaynak kodda semantic olarak önemlidir ve Syntax Tree üzerinde
+        /// kaybedilmeden korunmalıdır.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL PARAM CHAR(08) INIT(' ');
+        /// DCL PARAM2 CHAR(01) INIT(';');
+        /// DCL PARAM3 CHAR(8) INIT((08)' ');
+        /// DCL PARAM4 CHAR(8) INIT((*)' ');
+        /// DCL PARAM5 CHAR(4) INITIAL('ABCD');
+        ///
+        /// Bu method:
+        /// - INIT / INITIAL yoksa null döner
+        /// - INIT(' ') için Pl1InitialValue üretir
+        /// - INIT((08)' ') için RepeatCount = 8 üretir
+        /// - INIT((*)' ') için AppliesToAllElements = true üretir
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseVariableDeclaration içerisinde
+        /// - PL/I declaration modeline başlangıç değeri bilgisini eklemek için
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// EGL default value üretimi kararlaştırıldığında bu bilgi Transpiler
+        /// veya Generator tarafında kullanılabilecektir.
+        /// Structure array desteği geldiğinde INIT((*)' ') kullanımı bu model
+        /// üzerinden anlamlandırılacaktır.
+        /// </summary>
+        private Pl1InitialValue? ParseOptionalInitialValue()
+        {
+            if (Current.Kind != Pl1TokenKind.InitKeyword &&
+                Current.Kind != Pl1TokenKind.InitialKeyword)
+            {
+                return null;
+            }
+
+            var initToken = Current;
+
+            if (Current.Kind == Pl1TokenKind.InitKeyword)
+            {
+                Consume(
+                    Pl1TokenKind.InitKeyword,
+                    "INIT bekleniyordu.");
+            }
+            else
+            {
+                Consume(
+                    Pl1TokenKind.InitialKeyword,
+                    "INITIAL bekleniyordu.");
+            }
+
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            var repeatInfo = ParseOptionalInitialRepeatFactor();
+
+            var valueToken = Consume(
+                Pl1TokenKind.StringLiteral,
+                "Başlangıç değeri için karakter sabiti bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (valueToken is null)
+            {
+                return null;
+            }
+
+            return new Pl1InitialValue(
+                valueToken.Text,
+                repeatInfo.RepeatCount,
+                repeatInfo.AppliesToAllElements,
+                initToken.Location);
+        }
+
+        /// <summary>
+        /// PL/I INIT / INITIAL içindeki opsiyonel tekrar faktörünü parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I başlangıç değeri söz diziminde aynı değerin tekrar ettirilmesi
+        /// veya tüm elemanlara uygulanması için tekrar faktörü kullanılabilir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// INIT((08)' ')
+        /// INIT((*)' ')
+        /// INITIAL((4)'*')
+        ///
+        /// Bu method:
+        /// - (08) için RepeatCount = 8
+        /// - (*) için AppliesToAllElements = true
+        /// - tekrar faktörü yoksa varsayılan değerler
+        ///
+        /// üretir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseOptionalInitialValue içerisinde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Array ve structure initialization desteği geldiğinde repeat factor
+        /// davranışı bu method üzerinden genişletilecektir.
+        /// </summary>
+        private InitialRepeatInfo ParseOptionalInitialRepeatFactor()
+        {
+            if (Current.Kind != Pl1TokenKind.OpenParenthesis)
+            {
+                return InitialRepeatInfo.None;
+            }
+
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            int? repeatCount = null;
+            var appliesToAllElements = false;
+
+            if (Current.Kind == Pl1TokenKind.Number)
+            {
+                var repeatToken = Consume(
+                    Pl1TokenKind.Number,
+                    "Tekrar sayısı bekleniyordu.");
+
+                if (repeatToken is not null &&
+                    int.TryParse(repeatToken.Text, out var parsedRepeatCount))
+                {
+                    repeatCount = parsedRepeatCount;
+                }
+            }
+            else if (Current.Kind == Pl1TokenKind.Asterisk)
+            {
+                Consume(
+                    Pl1TokenKind.Asterisk,
+                    "'*' bekleniyordu.");
+
+                appliesToAllElements = true;
+            }
+            else
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"INIT tekrar faktörü için sayı veya '*' bekleniyordu. Gelen token: {Current.Text}",
+                    Current.Location));
+            }
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            return new InitialRepeatInfo(
+                repeatCount,
+                appliesToAllElements);
+        }
+
+
 
         /// <summary>
         /// PL/I değişken tanımındaki veri tipini parse eder.
@@ -430,5 +605,40 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         }
 
         private Pl1Token Previous => _tokens[_position - 1];
+
+        /// <summary>
+        /// INIT / INITIAL tekrar faktörü parse sonucunu taşır.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// ParseOptionalInitialRepeatFactor methodunun iki ayrı bilgi döndürmesi
+        /// gerekir:
+        /// - Sayısal tekrar değeri
+        /// - (*) kullanımının varlığı
+        ///
+        /// Bu küçük taşıyıcı model, tuple kullanımına göre daha okunabilir ve
+        /// parser kodunun niyetini daha açık gösterir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseOptionalInitialRepeatFactor dönüş değerinde
+        /// - ParseOptionalInitialValue içerisinde Pl1InitialValue oluştururken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Repeat factor davranışı genişletilirse bu model yeni alanlarla
+        /// genişletilebilir.
+        /// </summary>
+        private sealed record InitialRepeatInfo(
+            int? RepeatCount,
+            bool AppliesToAllElements)
+        {
+            /// <summary>
+            /// Tekrar faktörü bulunmadığı durumu temsil eder.
+            /// </summary>
+            public static InitialRepeatInfo None { get; } = new(
+                null,
+                false);
+        }
     }
 }
