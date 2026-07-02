@@ -98,6 +98,36 @@ namespace LegacyCodeTransformer.Pl1.Lexing
             }
         }
 
+        /// <summary>
+        /// Identifier veya PL/I keyword okur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodunda keyword ve identifier yapıları aynı karakter
+        /// kurallarıyla başlar.
+        /// Bu nedenle lexer önce metni okur, sonra bu metnin özel bir PL/I
+        /// keyword'ü olup olmadığını belirler.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL PARAM CHAR(08);
+        /// DECLARE CUSTOMER_NAME CHARACTER(25);
+        ///
+        /// Bu örneklerde:
+        /// - DCL / DECLARE declaration başlangıcıdır.
+        /// - CHAR / CHARACTER karakter veri tipidir.
+        /// - PARAM / CUSTOMER_NAME identifier'dır.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Tokenize akışı içerisinde harf veya '_' görüldüğünde
+        /// - Parser'ın DCL ve veri tipi tokenlarını doğru ayırabilmesi için
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// BIT, PIC, PICTURE, BINARY, INIT, INITIAL gibi yeni keyword'ler
+        /// desteklendikçe bu switch genişletilecektir.
+        /// </summary>
         private Pl1Token ReadIdentifierOrKeyword()
         {
             var startPosition = _position;
@@ -114,8 +144,16 @@ namespace LegacyCodeTransformer.Pl1.Lexing
             var kind = upperText switch
             {
                 "DCL" => Pl1TokenKind.DclKeyword,
+                "DECLARE" => Pl1TokenKind.DclKeyword,
+
                 "FIXED" => Pl1TokenKind.FixedKeyword,
+
                 "DECIMAL" => Pl1TokenKind.DecimalKeyword,
+                "DEC" => Pl1TokenKind.DecimalKeyword,
+
+                "CHAR" => Pl1TokenKind.CharKeyword,
+                "CHARACTER" => Pl1TokenKind.CharacterKeyword,
+
                 _ => Pl1TokenKind.Identifier
             };
 

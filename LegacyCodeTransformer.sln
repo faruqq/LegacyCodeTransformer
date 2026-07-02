@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.37411.7 d17.14
+VisualStudioVersion = 17.14.37411.7
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Core", "LegacyCodeTransformer.Core\LegacyCodeTransformer.Core.csproj", "{F4AA1CF0-372F-43B7-BA18-432F168FACEC}"
 EndProject
@@ -10,8 +10,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Pl1", "LegacyCodeTransformer.PL1\LegacyCodeTransformer.Pl1.csproj", "{B873132B-3C67-4E26-A97E-F234CF3D18B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Egl", "LegacyCodeTransformer.Egl\LegacyCodeTransformer.Egl.csproj", "{BF1A415D-3740-45C9-87A5-E6CF74FDA830}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Transpilers", "LegacyCodeTransformer.Transformations\LegacyCodeTransformer.Transpilers.csproj", "{0FBBBB09-F037-4315-B3CA-D0C473B29861}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Application", "LegacyCodeTransformer.Application\LegacyCodeTransformer.Application.csproj", "{2F3F5470-9FC9-4B31-AC0A-E5EA1F7B62B2}"
 EndProject
@@ -36,6 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2AE72334-9
 		Roadmap.md = Roadmap.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyCodeTransformer.Transpilers", "LegacyCodeTransformer.Transpilers\LegacyCodeTransformer.Transpilers.csproj", "{78454C80-8CF8-CA4B-0A79-C947116792F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,10 +58,6 @@ Global
 		{BF1A415D-3740-45C9-87A5-E6CF74FDA830}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF1A415D-3740-45C9-87A5-E6CF74FDA830}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF1A415D-3740-45C9-87A5-E6CF74FDA830}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0FBBBB09-F037-4315-B3CA-D0C473B29861}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0FBBBB09-F037-4315-B3CA-D0C473B29861}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0FBBBB09-F037-4315-B3CA-D0C473B29861}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0FBBBB09-F037-4315-B3CA-D0C473B29861}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2F3F5470-9FC9-4B31-AC0A-E5EA1F7B62B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2F3F5470-9FC9-4B31-AC0A-E5EA1F7B62B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F3F5470-9FC9-4B31-AC0A-E5EA1F7B62B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -86,6 +82,10 @@ Global
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D60451E-C276-4B56-BC61-CBC481D63D27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78454C80-8CF8-CA4B-0A79-C947116792F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

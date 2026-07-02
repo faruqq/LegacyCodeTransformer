@@ -85,6 +85,44 @@
         /// Virgül karakteri.
         /// FIXED DECIMAL(8,2) desteği için kullanılacaktır.
         /// </summary>
-        Comma = 10
+        Comma = 10,
+
+        /// <summary>
+        /// PL/I CHAR kısa veri tipi keyword'ü.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I dilinde CHARACTER veri tipinin kısa kullanımı CHAR olarak geçer.
+        /// Gerçek kaynak kodlarda karakter alanlar çoğunlukla CHAR(n) şeklinde
+        /// tanımlanır.
+        ///
+        /// Örnek:
+        ///
+        /// DCL PARAM CHAR(08);
+        ///
+        /// Parser bu token sayesinde CHAR söz dizimini veri tipi başlangıcı
+        /// olarak algılar.
+        /// </summary>
+        CharKeyword = 11,
+
+        /// <summary>
+        /// PL/I CHARACTER uzun veri tipi keyword'ü.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I dilinde CHAR ve CHARACTER aynı karakter veri tipi ailesini
+        /// temsil eder.
+        ///
+        /// Bazı kaynak kodlarda kısa form CHAR, bazı kaynaklarda uzun form
+        /// CHARACTER kullanılabilir.
+        ///
+        /// Örnek:
+        ///
+        /// DECLARE PARAM CHARACTER(08);
+        ///
+        /// Parser bu token sayesinde CHARACTER söz dizimini CHAR ile aynı
+        /// veri tipi modeline dönüştürür.
+        /// </summary>
+        CharacterKeyword = 12
     }
 }

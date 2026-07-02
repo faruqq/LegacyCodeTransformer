@@ -57,11 +57,51 @@ namespace LegacyCodeTransformer.Egl.Generation
             return $"{declaration.Name} {GenerateDataType(declaration.DataType)};";
         }
 
+        /// <summary>
+        /// EGL veri tipi modelinden kaynak kod karşılığını üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// EGL syntax tree üzerindeki veri tipi modelleri doğrudan string değildir.
+        /// Code generator aşamasında bu modellerin gerçek EGL kaynak koduna
+        /// dönüştürülmesi gerekir.
+        ///
+        /// Örnek modeller:
+        ///
+        /// EglDecimalType
+        /// - Precision: 8
+        /// - Scale: 0
+        ///
+        /// Üretilen EGL:
+        /// decimal(8,0)
+        ///
+        /// EglCharacterType
+        /// - Length: 8
+        ///
+        /// Üretilen EGL:
+        /// char(8)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - EGL variable declaration üretiminde
+        /// - Application pipeline sonucunda hedef kaynak kod oluşturulurken
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Record field üretimi, array tipleri, nullable/default value gibi
+        /// EGL söz dizimleri desteklendiğinde data type üretimi merkezi olarak
+        /// buradan yönetilecektir.
+        /// </summary>
         private static string GenerateDataType(EglDataType dataType)
         {
             return dataType switch
             {
-                EglDecimalType decimalType => $"decimal({decimalType.Precision},{decimalType.Scale})",
+                EglDecimalType decimalType =>
+                    $"decimal({decimalType.Precision},{decimalType.Scale})",
+
+                EglCharacterType characterType =>
+                    $"char({characterType.Length})",
+
                 _ => "unknown"
             };
         }

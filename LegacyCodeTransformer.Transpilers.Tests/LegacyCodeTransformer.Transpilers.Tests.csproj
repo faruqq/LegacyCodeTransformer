@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LegacyCodeTransformer.Transformations\LegacyCodeTransformer.Transpilers.csproj" />
+    <ProjectReference Include="..\LegacyCodeTransformer.Transpilers\LegacyCodeTransformer.Transpilers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

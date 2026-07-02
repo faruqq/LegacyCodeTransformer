@@ -1399,3 +1399,14 @@ Gelişmiş CLI komut yapısı ve dosya okuma/yazma özellikleri daha sonra eklen
 ### Durum
 
 ✅ Aktif
+
+## Decision 042 - PL/I CHAR ve CHARACTER tipleri EGL char tipine dönüştürülecektir.
+
+### Karar
+
+PL/I tarafındaki CHAR(n) ve CHARACTER(n) karakter veri tipi tanımları, EGL tarafında char(n) veri tipine dönüştürülecektir.
+
+Örnek PL/I:
+
+```pli
+DCL PARAM CHAR(08);
