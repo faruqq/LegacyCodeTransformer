@@ -30,7 +30,7 @@ namespace LegacyCodeTransformer.Egl.Syntax
         /// <summary>
         /// EGL kaynak kodunda üretilecek değişken declaration listesidir.
         /// </summary>
-        public IReadOnlyList<EglVariableDeclaration> Declarations { get; }
+        public IReadOnlyList<EglDeclaration> Declarations { get; }
 
         public EglSyntaxTree(
             IEnumerable<EglVariableDeclaration>? declarations,

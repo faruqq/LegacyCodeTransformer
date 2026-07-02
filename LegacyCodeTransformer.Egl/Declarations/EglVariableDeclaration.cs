@@ -31,7 +31,7 @@ namespace LegacyCodeTransformer.Egl.Declarations
     /// İleride string, int, boolean, record veya daha karmaşık EGL tipleri
     /// aynı declaration modeli üzerinden üretilebilir.
     /// </summary>
-    public sealed class EglVariableDeclaration : SyntaxNode
+    public sealed class EglVariableDeclaration : EglDeclaration
     {
         /// <summary>
         /// EGL değişken adıdır.

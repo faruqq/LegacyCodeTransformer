@@ -1408,14 +1408,14 @@ PL/I tarafındaki CHAR(n) ve CHARACTER(n) karakter veri tipi tanımları, EGL ta
 
 Örnek PL/I:
 
-```pli
+``pli
 DCL PARAM CHAR(08);
 
 ---
 
 ## Decision 043 - PL/I → EGL identifier isimlendirme dönüşümü strategy tabanlı yapılacaktır.
 
-### Karar
+## Karar
 
 PL/I → EGL dönüşümünde değişken, parametre ve field isimleri hardcoded tek bir casing kuralına göre dönüştürülmeyecektir.
 
@@ -1429,12 +1429,63 @@ Identifier isim dönüşümü strategy tabanlı yapılacaktır.
 
 Varsayılan PL/I → EGL dönüşüm kuralı PascalCase olacaktır.
 
-Örnekler:
+Örnek dönüşümler:
 
-```text
-PL/I adı        Preserve        CamelCase       PascalCase
-MUST_NO         MUST_NO         mustNo          MustNo
-CUSTOMER_NO     CUSTOMER_NO     customerNo      CustomerNo
-DIZI_PARAM1     DIZI_PARAM1     diziParam1      DiziParam1
-PARAM           PARAM           param           Param
-PARAM2          PARAM2          param2          Param2
+| PL/I Adı | Preserve | CamelCase | PascalCase |
+|---|---|---|---|
+| MUST_NO | MUST_NO | mustNo | MustNo |
+| CUSTOMER_NO | CUSTOMER_NO | customerNo | CustomerNo |
+| DIZI_PARAM1 | DIZI_PARAM1 | diziParam1 | DiziParam1 |
+| PARAM | PARAM | param | Param |
+| PARAM2 | PARAM2 | param2 | Param2 |
+
+Parser, kaynak identifier adını değiştirmeden saklayacaktır.
+
+Normalizer, ihtiyaç oluşmadıkça identifier casing değiştirmeyecektir.
+
+PL/I → EGL Transpiler, seçilen naming strategy’ye göre EGL identifier adını üretecektir.
+
+EGL Code Generator, kendisine gelen EGL modelindeki identifier adını olduğu gibi yazdıracaktır.
+
+## Gerekçe
+
+Identifier casing kuralı kaynak dilin syntax bilgisinden ziyade hedef dil, kurum standardı ve proje kullanım alışkanlığı ile ilgilidir.
+
+Bu nedenle casing dönüşümünün Parser veya Generator içinde yapılması doğru değildir.
+
+Parser yalnızca PL/I kodunu anlamalı ve kaynak adı korumalıdır.
+
+Generator yalnızca EGL modelini kaynak koda yazdırmalıdır.
+
+PL/I identifier adının EGL standardına göre dönüştürülmesi Transpiler sorumluluğunda kalmalıdır.
+
+Firma EGL kodlarında çoğunlukla PascalCase kullanıldığı için varsayılan dönüşüm PascalCase olarak belirlenmiştir.
+
+Ancak farklı projelerde veya ileride farklı hedef dil dönüşümlerinde camelCase ya da preserve davranışı gerekebileceği için yapı genişletilebilir tutulacaktır.
+
+Bu karar, daha önceki hardcoded lower camel case davranışını strategy tabanlı hale getirir ve sonraki structure / record field dönüşümleri için merkezi isimlendirme altyapısı sağlar.
+
+## Etkilediği Modüller
+
+- Transpilers
+- Application
+- CLI
+- Tests
+- docs
+
+## Durum
+
+✅ Aktif
+
+## Decision 044 - PL/I structure declaration ifadeleri EGL record olarak modellenecektir.
+
+## Karar
+
+PL/I tarafındaki seviye numaralı structure declaration ifadeleri, EGL tarafında record modeli olarak temsil edilecektir.
+
+İlk desteklenecek PL/I structure kapsamı:
+
+```pli
+DCL 1 PARAME_LIST,
+    5 PARAM CHAR(08) INIT(' '),
+    5 PARAM2 CHAR(01) INIT(';');

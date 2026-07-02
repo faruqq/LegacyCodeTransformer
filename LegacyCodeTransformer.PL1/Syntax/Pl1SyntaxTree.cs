@@ -32,7 +32,7 @@ namespace LegacyCodeTransformer.Pl1.Syntax
         /// <summary>
         /// PL/I kaynak kodunda tanımlanan değişken declaration listesidir.
         /// </summary>
-        public IReadOnlyList<Pl1VariableDeclaration> Declarations { get; }
+        public IReadOnlyList<Pl1Declaration> Declarations { get; }
 
         public Pl1SyntaxTree(
             IEnumerable<Pl1VariableDeclaration>? declarations,

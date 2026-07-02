@@ -45,7 +45,7 @@ namespace LegacyCodeTransformer.Pl1.Declarations
     /// INIT / INITIAL desteği ile birlikte başlangıç değeri bilgisi de
     /// Syntax Tree üzerinde kaybedilmeden korunacaktır.
     /// </summary>
-    public sealed class Pl1VariableDeclaration : SyntaxNode
+    public sealed class Pl1VariableDeclaration : Pl1Declaration
     {
         /// <summary>
         /// PL/I değişken adıdır.
