@@ -637,4 +637,51 @@ public sealed class Pl1ParserTests
         Assert.NotNull(secondMember.InitialValue);
         Assert.Equal(";", secondMember.InitialValue!.Value);
     }
+
+    /// <summary>
+    /// PL/I structure array tanımındaki dimension bilgisinin parse edilip
+    /// Pl1StructureDeclaration.ArraySize üzerinde saklandığını doğrular.
+    ///
+    /// Test edilen PL/I:
+    ///
+    /// DCL 1 DIZI(6),
+    ///     3 DIZI_PARAM1 CHAR(01) INIT((*)' '),
+    ///     3 DIZI_PARAM2 CHAR(02) INIT((*)' ');
+    ///
+    /// Beklenen:
+    /// - Structure adı: DIZI
+    /// - ArraySize: 6
+    /// - Member sayısı: 2
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureArrayDeclaration_ShouldSetArraySize()
+    {
+        // Arrange
+        var source =
+            "DCL 1 DIZI(6), " +
+            "3 DIZI_PARAM1 CHAR(01) INIT((*)' '), " +
+            "3 DIZI_PARAM2 CHAR(02) INIT((*)' ');";
+
+        var tokens = new Pl1Lexer(source).Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+
+        Assert.Equal(1, structureDeclaration.Level);
+        Assert.Equal("DIZI", structureDeclaration.Name);
+        Assert.Equal(6, structureDeclaration.ArraySize);
+        Assert.Equal(2, structureDeclaration.Members.Count);
+
+        Assert.Equal("DIZI_PARAM1", structureDeclaration.Members[0].Name);
+        Assert.Equal("DIZI_PARAM2", structureDeclaration.Members[1].Name);
+    }
 }

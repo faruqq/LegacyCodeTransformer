@@ -96,7 +96,7 @@ namespace LegacyCodeTransformer.Egl.Generation
         ///
         /// Örnek EGL:
         ///
-        /// record ParameList type BasicRecord
+        /// record ParameList type basicRecord
         ///     10 Param char(8);
         ///     10 Param2 char(1);
         /// end
@@ -112,17 +112,19 @@ namespace LegacyCodeTransformer.Egl.Generation
         /// geldiğinde bu method genişletilecektir.
         /// </summary>
         private static string GenerateRecordDeclaration(
-            EglRecordDeclaration declaration)
+    EglRecordDeclaration declaration)
         {
             var builder = new StringBuilder();
 
             builder.AppendLine(
                 $"record {declaration.Name} type {declaration.RecordType}");
 
+            var indentationByLevel = CreateIndentationByLevel(declaration.Fields);
+
             foreach (var field in declaration.Fields)
             {
                 builder.AppendLine(
-                    $"    {GenerateRecordFieldDeclaration(field)}");
+                    GenerateRecordFieldDeclaration(field, indentationByLevel));
             }
 
             builder.AppendLine("end");
@@ -131,26 +133,105 @@ namespace LegacyCodeTransformer.Egl.Generation
         }
 
         /// <summary>
-        /// EGL record field declaration modelinden field kaynak kodunu üretir.
+        /// EGL record field level değerlerinden indentation depth haritası üretir.
         ///
         /// Neden var?
         /// ----------------------
-        /// Record içindeki field alanları variable declaration formatından farklı
-        /// olarak level bilgisiyle birlikte yazılır.
+        /// EGL record field'larının başındaki 5, 10, 15 gibi değerler hiyerarşik
+        /// level bilgisidir.
+        /// Bu değerler genelde artan sırayla parent-child ilişkisini gösterir.
         ///
-        /// Örnek:
+        /// Ancak indentation hesabını doğrudan level / 5 gibi matematiksel bir
+        /// formüle bağlamak doğru değildir.
+        /// Çünkü legacy kaynaklarda farklı level değerleri kullanılabilir.
         ///
-        /// 10 Param char(8);
+        /// Örneğin:
+        ///
+        /// 5 A
+        ///     10 B
+        ///         15 C
+        ///
+        /// veya:
+        ///
+        /// 3 A
+        ///     7 B
+        ///         11 C
+        ///
+        /// iki durumda da üç seviye vardır.
+        ///
+        /// Bu method record içindeki farklı level değerlerini küçükten büyüğe sıralar
+        /// ve her level için bir indentation depth üretir.
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - GenerateRecordDeclaration içerisinde
-        /// - EglRecordFieldDeclaration kaynak kodu üretiminde
+        /// - EglCodeGenerator record field üretiminde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Nested structure, multi-level record ve farklı kurum level standartları
+        /// desteklendiğinde generator'ın sabit level varsayımına bağlı kalmamasını sağlar.
         /// </summary>
-        private static string GenerateRecordFieldDeclaration(
-            EglRecordFieldDeclaration field)
+        private static IReadOnlyDictionary<int, int> CreateIndentationByLevel(
+            IReadOnlyList<EglRecordFieldDeclaration> fields)
         {
-            return $"{field.Level} {field.Name} {GenerateDataType(field.DataType)};";
+            return fields
+                .Select(x => x.Level)
+                .Distinct()
+                .OrderBy(x => x)
+                .Select((level, index) => new
+                {
+                    Level = level,
+                    Depth = index + 1
+                })
+                .ToDictionary(
+                    x => x.Level,
+                    x => x.Depth);
+        }
+
+        private static string GenerateRecordFieldDeclaration(EglRecordFieldDeclaration field)
+        {
+            var indentation = GetRecordFieldIndentation(field.Level);
+
+            var arraySuffix = field.ArraySize.HasValue
+                ? $"[{field.ArraySize.Value}]"
+                : string.Empty;
+
+            return $"{indentation}{field.Level} {field.Name} {GenerateDataType(field.DataType)}{arraySuffix};";
+        }
+
+        /// <summary>
+        /// EGL record field level değerine göre standart indentation üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I ve EGL record/structure alanlarında baştaki 5, 10, 15 gibi değerler
+        /// field'ın hiyerarşik seviyesini gösterir.
+        ///
+        /// Proje standardı olarak EGL output level değerleri 5 ve 5'in katları
+        /// şeklinde üretilecektir.
+        ///
+        /// Bu nedenle indentation hesabı level değerinin 5'e bölünmesiyle bulunur.
+        ///
+        /// Örnek:
+        ///
+        /// 5  -> 4 boşluk
+        /// 10 -> 8 boşluk
+        /// 15 -> 12 boşluk
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - EglCodeGenerator record field üretiminde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// Nested structure ve multi-level record desteği geldiğinde her level için
+        /// tutarlı indentation üretimini sağlar.
+        /// </summary>
+        private static string GetRecordFieldIndentation(int level)
+        {
+            var depth = Math.Max(level / 5, 1);
+
+            return new string(' ', depth * 4);
         }
 
         private static string GenerateVariableDeclaration(EglVariableDeclaration declaration)

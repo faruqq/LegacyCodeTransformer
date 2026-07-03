@@ -103,7 +103,7 @@ PL/I structure declaration ifadelerinin EGL karþýlýðý olarak kullanýlýr.
 
 Örnek:
 
-    record ParameList type BasicRecord
+    record ParameList type basicRecord
         10 Param char(8);
         10 Param2 char(1);
     end
@@ -114,7 +114,7 @@ LegacyCodeTransformer içinde bu yapý `EglRecordDeclaration` modeliyle temsil edi
 
 ## EGL Record Field Declaration
 
-EGL record içerisinde yer alan field declaration modelidir.
+EGL record içerisinde yer alan field declaration modelidir. 
 
 Örnek:
 

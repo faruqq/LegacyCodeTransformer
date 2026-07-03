@@ -330,7 +330,7 @@ namespace LegacyCodeTransformer.Application.Tests
         ///
         /// Beklenen EGL:
         ///
-        /// record ParameList type BasicRecord
+        /// record ParameList type basicRecord
         ///     10 Param char(8);
         ///     10 Param2 char(1);
         /// end
@@ -356,9 +356,53 @@ namespace LegacyCodeTransformer.Application.Tests
 
             // Assert
             var expected =
-                "record ParameList type BasicRecord" + Environment.NewLine +
+                "record ParameList type basicRecord" + Environment.NewLine +
                 "    10 Param char(8);" + Environment.NewLine +
                 "    10 Param2 char(1);" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I structure array tanımının uçtan uca EGL basicRecord array layout
+        /// çıktısına dönüştüğünü doğrular.
+        ///
+        /// Test edilen PL/I:
+        /// - DCL 1 DIZI(6)
+        /// - Child field toplam uzunluğu: 1 + 2 + 2 + 2 + 8 = 15
+        ///
+        /// Beklenen EGL:
+        /// - 5 Dizi char(15)[6];
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithStructureArrayDeclaration_ShouldGenerateEglRecordArrayField()
+        {
+            // Arrange
+            var service = new ConversionService();
+
+            var source =
+                "DCL 1 DIZI(6), " +
+                "3 DIZI_PARAM1 CHAR(01) INIT((*)' '), " +
+                "3 DIZI_PARAM2 CHAR(02) INIT((*)' '), " +
+                "3 DIZI_PARAM3 CHAR(02) INIT((*)' '), " +
+                "3 DIZI_PARAM4 CHAR(02) INIT((*)' '), " +
+                "3 DIZI_PARAM5 CHAR(08) INIT((*)' ');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record Dizi type basicRecord" + Environment.NewLine +
+                "    5 Dizi char(15)[6];" + Environment.NewLine +
+                "    10 DiziParam1 char(1);" + Environment.NewLine +
+                "    10 DiziParam2 char(2);" + Environment.NewLine +
+                "    10 DiziParam3 char(2);" + Environment.NewLine +
+                "    10 DiziParam4 char(2);" + Environment.NewLine +
+                "    10 DiziParam5 char(8);" + Environment.NewLine +
                 "end" + Environment.NewLine;
 
             Assert.True(result.Success);

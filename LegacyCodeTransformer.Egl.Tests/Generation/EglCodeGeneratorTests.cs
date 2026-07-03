@@ -126,7 +126,7 @@ public sealed class EglCodeGeneratorTests
     ///
     /// Beklenen EGL:
     ///
-    /// record ParameList type BasicRecord
+    /// record ParameList type basicRecord
     ///     10 Param char(8);
     ///     10 Param2 char(1);
     /// end
@@ -145,7 +145,7 @@ public sealed class EglCodeGeneratorTests
             {
             new EglRecordDeclaration(
                 "ParameList",
-                "BasicRecord",
+                "basicRecord",
                 new[]
                 {
                     new EglRecordFieldDeclaration(
@@ -171,7 +171,7 @@ public sealed class EglCodeGeneratorTests
 
         // Assert
         var expected =
-            "record ParameList type BasicRecord" + Environment.NewLine +
+            "record ParameList type basicRecord" + Environment.NewLine +
             "    10 Param char(8);" + Environment.NewLine +
             "    10 Param2 char(1);" + Environment.NewLine +
             "end" + Environment.NewLine;
@@ -179,4 +179,58 @@ public sealed class EglCodeGeneratorTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>
+    /// EGL record field üzerinde ArraySize varsa çıktının char(n)[m]
+    /// formatında üretildiğini doğrular.
+    ///
+    /// Test edilen EGL model:
+    /// - 5 Dizi char(15)[6]
+    /// - 10 DiziParam1 char(1)
+    ///
+    /// Beklenen çıktı:
+    /// - 5 Dizi char(15)[6];
+    /// </summary>
+    [Fact]
+    public void Generate_WithRecordArrayFieldDeclaration_ShouldGenerateEglRecordArrayField()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new EglDeclaration[]
+            {
+            new EglRecordDeclaration(
+                "Dizi",
+                "basicRecord",
+                new[]
+                {
+                    new EglRecordFieldDeclaration(
+                        5,
+                        "Dizi",
+                        new EglCharacterType(15, SourceLocation.Unknown),
+                        SourceLocation.Unknown,
+                        6),
+
+                    new EglRecordFieldDeclaration(
+                        10,
+                        "DiziParam1",
+                        new EglCharacterType(1, SourceLocation.Unknown),
+                        SourceLocation.Unknown)
+                },
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        var expected =
+            "record Dizi type basicRecord" + Environment.NewLine +
+            "    5 Dizi char(15)[6];" + Environment.NewLine +
+            "    10 DiziParam1 char(1);" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
 }

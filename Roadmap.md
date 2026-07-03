@@ -221,10 +221,12 @@ PL/I veri tipi desteğini gerçek projelerde kullanılabilecek seviyeye çıkarm
 - ✅ PL/I basic structure declaration parse desteği
 - ✅ PL/I structure declaration → EGL record dönüşümü
 - ✅ EGL record generator desteği
+- ✅ PL/I structure array dimension parse desteği
+- ✅ PL/I structure array → EGL record parent array field dönüşümü
 
 ## Aktif Alt Hedef
 
-- Structure array / dimension desteği
+- Structure member array / field dimension desteği
 
 ## Sıradaki Alt Hedefler
 

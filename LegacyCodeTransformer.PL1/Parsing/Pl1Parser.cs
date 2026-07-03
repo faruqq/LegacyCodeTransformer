@@ -275,6 +275,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 Pl1TokenKind.Identifier,
                 "Structure adı bekleniyordu.");
 
+            var arraySize = ParseOptionalArraySize();
+
             Consume(
                 Pl1TokenKind.Comma,
                 "',' bekleniyordu.");
@@ -334,7 +336,52 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 level,
                 nameToken.Text,
                 members,
-                dclToken.Location);
+                dclToken.Location,
+                arraySize);
+        }
+
+        /// <summary>
+        /// PL/I declaration adından sonra gelen opsiyonel array dimension bilgisini parse eder.
+        ///
+        /// Örnek:
+        ///
+        /// DCL 1 DIZI(6),
+        ///
+        /// Bu örnekte array size değeri 6 olarak döner.
+        /// </summary>
+        private int? ParseOptionalArraySize()
+        {
+            if (Current.Kind != Pl1TokenKind.OpenParenthesis)
+            {
+                return null;
+            }
+
+            Advance();
+
+            var sizeToken = Consume(
+                Pl1TokenKind.Number,
+                "Array boyutu bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (sizeToken is null)
+            {
+                return null;
+            }
+
+            if (int.TryParse(sizeToken.Text, out var arraySize))
+            {
+                return arraySize;
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Array boyutu sayısal olmalıdır: {sizeToken.Text}",
+                sizeToken.Location));
+
+            return null;
         }
 
         /// <summary>

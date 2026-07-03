@@ -41,7 +41,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///
     /// EGL record declaration:
     ///
-    /// record ParameList type BasicRecord
+    /// record ParameList type basicRecord
     ///     10 Param char(8);
     ///     10 Param2 char(1);
     /// end
@@ -281,35 +281,56 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Neden var?
         /// ----------------------
         /// PL/I seviye numaralı structure yapıları EGL tarafında record olarak
-        /// temsil edilecektir.
+        /// temsil edilir.
         ///
-        /// Örnek PL/I:
+        /// Structure üzerinde array dimension varsa, örneğin:
         ///
-        /// DCL 1 PARAME_LIST,
-        ///     5 PARAM CHAR(08),
-        ///     5 PARAM2 CHAR(01);
+        /// DCL 1 DIZI(6),
         ///
-        /// Örnek EGL:
+        /// EGL tarafında record içine önce parent array field üretilir:
         ///
-        /// record ParameList type BasicRecord
-        ///     10 Param char(8);
-        ///     10 Param2 char(1);
-        /// end
+        /// 5 Dizi char(15)[6];
+        ///
+        /// Ardından structure member alanları child layout field olarak üretilir:
+        ///
+        /// 10 DiziParam1 char(1);
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - TranspileDeclaration dispatch methodu içerisinde
         /// - Structure declaration dönüşümünde
+        /// - Structure array mapping işleminde
         ///
         /// Gelecekte ne işe yarayacak?
         /// ----------------------
-        /// Structure array, nested structure, record metadata ve field
-        /// description üretimi geldiğinde bu method genişletilecektir.
+        /// Nested structure, field array ve farklı EGL level üretim kuralları
+        /// desteklendiğinde bu method genişletilecektir.
         /// </summary>
         private EglRecordDeclaration? TranspileStructureDeclaration(
             Pl1StructureDeclaration declaration)
         {
             var fields = new List<EglRecordFieldDeclaration>();
+
+            if (declaration.ArraySize.HasValue)
+            {
+                var elementLength = CalculateStructureElementLength(declaration);
+
+                if (elementLength is null)
+                {
+                    return null;
+                }
+
+                fields.Add(new EglRecordFieldDeclaration(
+                    5,
+                    IdentifierNameTransformer.Transform(
+                        declaration.Name,
+                        _namingOptions.Style),
+                    new EglCharacterType(
+                        elementLength.Value,
+                        declaration.Location),
+                    declaration.Location,
+                    declaration.ArraySize.Value));
+            }
 
             foreach (var member in declaration.Members)
             {
@@ -325,9 +346,106 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 IdentifierNameTransformer.Transform(
                     declaration.Name,
                     _namingOptions.Style),
-                "BasicRecord",
+                "basicRecord",
                 fields,
                 declaration.Location);
+        }
+
+        /// <summary>
+        /// Structure array parent alanı için tek bir array elemanının toplam storage
+        /// uzunluğunu hesaplar.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// EGL basicRecord yapısında structure array parent field şu formatta üretilir:
+        ///
+        /// 5 Dizi char(15)[6];
+        ///
+        /// Buradaki `15` değeri, DIZI array'inin tek bir elemanını oluşturan child
+        /// field uzunluklarının toplamıdır.
+        ///
+        /// Örnek:
+        ///
+        /// 3 DIZI_PARAM1 CHAR(01)
+        /// 3 DIZI_PARAM2 CHAR(02)
+        /// 3 DIZI_PARAM3 CHAR(02)
+        /// 3 DIZI_PARAM4 CHAR(02)
+        /// 3 DIZI_PARAM5 CHAR(08)
+        ///
+        /// Toplam:
+        ///
+        /// 1 + 2 + 2 + 2 + 8 = 15
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - Structure array dönüşümünde parent EGL field'ın char(n) uzunluğunu
+        ///   hesaplamak için
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// NUM, SMALLINT, INT, field array ve nested structure desteği genişledikçe
+        /// storage length hesabı bu method üzerinden merkezi olarak büyütülecektir.
+        /// </summary>
+        private int? CalculateStructureElementLength(
+            Pl1StructureDeclaration declaration)
+        {
+            var totalLength = 0;
+
+            foreach (var member in declaration.Members)
+            {
+                var memberLength = CalculateDataTypeLength(member.DataType);
+
+                if (memberLength is null)
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Structure array uzunluğu hesaplanamayan PL/I member veri tipi: {member.DataType.GetType().Name}",
+                        member.Location));
+
+                    return null;
+                }
+
+                totalLength += memberLength.Value;
+            }
+
+            return totalLength;
+        }
+
+        /// <summary>
+        /// PL/I veri tipinin fixed storage uzunluğunu hesaplar.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Structure array parent field uzunluğu, child member veri tiplerinin
+        /// storage uzunlukları toplanarak bulunur.
+        ///
+        /// İlk kapsamda desteklenen hesaplama:
+        ///
+        /// - CHAR(n) => n
+        /// - FIXED DECIMAL(p,s) => p
+        ///
+        /// Örnek:
+        ///
+        /// CHAR(08) => 8
+        /// FIXED DECIMAL(9,4) => 9
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CalculateStructureElementLength içinde
+        ///
+        /// Gelecekte ne işe yarayacak?
+        /// ----------------------
+        /// PL/I NUM, SMALLINT, INT ve field array desteği eklendiğinde bu method
+        /// genişletilerek toplam layout uzunluğu hesabı korunacaktır.
+        /// </summary>
+        private static int? CalculateDataTypeLength(Pl1DataType dataType)
+        {
+            return dataType switch
+            {
+                Pl1CharacterType characterType => characterType.Length,
+                Pl1FixedDecimalType fixedDecimalType => fixedDecimalType.Precision,
+                _ => null
+            };
         }
 
         /// <summary>

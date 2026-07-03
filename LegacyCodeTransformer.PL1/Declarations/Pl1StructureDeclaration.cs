@@ -54,6 +54,18 @@ namespace LegacyCodeTransformer.Pl1.Declarations
         public string Name { get; }
 
         /// <summary>
+        /// PL/I structure array boyutudur.
+        ///
+        /// Örnek:
+        ///
+        /// DCL 1 DIZI(6),
+        ///
+        /// için değer 6 olur.
+        /// Structure array değilse null olur.
+        /// </summary>
+        public int? ArraySize { get; }
+
+        /// <summary>
         /// Structure altında yer alan member alanlardır.
         /// </summary>
         public IReadOnlyList<Pl1StructureMember> Members { get; }
@@ -86,14 +98,16 @@ namespace LegacyCodeTransformer.Pl1.Declarations
         /// - Unit testlerde structure declaration doğrulamasında
         /// </summary>
         public Pl1StructureDeclaration(
-            int level,
-            string name,
-            IEnumerable<Pl1StructureMember>? members,
-            SourceLocation location)
-            : base(location)
+        int level,
+        string name,
+        IEnumerable<Pl1StructureMember>? members,
+        SourceLocation location,
+        int? arraySize = null)
+        : base(location)
         {
             Level = level;
             Name = name;
+            ArraySize = arraySize;
             Members = members?.ToList() ?? new List<Pl1StructureMember>();
         }
     }

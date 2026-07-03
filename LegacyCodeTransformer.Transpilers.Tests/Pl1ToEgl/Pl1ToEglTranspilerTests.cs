@@ -377,7 +377,7 @@ public sealed class Pl1ToEglTranspilerTests
         var recordDeclaration = Assert.IsType<EglRecordDeclaration>(declaration);
 
         Assert.Equal("ParameList", recordDeclaration.Name);
-        Assert.Equal("BasicRecord", recordDeclaration.RecordType);
+        Assert.Equal("basicRecord", recordDeclaration.RecordType);
         Assert.Equal(2, recordDeclaration.Fields.Count);
 
         Assert.Equal(10, recordDeclaration.Fields[0].Level);
@@ -391,5 +391,92 @@ public sealed class Pl1ToEglTranspilerTests
 
         var secondFieldType = Assert.IsType<EglCharacterType>(recordDeclaration.Fields[1].DataType);
         Assert.Equal(1, secondFieldType.Length);
+    }
+
+    /// <summary>
+    /// PL/I structure array modelinden EGL record içinde parent array field
+    /// üretildiğini doğrular.
+    ///
+    /// Test edilen yapı:
+    /// - DIZI(6)
+    /// - 5 Dizi char(15)[6]
+    /// - Child field toplam uzunluğu: 1 + 2 + 2 + 2 + 8 = 15
+    /// </summary>
+    [Fact]
+    public void Transpile_WithStructureArrayDeclaration_ShouldCreateEglRecordArrayField()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1StructureDeclaration(
+                1,
+                "DIZI",
+                new[]
+                {
+                    new Pl1StructureMember(
+                        3,
+                        "DIZI_PARAM1",
+                        new Pl1CharacterType(1, SourceLocation.Unknown),
+                        SourceLocation.Unknown),
+
+                    new Pl1StructureMember(
+                        3,
+                        "DIZI_PARAM2",
+                        new Pl1CharacterType(2, SourceLocation.Unknown),
+                        SourceLocation.Unknown),
+
+                    new Pl1StructureMember(
+                        3,
+                        "DIZI_PARAM3",
+                        new Pl1CharacterType(2, SourceLocation.Unknown),
+                        SourceLocation.Unknown),
+
+                    new Pl1StructureMember(
+                        3,
+                        "DIZI_PARAM4",
+                        new Pl1CharacterType(2, SourceLocation.Unknown),
+                        SourceLocation.Unknown),
+
+                    new Pl1StructureMember(
+                        3,
+                        "DIZI_PARAM5",
+                        new Pl1CharacterType(8, SourceLocation.Unknown),
+                        SourceLocation.Unknown)
+                },
+                SourceLocation.Unknown,
+                6)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var recordDeclaration = Assert.IsType<EglRecordDeclaration>(declaration);
+
+        Assert.Equal("Dizi", recordDeclaration.Name);
+        Assert.Equal("basicRecord", recordDeclaration.RecordType);
+        Assert.Equal(6, recordDeclaration.Fields.Count);
+
+        Assert.Equal(5, recordDeclaration.Fields[0].Level);
+        Assert.Equal("Dizi", recordDeclaration.Fields[0].Name);
+        Assert.Equal(6, recordDeclaration.Fields[0].ArraySize);
+
+        var arrayFieldType = Assert.IsType<EglCharacterType>(recordDeclaration.Fields[0].DataType);
+        Assert.Equal(15, arrayFieldType.Length);
+
+        Assert.Equal(10, recordDeclaration.Fields[1].Level);
+        Assert.Equal("DiziParam1", recordDeclaration.Fields[1].Name);
+
+        Assert.Equal(10, recordDeclaration.Fields[5].Level);
+        Assert.Equal("DiziParam5", recordDeclaration.Fields[5].Name);
     }
 }

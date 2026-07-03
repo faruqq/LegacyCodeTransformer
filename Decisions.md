@@ -1489,3 +1489,118 @@ PL/I tarafındaki seviye numaralı structure declaration ifadeleri, EGL tarafın
 DCL 1 PARAME_LIST,
     5 PARAM CHAR(08) INIT(' '),
     5 PARAM2 CHAR(01) INIT(';');
+
+---
+
+## Decision 046 - EGL output casing ve indentation kuralları korunacaktır
+
+### Karar
+
+EGL kaynak kodu üretilirken keyword, type adı, casing, boşluk ve indentation kuralları dönüşümün parçası kabul edilecektir.
+
+Özellikle aşağıdaki EGL keyword ve type değerleri birebir korunacaktır:
+
+- `basicRecord`
+- `sqlRecord`
+- `char`
+- `num`
+- `smallint`
+- `int`
+- `decimal`
+
+`basicRecord` değeri `BasicRecord` olarak üretilmeyecektir.
+
+Record / structure level değerleri EGL output tarafında 5 ve 5'in katları olarak üretilecektir.
+
+Bu standarda göre level değerleri aşağıdaki anlamda kullanılacaktır:
+
+- `5`: parent / group field
+- `10`: child field
+- `15`: nested child field
+- `20`: daha derin nested field
+
+Record field çıktılarında level hiyerarşisi indentation ile görünür hale getirilecektir.
+
+Indentation hesabı level standardına göre yapılacaktır:
+
+- level `5` için 4 boşluk
+- level `10` için 8 boşluk
+- level `15` için 12 boşluk
+- level `20` için 16 boşluk
+
+Genel kural:
+
+    indentationSpaceCount = (level / 5) * 4
+
+Generator indentation hesabını bu standarda göre yapacaktır.
+
+Örnek doğru çıktı:
+
+    record RecordName type basicRecord
+        5 Param1 char(80)[999];
+            10 Param2 char(2);
+            10 Param3 num(4);
+            10 Param4 num(9,4);
+    end
+
+Aşağıdaki gibi field'ların aynı hizaya yazılması kabul edilmeyecektir:
+
+    record RecordName type basicRecord
+    5 Param1 char(80)[999];
+    10 Param2 char(2);
+    10 Param3 num(4);
+    10 Param4 num(9,4);
+    end
+
+### Gerekçe
+
+EGL record yapılarında level bilgisi field hiyerarşisini gösterir.
+
+Bununla birlikte üretilen kodun okunabilir olması için bu hiyerarşinin indentation ile de görünür hale getirilmesi gerekir.
+
+Casing, boşluk ve indentation kuralları yalnızca görsel tercih olarak ele alınmayacaktır. Bu kurallar kurum EGL kod standardının parçası kabul edilecektir.
+
+Bu nedenle dönüşüm çıktısında `basicRecord` gibi keyword ve type adları birebir korunmalı, field hiyerarşisi de düzenli indentation ile üretilmelidir.
+
+### Etkilediği Modüller
+
+- EGL Code Generator
+- Transpilers
+- Application Tests
+- Snapshot / output testleri
+- Dokümantasyon
+
+### Durum
+
+✅ Aktif
+
+## Decision 047 - Decision kayıtları standart başlık yapısıyla yazılacaktır.
+
+### Karar
+
+Tüm decision kayıtları aşağıdaki standart başlık yapısıyla yazılacaktır:
+
+- `### Karar`
+- `### Gerekçe`
+- `### Etkilediği Modüller`
+- `### Durum`
+
+Yeni bir decision önerilirken veya mevcut decision düzenlenirken bu başlıkların tamamı bulunmalıdır.
+
+### Gerekçe
+
+Decision kayıtları proje boyunca mimari kararların izlenebilir olmasını sağlar.
+
+Başlık yapısının her decision içinde aynı olması, dokümanın okunabilirliğini ve sürdürülebilirliğini artırır.
+
+Eksik veya farklı formatta yazılan decision kayıtları zamanla dokümantasyonun dağınık hale gelmesine neden olur.
+
+### Etkilediği Modüller
+
+- Dokümantasyon
+- Decisions.md
+- Geliştirme süreci
+
+### Durum
+
+✅ Aktif

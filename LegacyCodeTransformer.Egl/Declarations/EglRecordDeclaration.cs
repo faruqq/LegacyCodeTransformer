@@ -18,14 +18,14 @@ namespace LegacyCodeTransformer.Egl.Declarations
     ///
     /// Örnek EGL:
     ///
-    /// record ParameList type BasicRecord
+    /// record ParameList type basicRecord
     ///     10 Param char(8);
     ///     10 Param2 char(1);
     /// end
     ///
     /// Bu modelde:
     /// - Name: ParameList
-    /// - RecordType: BasicRecord
+    /// - RecordType: basicRecord
     /// - Fields: Param, Param2
     ///
     /// olarak temsil edilir.
@@ -51,7 +51,7 @@ namespace LegacyCodeTransformer.Egl.Declarations
         /// <summary>
         /// EGL record tipidir.
         ///
-        /// İlk kapsamda BasicRecord kullanılacaktır.
+        /// İlk kapsamda basicRecord kullanılacaktır.
         /// </summary>
         public string RecordType { get; }
 

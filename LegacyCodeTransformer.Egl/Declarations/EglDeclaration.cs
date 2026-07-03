@@ -17,7 +17,7 @@ namespace LegacyCodeTransformer.Egl.Declarations
     ///
     /// Örnek EGL record declaration:
     ///
-    /// record ParameList type BasicRecord
+    /// record ParameList type basicRecord
     ///     10 Param char(8);
     ///     10 Param2 char(1);
     /// end
