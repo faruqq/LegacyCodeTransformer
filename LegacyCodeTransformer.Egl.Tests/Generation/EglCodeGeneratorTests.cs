@@ -143,24 +143,24 @@ public sealed class EglCodeGeneratorTests
         var syntaxTree = new EglSyntaxTree(
             new EglDeclaration[]
             {
-            new EglRecordDeclaration(
-                "ParameList",
-                "basicRecord",
-                new[]
-                {
-                    new EglRecordFieldDeclaration(
-                        10,
-                        "Param",
-                        new EglCharacterType(8, SourceLocation.Unknown),
-                        SourceLocation.Unknown),
+        new EglRecordDeclaration(
+            "ParameList",
+            "basicRecord",
+            new[]
+            {
+                new EglRecordFieldDeclaration(
+                    10,
+                    "Param",
+                    new EglCharacterType(8, SourceLocation.Unknown),
+                    SourceLocation.Unknown),
 
-                    new EglRecordFieldDeclaration(
-                        10,
-                        "Param2",
-                        new EglCharacterType(1, SourceLocation.Unknown),
-                        SourceLocation.Unknown)
-                },
-                SourceLocation.Unknown)
+                new EglRecordFieldDeclaration(
+                    10,
+                    "Param2",
+                    new EglCharacterType(1, SourceLocation.Unknown),
+                    SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown)
             },
             SourceLocation.Unknown);
 
@@ -172,8 +172,8 @@ public sealed class EglCodeGeneratorTests
         // Assert
         var expected =
             "record ParameList type basicRecord" + Environment.NewLine +
-            "    10 Param char(8);" + Environment.NewLine +
-            "    10 Param2 char(1);" + Environment.NewLine +
+            "        10 Param char(8);" + Environment.NewLine +
+            "        10 Param2 char(1);" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, result);
@@ -228,9 +228,163 @@ public sealed class EglCodeGeneratorTests
         var expected =
             "record Dizi type basicRecord" + Environment.NewLine +
             "    5 Dizi char(15)[6];" + Environment.NewLine +
-            "    10 DiziParam1 char(1);" + Environment.NewLine +
+            "        10 DiziParam1 char(1);" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, result);
+    }
+
+    /// <summary>
+    /// EGL decimal type üzerinde Scale null ise decimal(p) formatında çıktı
+    /// üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın scale verilmemiş decimal modeli için decimal(p,0)
+    /// üretmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglDecimalType(15, null)
+    ///
+    /// Beklenen çıktı:
+    /// - Count decimal(15);
+    /// </summary>
+    [Fact]
+    public void Generate_WithDecimalDeclarationWithoutScale_ShouldGenerateDecimalWithoutScale()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Count",
+                new EglDecimalType(15, null, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Count decimal(15);" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL decimal type üzerinde Scale 0 ise decimal(p,0) formatında çıktı
+    /// üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın açıkça verilen scale 0 bilgisini output'a taşıdığını
+    /// doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglDecimalType(15, 0)
+    ///
+    /// Beklenen çıktı:
+    /// - Count decimal(15,0);
+    /// </summary>
+    [Fact]
+    public void Generate_WithDecimalDeclarationHavingExplicitZeroScale_ShouldGenerateDecimalWithZeroScale()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Count",
+                new EglDecimalType(15, 0, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Count decimal(15,0);" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL smallint type modelinin smallint keyword'üyle üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın küçük integer type için standart casing olan `smallint`
+    /// çıktısını ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglSmallIntType
+    ///
+    /// Beklenen çıktı:
+    /// - Count smallint;
+    /// </summary>
+    [Fact]
+    public void Generate_WithSmallIntDeclaration_ShouldGenerateSmallintDeclaration()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Count",
+                new EglSmallIntType(SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Count smallint;" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL int type modelinin int keyword'üyle üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın integer type için standart casing olan `int` çıktısını
+    /// ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglIntType
+    ///
+    /// Beklenen çıktı:
+    /// - Count int;
+    /// </summary>
+    [Fact]
+    public void Generate_WithIntDeclaration_ShouldGenerateIntDeclaration()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Count",
+                new EglIntType(SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Count int;" + Environment.NewLine, result);
     }
 }

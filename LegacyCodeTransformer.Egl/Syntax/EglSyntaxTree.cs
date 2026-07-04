@@ -55,7 +55,7 @@ namespace LegacyCodeTransformer.Egl.Syntax
         ///
         /// Örnek EGL variable declaration:
         ///
-        /// MustNo decimal(8,0);
+        /// MustNo decimal(8);
         ///
         /// Örnek EGL record declaration:
         ///

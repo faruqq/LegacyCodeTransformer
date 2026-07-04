@@ -31,7 +31,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///
     /// EGL variable declaration:
     ///
-    /// MustNo decimal(8,0);
+    /// MustNo decimal(8);
     ///
     /// PL/I structure declaration:
     ///
@@ -240,7 +240,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Örnek EGL:
         ///
-        /// MustNo decimal(8,0);
+        /// MustNo decimal(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -283,28 +283,52 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// PL/I seviye numaralı structure yapıları EGL tarafında record olarak
         /// temsil edilir.
         ///
-        /// Structure üzerinde array dimension varsa, örneğin:
+        /// P04-F ile birlikte structure içinde nested group field desteği de eklenmiştir.
         ///
-        /// DCL 1 DIZI(6),
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Structure member listesini EGL record field listesine dönüştürür.
         ///
-        /// EGL tarafında record içine önce parent array field üretilir:
+        /// Normal typed field:
         ///
-        /// 5 Dizi char(15)[6];
+        /// 5 PARAM CHAR(08)
         ///
-        /// Ardından structure member alanları child layout field olarak üretilir:
+        /// EGL:
         ///
-        /// 10 DiziParam1 char(1);
+        /// 10 Param char(8);
+        ///
+        /// Nested group field:
+        ///
+        /// 5 ADRES_BILGI,
+        ///     10 IL_KOD CHAR(02),
+        ///     10 ILCE_KOD CHAR(03)
+        ///
+        /// EGL:
+        ///
+        /// 5 AdresBilgi char(5);
+        ///     10 IlKod char(2);
+        ///     10 IlceKod char(3);
+        ///
+        /// Structure array varsa önce parent array field üretilir:
+        ///
+        /// 5 Dizi char(totalLength)[arraySize];
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - Basic structure declaration
+        /// - Structure array declaration
+        /// - Structure member array declaration
+        /// - Nested structure / group field declaration
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - TranspileDeclaration dispatch methodu içerisinde
         /// - Structure declaration dönüşümünde
-        /// - Structure array mapping işleminde
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Nested structure, field array ve farklı EGL level üretim kuralları
-        /// desteklendiğinde bu method genişletilecektir.
+        /// Çok seviyeli nested structure, group array, sqlRecord mapping ve daha
+        /// gelişmiş layout hesaplama kurallarına temel olur.
         /// </summary>
         private EglRecordDeclaration? TranspileStructureDeclaration(
             Pl1StructureDeclaration declaration)
@@ -334,12 +358,15 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 
             foreach (var member in declaration.Members)
             {
-                var field = TranspileStructureMember(member);
+                var topLevel = declaration.ArraySize.HasValue
+                    ? 10
+                    : GetTopLevelEglLevel(member);
 
-                if (field is not null)
-                {
-                    fields.Add(field);
-                }
+                var memberFields = TranspileStructureMember(
+                    member,
+                    topLevel);
+
+                fields.AddRange(memberFields);
             }
 
             return new EglRecordDeclaration(
@@ -349,6 +376,55 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 "basicRecord",
                 fields,
                 declaration.Location);
+        }
+
+        /// <summary>
+        /// Root structure altındaki ilk seviye member için üretilecek EGL level değerini belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Mevcut kurum standardında normal typed structure field'lar EGL tarafında
+        /// level 10 olarak üretilmektedir.
+        ///
+        /// Ancak nested group field parent alanları aynı record içinde group field
+        /// olarak level 5 ile üretilmelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Top-level normal field ile top-level group field arasındaki EGL level
+        /// farkını merkezi hale getirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// Normal field:
+        ///
+        /// 5 PARAM CHAR(08)
+        ///
+        /// EGL:
+        ///
+        /// 10 Param char(8);
+        ///
+        /// Group field:
+        ///
+        /// 5 ADRES_BILGI,
+        ///     10 IL_KOD CHAR(02)
+        ///
+        /// EGL:
+        ///
+        /// 5 AdresBilgi char(2);
+        ///     10 IlKod char(2);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileStructureDeclaration içinde root member mapping işleminde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Farklı EGL level politikaları gerektiğinde tek noktadan yönetim sağlar.
+        /// </summary>
+        private static int GetTopLevelEglLevel(Pl1StructureMember member)
+        {
+            return member.IsGroup ? 5 : 10;
         }
 
         /// <summary>
@@ -364,27 +440,26 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Buradaki `15` değeri, DIZI array'inin tek bir elemanını oluşturan child
         /// field uzunluklarının toplamıdır.
         ///
-        /// Örnek:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Structure array parent field length değerini, typed field, field array ve
+        /// nested group field bilgilerini dikkate alarak hesaplar.
         ///
-        /// 3 DIZI_PARAM1 CHAR(01)
-        /// 3 DIZI_PARAM2 CHAR(02)
-        /// 3 DIZI_PARAM3 CHAR(02)
-        /// 3 DIZI_PARAM4 CHAR(02)
-        /// 3 DIZI_PARAM5 CHAR(08)
-        ///
-        /// Toplam:
-        ///
-        /// 1 + 2 + 2 + 2 + 8 = 15
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - CHAR(10) => 10
+        /// - CHAR(10)[2] => 20
+        /// - Nested group: child field toplamı
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - Structure array dönüşümünde parent EGL field'ın char(n) uzunluğunu
         ///   hesaplamak için
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// NUM, SMALLINT, INT, field array ve nested structure desteği genişledikçe
-        /// storage length hesabı bu method üzerinden merkezi olarak büyütülecektir.
+        /// Nested structure, multi-level layout ve farklı numeric type storage
+        /// hesaplarının merkezi olarak genişletilmesine temel olur.
         /// </summary>
         private int? CalculateStructureElementLength(
             Pl1StructureDeclaration declaration)
@@ -393,15 +468,10 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 
             foreach (var member in declaration.Members)
             {
-                var memberLength = CalculateDataTypeLength(member.DataType);
+                var memberLength = CalculateMemberLength(member);
 
                 if (memberLength is null)
                 {
-                    _diagnostics.Add(new Diagnostic(
-                        DiagnosticSeverity.Error,
-                        $"Structure array uzunluğu hesaplanamayan PL/I member veri tipi: {member.DataType.GetType().Name}",
-                        member.Location));
-
                     return null;
                 }
 
@@ -412,73 +482,237 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
-        /// PL/I veri tipinin fixed storage uzunluğunu hesaplar.
+        /// PL/I structure member alanının storage length değerini hesaplar.
         ///
         /// Neden var?
         /// ----------------------
-        /// Structure array parent field uzunluğu, child member veri tiplerinin
-        /// storage uzunlukları toplanarak bulunur.
+        /// P04-F ile birlikte structure member yalnızca basit typed field değildir.
         ///
-        /// İlk kapsamda desteklenen hesaplama:
+        /// Member:
         ///
-        /// - CHAR(n) => n
-        /// - FIXED DECIMAL(p,s) => p
+        /// - Normal typed field olabilir.
+        /// - Field array olabilir.
+        /// - Nested group field olabilir.
         ///
-        /// Örnek:
+        /// Bu nedenle length hesabı tek veri tipinden ibaret değildir.
         ///
-        /// CHAR(08) => 8
-        /// FIXED DECIMAL(9,4) => 9
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Typed field için data type length değerini hesaplar.
+        ///
+        /// Field array için array çarpanını uygular.
+        ///
+        /// Nested group için child member length toplamını hesaplar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - CHAR(10) => 10
+        /// - CHAR(10)[2] => 20
+        /// - GROUP => child length toplamı
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - CalculateStructureElementLength içinde
+        /// - TranspileStructureMember içinde group parent field char(n) üretirken
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// PL/I NUM, SMALLINT, INT ve field array desteği eklendiğinde bu method
-        /// genişletilerek toplam layout uzunluğu hesabı korunacaktır.
+        /// Çok seviyeli nested structure, group array ve farklı PL/I storage type
+        /// hesaplarını merkezi hale getirir.
+        /// </summary>
+        private int? CalculateMemberLength(Pl1StructureMember member)
+        {
+            int? memberLength;
+
+            if (member.IsGroup)
+            {
+                var totalChildLength = 0;
+
+                foreach (var childMember in member.Members)
+                {
+                    var childLength = CalculateMemberLength(childMember);
+
+                    if (childLength is null)
+                    {
+                        return null;
+                    }
+
+                    totalChildLength += childLength.Value;
+                }
+
+                memberLength = totalChildLength;
+            }
+            else
+            {
+                if (member.DataType is null)
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Structure member uzunluğu hesaplanamayan PL/I member veri tipi bulunamadı: {member.Name}",
+                        member.Location));
+
+                    return null;
+                }
+
+                memberLength = CalculateDataTypeLength(member.DataType);
+
+                if (memberLength is null)
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Structure member uzunluğu hesaplanamayan PL/I member veri tipi: {member.DataType.GetType().Name}",
+                        member.Location));
+
+                    return null;
+                }
+            }
+
+            var arrayMultiplier = member.ArraySize ?? 1;
+
+            return memberLength.Value * arrayMultiplier;
+        }
+
+        /// <summary>
+        /// PL/I veri tipinin fixed storage uzunluğunu hesaplar.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Structure array parent field uzunluğu ve nested group field uzunluğu,
+        /// child member veri tiplerinin storage uzunlukları üzerinden hesaplanır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Veri tipi bazlı temel storage length hesabını merkezi hale getirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - CHAR(08) => 8
+        /// - VARCHAR(50) => 50
+        /// - FIXED DECIMAL(9,4) => 9
+        /// - FIXED BIN(15) => 2
+        /// - FIXED BIN(31) => 4
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CalculateMemberLength içinde
+        /// - Structure array parent length hesabında
+        /// - Nested group field length hesabında
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// PL/I NUM, PIC, BIT ve farklı storage type hesapları geldikçe bu method
+        /// genişletilecektir.
         /// </summary>
         private static int? CalculateDataTypeLength(Pl1DataType dataType)
         {
             return dataType switch
             {
                 Pl1CharacterType characterType => characterType.Length,
+                Pl1VarcharType varcharType => varcharType.Length,
                 Pl1FixedDecimalType fixedDecimalType => fixedDecimalType.Precision,
+                Pl1FixedBinaryType { Precision: 15, Scale: null } => 2,
+                Pl1FixedBinaryType { Precision: 15, Scale: 0 } => 2,
+                Pl1FixedBinaryType { Precision: 31, Scale: null } => 4,
+                Pl1FixedBinaryType { Precision: 31, Scale: 0 } => 4,
                 _ => null
             };
         }
 
         /// <summary>
-        /// PL/I structure member modelini EGL record field modeline dönüştürür.
+        /// PL/I structure member modelini bir veya daha fazla EGL record field modeline dönüştürür.
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I structure içindeki her member, EGL record içerisinde field
-        /// olarak üretilmelidir.
+        /// PL/I structure member alanları artık yalnızca tek typed field olmak
+        /// zorunda değildir.
         ///
-        /// Örnek PL/I member:
+        /// Bir member:
         ///
-        /// 5 PARAM CHAR(08) INIT(' ')
+        /// - Normal typed field olabilir.
+        /// - Field array olabilir.
+        /// - Nested group field olabilir.
         ///
-        /// Örnek EGL field:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Normal field için tek EGL field üretir.
         ///
-        /// 10 Param char(8);
+        /// Nested group için önce group parent field üretir, ardından child member
+        /// alanlarını bir sonraki EGL level ile üretir.
         ///
-        /// İlk kapsamda EGL field level değeri sabit 10 olarak üretilecektir.
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// Normal field:
+        ///
+        /// 5 PARAM CHAR(08)
+        ///
+        /// Field array:
+        ///
+        /// 5 PARAM_LIST(2) CHAR(10)
+        ///
+        /// Nested group:
+        ///
+        /// 5 ADRES_BILGI,
+        ///     10 IL_KOD CHAR(02),
+        ///     10 ILCE_KOD CHAR(03)
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - TranspileStructureDeclaration içerisinde
-        /// - Record field listesi oluşturulurken
+        /// - Nested group child field üretiminde recursive olarak
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Nested structure ve farklı EGL level üretim kuralları geldiğinde
-        /// member level bilgisi burada kullanılabilir.
+        /// Çok seviyeli nested structure, group array ve layout hesaplama desteğini
+        /// genişletmek için temel dönüşüm noktasıdır.
         /// </summary>
-        private EglRecordFieldDeclaration? TranspileStructureMember(
-            Pl1StructureMember member)
+        private IReadOnlyList<EglRecordFieldDeclaration> TranspileStructureMember(
+            Pl1StructureMember member,
+            int eglLevel)
         {
+            var fields = new List<EglRecordFieldDeclaration>();
+
+            if (member.IsGroup)
+            {
+                var groupLength = CalculateMemberLength(member);
+
+                if (groupLength is null)
+                {
+                    return fields;
+                }
+
+                fields.Add(new EglRecordFieldDeclaration(
+                    eglLevel,
+                    IdentifierNameTransformer.Transform(
+                        member.Name,
+                        _namingOptions.Style),
+                    new EglCharacterType(
+                        groupLength.Value,
+                        member.Location),
+                    member.Location,
+                    member.ArraySize));
+
+                foreach (var childMember in member.Members)
+                {
+                    var childFields = TranspileStructureMember(
+                        childMember,
+                        eglLevel + 5);
+
+                    fields.AddRange(childFields);
+                }
+
+                return fields;
+            }
+
+            if (member.DataType is null)
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"PL/I structure member veri tipi bulunamadı: {member.Name}",
+                    member.Location));
+
+                return fields;
+            }
+
             var dataType = TranspileDataType(member.DataType);
 
             if (dataType is null)
@@ -488,16 +722,19 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     $"Desteklenmeyen PL/I structure member veri tipi: {member.DataType.GetType().Name}",
                     member.Location));
 
-                return null;
+                return fields;
             }
 
-            return new EglRecordFieldDeclaration(
-                10,
+            fields.Add(new EglRecordFieldDeclaration(
+                eglLevel,
                 IdentifierNameTransformer.Transform(
                     member.Name,
                     _namingOptions.Style),
                 dataType,
-                member.Location);
+                member.Location,
+                member.ArraySize));
+
+            return fields;
         }
 
         /// <summary>
@@ -537,34 +774,29 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Parser çıktısı PL/I diline ait syntax tree modellerini üretir.
         /// Code generator ise EGL diline ait modeller üzerinden çalışır.
         ///
-        /// Bu nedenle PL/I data type modellerinin EGL data type modellerine
-        /// çevrilmesi gerekir.
+        /// Ne çözüyor?
+        /// ----------------------
+        /// PL/I veri tipi modellerini hedef EGL veri tipi modellerine dönüştürür.
         ///
-        /// Örnek dönüşümler:
-        ///
-        /// PL/I:
-        /// FIXED DECIMAL(8)
-        ///
-        /// EGL:
-        /// decimal(8,0)
-        ///
-        /// PL/I:
-        /// CHAR(08)
-        ///
-        /// EGL:
-        /// char(8)
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED DECIMAL(15) => decimal(15)
+        /// - FIXED DECIMAL(15,0) => decimal(15,0)
+        /// - CHAR(08) => char(8)
+        /// - VARCHAR(50) => char(50)
+        /// - FIXED BIN(15) => smallint
+        /// - FIXED BIN(31) => int
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - PL/I → EGL Transpiler içerisinde variable declaration dönüşümünde
         /// - PL/I → EGL Transpiler içerisinde record field dönüşümünde
-        /// - Application pipeline içinde parser sonrası model dönüşümünde
+        /// - Nested group child field dönüşümünde
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT, FIXED BINARY, PIC / PICTURE, VARYING ve structure field
-        /// tipleri desteklendikçe bu method yeni mapping kurallarıyla
-        /// genişletilecektir.
+        /// BIT, PIC / PICTURE ve sqlRecord özel tip mapping kuralları eklendikçe
+        /// bu method genişletilecektir.
         /// </summary>
         private EglDataType? TranspileDataType(Pl1DataType dataType)
         {
@@ -576,13 +808,105 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                         fixedDecimalType.Scale,
                         fixedDecimalType.Location),
 
+                Pl1FixedBinaryType fixedBinaryType =>
+                    TranspileFixedBinaryType(fixedBinaryType),
+
                 Pl1CharacterType characterType =>
                     new EglCharacterType(
                         characterType.Length,
                         characterType.Location),
 
+                Pl1VarcharType varcharType =>
+                    new EglCharacterType(
+                        varcharType.Length,
+                        varcharType.Location),
+
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// PL/I FIXED BINARY / FIXED BIN veri tipini EGL integer tipine dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I binary fixed alanlar binary integer semantic taşır.
+        ///
+        /// İlk kapsamda yalnızca scale değeri olmayan veya scale değeri 0 olan
+        /// integer kullanımlar desteklenecektir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Yaygın binary integer precision değerlerini EGL integer type karşılıklarına
+        /// dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED BIN(15) => smallint
+        /// - BIN FIXED(15) => smallint
+        /// - FIXED BIN(31) => int
+        /// - BIN FIXED(31) => int
+        /// - FIXED BIN(15,0) => smallint
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileDataType içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Farklı binary precision değerleri veya binary fractional mapping
+        /// kararları alındığında bu method genişletilecektir.
+        /// </summary>
+        private EglDataType? TranspileFixedBinaryType(
+            Pl1FixedBinaryType fixedBinaryType)
+        {
+            if (fixedBinaryType.Scale.HasValue &&
+                fixedBinaryType.Scale.Value != 0)
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"FIXED BINARY scale değeri desteklenmiyor. Precision: {fixedBinaryType.Precision}, Scale: {fixedBinaryType.Scale.Value}",
+                    fixedBinaryType.Location));
+
+                return null;
+            }
+
+            return fixedBinaryType.Precision switch
+            {
+                15 => new EglSmallIntType(fixedBinaryType.Location),
+                31 => new EglIntType(fixedBinaryType.Location),
+                _ => CreateUnsupportedFixedBinaryPrecisionDiagnostic(fixedBinaryType)
+            };
+        }
+
+        /// <summary>
+        /// Desteklenmeyen FIXED BINARY precision değeri için diagnostic üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Binary fixed precision değerleri yanlış EGL type'a sessizce çevrilmemelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Desteklenmeyen precision değerlerini görünür hata haline getirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// FIXED BIN(13) gibi ilk kapsamda mapping kararı olmayan kullanımlar.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileFixedBinaryType içinde
+        /// </summary>
+        private EglDataType? CreateUnsupportedFixedBinaryPrecisionDiagnostic(
+            Pl1FixedBinaryType fixedBinaryType)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Desteklenmeyen FIXED BINARY precision değeri: {fixedBinaryType.Precision}",
+                fixedBinaryType.Location));
+
+            return null;
         }
     }
 }

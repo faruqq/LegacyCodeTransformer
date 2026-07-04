@@ -416,7 +416,7 @@ DCL CUSTOMER_NO FIXED DECIMAL(10,2);
 EGL
 
 ```egl
-mustNo decimal(8,0);
+mustNo decimal(8);
 
 customerNo decimal(10,2);
 ```

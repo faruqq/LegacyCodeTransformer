@@ -180,7 +180,7 @@ DCL CUSTOMER_NO FIXED DECIMAL(10,2);
 EGL
 
 ```egl
-mustNo decimal(8,0);
+mustNo decimal(8);
 
 customerNo decimal(10,2);
 ```
@@ -199,45 +199,102 @@ P04 — PL/I Veri Tiplerini Genişletme
 
 ## Amaç
 
-PL/I veri tipi desteğini gerçek projelerde kullanılabilecek seviyeye çıkarmak.
-
-## İlk Hedefler
-
-* CHAR
-* VARCHAR
-* FIXED BINARY
-* FLOAT
-* BIT
+PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanılabilecek seviyeye çıkarmak.
 
 ## Tamamlananlar
 
 - ✅ CHAR / CHARACTER veri tipi desteği
-- ✅ CHAR / CHARACTER → EGL char dönüşümü
-- ✅ CHAR uzunluk normalizasyonu
+- ✅ VARCHAR → EGL char dönüşümü
 - ✅ INIT / INITIAL parse desteği
-- ✅ INIT repeat factor parse desteği
-- ✅ INIT bilgisinin PL/I Syntax Tree üzerinde korunması
 - ✅ Identifier naming strategy desteği
 - ✅ PL/I basic structure declaration parse desteği
 - ✅ PL/I structure declaration → EGL record dönüşümü
-- ✅ EGL record generator desteği
-- ✅ PL/I structure array dimension parse desteği
-- ✅ PL/I structure array → EGL record parent array field dönüşümü
+- ✅ PL/I structure array → EGL basicRecord parent array field dönüşümü
+- ✅ PL/I structure member array → EGL field array dönüşümü
+- ✅ PL/I nested structure → EGL parent group field dönüşümü
+- ✅ Recursive nested structure mapping desteği
+- ✅ EGL output casing ve indentation standardı
+- ✅ Decimal scale bilgisinin nullable korunması
+- ✅ `FIXED DECIMAL(p)` → `decimal(p)`
+- ✅ `FIXED DECIMAL(p,0)` → `decimal(p,0)`
+- ✅ `FIXED DECIMAL(p,s)` → `decimal(p,s)`
+- ✅ `FIXED DEC` / `DEC FIXED` / `DECIMAL FIXED` synonym parse desteği
+- ✅ `FIXED BIN(15)` / `BIN FIXED(15)` → `smallint`
+- ✅ `FIXED BIN(31)` / `BIN FIXED(31)` → `int`
+- ✅ Binary fixed storage length hesabı
+
+## Tamamlanan Alt Fazlar
+
+### P04-A — CHAR / CHARACTER Desteği
+
+PL/I CHAR / CHARACTER veri tipleri parse edilip EGL char tipine dönüştürülmektedir.
+
+### P04-B — INIT / INITIAL Parse Desteği
+
+PL/I INIT / INITIAL bilgisi Syntax Tree üzerinde korunmaktadır.
+
+### P04-C — Basic Structure Declaration Desteği
+
+PL/I structure declaration ifadeleri EGL record olarak modellenmektedir.
+
+### P04-D — PL/I Structure Array / Dimension Desteği
+
+PL/I structure adı üzerinde bulunan dimension bilgisi parse edilmektedir.
+
+### P04-E — PL/I Structure Member Array / Field Dimension Desteği
+
+PL/I structure member üzerinde bulunan dimension bilgisi parse edilmektedir.
+
+### P04-F — PL/I Nested Structure Desteği
+
+PL/I structure içinde veri tipi olmayan group member alanları nested structure olarak parse edilmektedir.
+
+### P04-G — PL/I VARCHAR Desteği
+
+PL/I `VARCHAR(n)` veri tipi EGL tarafında `char(n)` olarak üretilmektedir.
+
+### P04-H — PL/I Numeric Type Foundation
+
+PL/I decimal ve binary numeric type mapping stratejisi aşamalı ve semantic korumalı olarak geliştirilmektedir.
+
+Desteklenen decimal örnekleri:
+
+    DCL COUNT FIXED DECIMAL(15);
+    DCL COUNT FIXED DECIMAL(15,0);
+    DCL AMOUNT FIXED DEC(17,2);
+    DCL AMOUNT DEC FIXED(17,2);
+    DCL AMOUNT DECIMAL FIXED(17,2);
+
+Beklenen EGL:
+
+    Count decimal(15);
+    Count decimal(15,0);
+    Amount decimal(17,2);
+
+Desteklenen binary örnekleri:
+
+    DCL COUNT FIXED BIN(15);
+    DCL COUNT BIN FIXED(31);
+
+Beklenen EGL:
+
+    Count smallint;
+    Count int;
 
 ## Aktif Alt Hedef
 
-- Structure member array / field dimension desteği
+- PIC / PICTURE desteği
 
 ## Sıradaki Alt Hedefler
 
-- Nested structure desteği
-- VARCHAR desteği
-- FIXED BINARY desteği
 - BIT desteği
+- sqlRecord mapping desteği
+- INIT değerlerinin EGL default value olarak üretilmesi
+- DIM / DIMENSION syntax desteği
 
 ## Başarı Kriteri
 
-Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini uçtan uca desteklemesi.
+Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini ve declaration yapılarını uçtan uca desteklemesi.
 
 ## Sonraki Faz
 

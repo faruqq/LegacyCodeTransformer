@@ -97,8 +97,8 @@ namespace LegacyCodeTransformer.Egl.Generation
         /// Örnek EGL:
         ///
         /// record ParameList type basicRecord
-        ///     10 Param char(8);
-        ///     10 Param2 char(1);
+        ///         10 Param char(8);
+        ///         10 Param2 char(1);
         /// end
         ///
         /// Nerede kullanılır?
@@ -108,84 +108,26 @@ namespace LegacyCodeTransformer.Egl.Generation
         ///
         /// Gelecekte ne işe yarayacak?
         /// ----------------------
-        /// Record description metadata, field metadata ve annotation üretimi
-        /// geldiğinde bu method genişletilecektir.
+        /// Record description metadata, field metadata, nested structure ve
+        /// annotation üretimi geldiğinde bu method genişletilecektir.
         /// </summary>
         private static string GenerateRecordDeclaration(
-    EglRecordDeclaration declaration)
+            EglRecordDeclaration declaration)
         {
             var builder = new StringBuilder();
 
             builder.AppendLine(
                 $"record {declaration.Name} type {declaration.RecordType}");
 
-            var indentationByLevel = CreateIndentationByLevel(declaration.Fields);
-
             foreach (var field in declaration.Fields)
             {
                 builder.AppendLine(
-                    GenerateRecordFieldDeclaration(field, indentationByLevel));
+                    GenerateRecordFieldDeclaration(field));
             }
 
             builder.AppendLine("end");
 
             return builder.ToString();
-        }
-
-        /// <summary>
-        /// EGL record field level değerlerinden indentation depth haritası üretir.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// EGL record field'larının başındaki 5, 10, 15 gibi değerler hiyerarşik
-        /// level bilgisidir.
-        /// Bu değerler genelde artan sırayla parent-child ilişkisini gösterir.
-        ///
-        /// Ancak indentation hesabını doğrudan level / 5 gibi matematiksel bir
-        /// formüle bağlamak doğru değildir.
-        /// Çünkü legacy kaynaklarda farklı level değerleri kullanılabilir.
-        ///
-        /// Örneğin:
-        ///
-        /// 5 A
-        ///     10 B
-        ///         15 C
-        ///
-        /// veya:
-        ///
-        /// 3 A
-        ///     7 B
-        ///         11 C
-        ///
-        /// iki durumda da üç seviye vardır.
-        ///
-        /// Bu method record içindeki farklı level değerlerini küçükten büyüğe sıralar
-        /// ve her level için bir indentation depth üretir.
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - EglCodeGenerator record field üretiminde
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// Nested structure, multi-level record ve farklı kurum level standartları
-        /// desteklendiğinde generator'ın sabit level varsayımına bağlı kalmamasını sağlar.
-        /// </summary>
-        private static IReadOnlyDictionary<int, int> CreateIndentationByLevel(
-            IReadOnlyList<EglRecordFieldDeclaration> fields)
-        {
-            return fields
-                .Select(x => x.Level)
-                .Distinct()
-                .OrderBy(x => x)
-                .Select((level, index) => new
-                {
-                    Level = level,
-                    Depth = index + 1
-                })
-                .ToDictionary(
-                    x => x.Level,
-                    x => x.Depth);
         }
 
         private static string GenerateRecordFieldDeclaration(EglRecordFieldDeclaration field)
@@ -248,41 +190,48 @@ namespace LegacyCodeTransformer.Egl.Generation
         /// Code generator aşamasında bu modellerin gerçek EGL kaynak koduna
         /// dönüştürülmesi gerekir.
         ///
-        /// Örnek modeller:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Data type modellerini kurum EGL output standardına uygun string
+        /// karşılıklarına dönüştürür.
         ///
-        /// EglDecimalType
-        /// - Precision: 8
-        /// - Scale: 0
-        ///
-        /// Üretilen EGL:
-        /// decimal(8,0)
-        ///
-        /// EglCharacterType
-        /// - Length: 8
-        ///
-        /// Üretilen EGL:
-        /// char(8)
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - EglDecimalType(15, null) => decimal(15)
+        /// - EglDecimalType(15, 0) => decimal(15,0)
+        /// - EglCharacterType(8) => char(8)
+        /// - EglSmallIntType => smallint
+        /// - EglIntType => int
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - EGL variable declaration üretiminde
+        /// - EGL record field üretiminde
         /// - Application pipeline sonucunda hedef kaynak kod oluşturulurken
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Record field üretimi, array tipleri, nullable/default value gibi
-        /// EGL söz dizimleri desteklendiğinde data type üretimi merkezi olarak
-        /// buradan yönetilecektir.
+        /// num, PIC ve farklı numeric output türleri eklendiğinde data type üretimi
+        /// merkezi olarak buradan yönetilecektir.
         /// </summary>
         private static string GenerateDataType(EglDataType dataType)
         {
             return dataType switch
             {
+                EglDecimalType decimalType when decimalType.Scale.HasValue =>
+                    $"decimal({decimalType.Precision},{decimalType.Scale.Value})",
+
                 EglDecimalType decimalType =>
-                    $"decimal({decimalType.Precision},{decimalType.Scale})",
+                    $"decimal({decimalType.Precision})",
 
                 EglCharacterType characterType =>
                     $"char({characterType.Length})",
+
+                EglSmallIntType =>
+                    "smallint",
+
+                EglIntType =>
+                    "int",
 
                 _ => "unknown"
             };

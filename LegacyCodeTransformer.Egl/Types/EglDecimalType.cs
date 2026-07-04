@@ -1,5 +1,4 @@
-﻿
-using LegacyCodeTransformer.Core.Syntax;
+﻿using LegacyCodeTransformer.Core.Syntax;
 
 namespace LegacyCodeTransformer.Egl.Types
 {
@@ -8,45 +7,57 @@ namespace LegacyCodeTransformer.Egl.Types
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I FIXED DECIMAL tipi, ilk dönüşüm hedefimizde EGL decimal tipine
-    /// karşılık gelecektir.
+    /// PL/I decimal numeric alanlar EGL tarafında decimal type olarak
+    /// üretilecektir.
     ///
     /// Örnek EGL:
     ///
-    /// decimal(8,0)
+    /// decimal(15)
+    /// decimal(15,0)
+    /// decimal(17,2)
     ///
-    /// Bu modelde:
-    /// - Precision: 8
-    /// - Scale: 0
+    /// Ne çözüyor?
+    /// ----------------------
+    /// EGL decimal type için precision ve optional scale bilgisini taşır.
     ///
-    /// olarak temsil edilir.
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - decimal(15)
+    /// - decimal(15,0)
+    /// - decimal(17,2)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - PL/I → EGL Transpiler içerisinde
-    /// - EGL VariableDeclaration üzerinde
-    /// - EGL Code Generator içerisinde
+    /// - Transpiler PL/I decimal type mapping işleminde
+    /// - EGL Code Generator data type üretiminde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// FIXED DECIMAL(8,2) gibi PL/I tipleri desteklendiğinde,
-    /// precision ve scale bilgisi doğrudan EGL decimal üretiminde kullanılacaktır.
+    /// NUM, PIC ve farklı decimal formatting kararları geldiğinde decimal
+    /// output davranışının merkezi modelidir.
     /// </summary>
     public sealed class EglDecimalType : EglDataType
     {
         /// <summary>
-        /// Decimal alanın toplam basamak sayısıdır.
+        /// Decimal alanın toplam digit sayısıdır.
         /// </summary>
         public int Precision { get; }
 
         /// <summary>
-        /// Decimal alanın virgülden sonraki basamak sayısıdır.
+        /// Decimal alanın optional scale bilgisidir.
+        ///
+        /// Scale null ise generator decimal(p) üretir.
+        ///
+        /// Scale null değilse generator decimal(p,s) üretir.
         /// </summary>
-        public int Scale { get; }
+        public int? Scale { get; }
 
+        /// <summary>
+        /// EGL decimal veri tipi modelini oluşturur.
+        /// </summary>
         public EglDecimalType(
             int precision,
-            int scale,
+            int? scale,
             SourceLocation location)
             : base(location)
         {

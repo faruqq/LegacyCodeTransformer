@@ -1,59 +1,79 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LegacyCodeTransformer.Pl1.Types
 {
     /// <summary>
-    /// PL/I FIXED DECIMAL veri tipini temsil eder.
+    /// PL/I FIXED DECIMAL / FIXED DEC veri tipini temsil eder.
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kodunda numerik alanlar sıklıkla FIXED DECIMAL ile tanımlanır.
-    /// İlk parser hedefimiz olan DCL MUST_NO FIXED DECIMAL(8); ifadesini
-    /// modelleyebilmek için bu sınıf gereklidir.
+    /// PL/I tarafında decimal sayısal alanlar FIXED DECIMAL veya FIXED DEC
+    /// söz dizimiyle tanımlanabilir.
     ///
     /// Örnek PL/I:
     ///
-    /// DCL MUST_NO FIXED DECIMAL(8);
+    /// DCL AMOUNT FIXED DECIMAL(17,2);
+    /// DCL COUNT FIXED DECIMAL(15);
+    /// DCL RATE FIXED DEC(9,4);
     ///
-    /// Bu modelde:
-    /// - Precision: 8
-    /// - Scale: 0
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Decimal alanın precision ve varsa scale bilgisini syntax tree üzerinde
+    /// kaybetmeden taşır.
     ///
-    /// olarak temsil edilir.
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - FIXED DECIMAL(15)
+    /// - FIXED DECIMAL(15,0)
+    /// - FIXED DECIMAL(17,2)
+    /// - FIXED DEC(9,4)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - PL/I Parser çıktısında
-    /// - PL/I Normalizer içerisinde varsayılan scale belirlemede
-    /// - PL/I → EGL Transpiler içerisinde decimal tip dönüşümünde
+    /// - PL/I Parser veri tipi parse işleminde
+    /// - PL/I → EGL Transpiler decimal type mapping işleminde
+    /// - Structure length hesabında
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// FIXED DECIMAL(8,2) gibi scale içeren tanımlar desteklendiğinde
-    /// Scale property’si doğrudan kullanılacaktır.
+    /// DEC FIXED / DECIMAL FIXED synonym desteği ve numeric type mapping
+    /// stratejisinin genişletilmesi için temel modeldir.
     /// </summary>
     public sealed class Pl1FixedDecimalType : Pl1DataType
     {
         /// <summary>
-        /// Decimal alanın toplam basamak sayısıdır.
-        /// Örneğin FIXED DECIMAL(8) için 8.
+        /// Decimal alanın toplam digit sayısıdır.
+        ///
+        /// Örnek:
+        ///
+        /// FIXED DECIMAL(17,2)
+        ///
+        /// için Precision değeri 17 olur.
         /// </summary>
         public int Precision { get; }
 
         /// <summary>
-        /// Decimal alanın virgülden sonraki basamak sayısıdır.
-        /// FIXED DECIMAL(8) için varsayılan değer 0 kabul edilir.
+        /// Decimal alanın küsürat digit sayısıdır.
+        ///
+        /// Neden nullable?
+        /// ----------------------
+        /// PL/I tarafında FIXED DECIMAL(15) ile FIXED DECIMAL(15,0)
+        /// aynı şey değildir. İlkinde scale hiç verilmemiştir, ikincisinde
+        /// scale açıkça 0 verilmiştir.
+        ///
+        /// Bu ayrımı korumak için:
+        /// - Scale null ise kaynakta scale yoktur.
+        /// - Scale 0 ise kaynakta açıkça ,0 vardır.
+        /// - Scale 2 ise kaynakta açıkça ,2 vardır.
         /// </summary>
-        public int Scale { get; }
+        public int? Scale { get; }
 
+        /// <summary>
+        /// PL/I FIXED DECIMAL veri tipi modelini oluşturur.
+        /// </summary>
         public Pl1FixedDecimalType(
             int precision,
-            int scale,
+            int? scale,
             SourceLocation location)
             : base(location)
         {

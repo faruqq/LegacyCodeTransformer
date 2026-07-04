@@ -13,7 +13,7 @@ namespace LegacyCodeTransformer.Egl.Declarations
     ///
     /// Örnek EGL kodu:
     ///
-    /// mustNo decimal(8,0);
+    /// mustNo decimal(8);
     ///
     /// Bu modelde:
     /// - Name: mustNo

@@ -1,4 +1,6 @@
-﻿using LegacyCodeTransformer.Core.Syntax;
+﻿using System;
+using System.Collections.Generic;
+using LegacyCodeTransformer.Core.Syntax;
 
 namespace LegacyCodeTransformer.Pl1.Lexing
 {
@@ -7,92 +9,195 @@ namespace LegacyCodeTransformer.Pl1.Lexing
     ///
     /// Neden var?
     /// ----------------------
-    /// Parser'ın ham kaynak metin üzerinde karakter karakter çalışmasını
-    /// engellemek için oluşturulmuştur.
+    /// Parser doğrudan raw string üzerinden çalışmamalıdır.
+    /// Önce kaynak metnin keyword, identifier, number, string literal ve
+    /// punctuation gibi anlamlı parçalara ayrılması gerekir.
     ///
-    /// Lexer, kaynak kodu küçük ve anlamlı parçalara ayırır.
-    /// Parser bu parçaları kullanarak SyntaxTree oluşturur.
+    /// Ne çözüyor?
+    /// ----------------------
+    /// PL/I kaynak kodunu parser'ın okuyabileceği Pl1Token listesine çevirir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL MUST_NO FIXED DECIMAL(8);
+    /// - DCL PARAM CHAR(08) INIT(' ');
+    /// - DCL CUSTOMER_NAME VARCHAR(50);
+    /// - DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - PL/I Parser öncesinde
-    /// - Application pipeline içerisinde
+    /// - Application conversion pipeline içinde
+    /// - Parser testlerinde
+    /// - Lexer testlerinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// PL/I desteği büyüdükçe yeni keyword, operator ve sembollerin tamamı
-    /// bu sınıf üzerinden token'lara dönüştürülecektir.
-    ///
-    /// İlk sürümde yalnızca DCL MUST_NO FIXED DECIMAL(8); hedefini
-    /// destekleyecek kadar token üretir.
+    /// Yeni PL/I keyword, operator, comment, compiler directive ve statement
+    /// destekleri eklendikçe ilk genişletilecek katmandır.
     /// </summary>
     public sealed class Pl1Lexer
     {
         private readonly string _source;
+        private readonly List<Pl1Token> _tokens = new();
 
         private int _position;
-        private int _line = 1;
-        private int _column = 1;
 
+        /// <summary>
+        /// PL/I lexer instance'ını oluşturur.
+        /// </summary>
         public Pl1Lexer(string source)
         {
             _source = source ?? string.Empty;
         }
 
+        /// <summary>
+        /// Kaynak PL/I metnini token listesine dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parser'ın tüketebileceği sıralı token akışını üretir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Whitespace karakterlerini atlar, keyword / identifier ayrımını yapar
+        /// ve statement punctuation karakterlerini ayrı token olarak üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// DCL CUSTOMER_NAME VARCHAR(50);
+        ///
+        /// Bu input için sırasıyla:
+        /// - DclKeyword
+        /// - Identifier
+        /// - VarcharKeyword
+        /// - OpenParenthesis
+        /// - Number
+        /// - CloseParenthesis
+        /// - Semicolon
+        ///
+        /// tokenları üretilir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ConversionService içinde parser öncesinde
+        /// - Lexer ve parser unit testlerinde
+        /// </summary>
         public IReadOnlyList<Pl1Token> Tokenize()
         {
-            var tokens = new List<Pl1Token>();
-
             while (!IsAtEnd())
             {
                 var current = Current;
 
                 if (char.IsWhiteSpace(current))
                 {
-                    ReadWhiteSpace();
+                    Advance();
                     continue;
                 }
 
                 if (char.IsLetter(current) || current == '_')
                 {
-                    tokens.Add(ReadIdentifierOrKeyword());
+                    TokenizeIdentifierOrKeyword();
                     continue;
                 }
 
                 if (char.IsDigit(current))
                 {
-                    tokens.Add(ReadNumber());
+                    TokenizeNumber();
                     continue;
                 }
 
-                tokens.Add(current switch
+                if (current == '\'')
                 {
-                    '(' => CreateSingleCharacterToken(Pl1TokenKind.OpenParenthesis),
-                    ')' => CreateSingleCharacterToken(Pl1TokenKind.CloseParenthesis),
-                    ';' => CreateSingleCharacterToken(Pl1TokenKind.Semicolon),
-                    ',' => CreateSingleCharacterToken(Pl1TokenKind.Comma),
-                    '*' => CreateSingleCharacterToken(Pl1TokenKind.Asterisk),
-                    '\'' => ReadStringLiteral(),
-                    _ => CreateSingleCharacterToken(Pl1TokenKind.Unknown)
-                });
+                    TokenizeStringLiteral();
+                    continue;
+                }
+
+                switch (current)
+                {
+                    case '(':
+                        AddToken(Pl1TokenKind.OpenParenthesis, current.ToString());
+                        Advance();
+                        break;
+
+                    case ')':
+                        AddToken(Pl1TokenKind.CloseParenthesis, current.ToString());
+                        Advance();
+                        break;
+
+                    case ',':
+                        AddToken(Pl1TokenKind.Comma, current.ToString());
+                        Advance();
+                        break;
+
+                    case ';':
+                        AddToken(Pl1TokenKind.Semicolon, current.ToString());
+                        Advance();
+                        break;
+
+                    case '*':
+                        AddToken(Pl1TokenKind.Asterisk, current.ToString());
+                        Advance();
+                        break;
+
+                    default:
+                        AddToken(Pl1TokenKind.BadToken, current.ToString());
+                        Advance();
+                        break;
+                }
             }
 
-            tokens.Add(new Pl1Token(
+            _tokens.Add(new Pl1Token(
                 Pl1TokenKind.EndOfFile,
                 string.Empty,
-                GetCurrentLocation()));
+                new SourceLocation(_position, 0, 0)));
 
-            return tokens;
+            return _tokens;
+        }
+
+        private void TokenizeIdentifierOrKeyword()
+        {
+            var start = _position;
+
+            while (!IsAtEnd() &&
+                   (char.IsLetterOrDigit(Current) || Current == '_'))
+            {
+                Advance();
+            }
+
+            var text = _source.Substring(start, _position - start);
+            var kind = GetKeywordKind(text);
+
+            _tokens.Add(new Pl1Token(
+                kind,
+                text,
+                new SourceLocation(start, 0, 0)));
+        }
+
+        private void TokenizeNumber()
+        {
+            var start = _position;
+
+            while (!IsAtEnd() &&
+                   char.IsDigit(Current))
+            {
+                Advance();
+            }
+
+            var text = _source.Substring(start, _position - start);
+
+            _tokens.Add(new Pl1Token(
+                Pl1TokenKind.Number,
+                text,
+                new SourceLocation(start, 0, 0)));
         }
 
         /// <summary>
-        /// PL/I karakter sabitini okur.
+        /// PL/I karakter sabitini string literal token olarak üretir.
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I kaynak kodunda karakter sabitleri tek tırnak içerisinde yazılır.
-        /// INIT / INITIAL söz diziminde başlangıç değerleri çoğunlukla bu formatta
-        /// gelir.
+        /// PL/I INIT / INITIAL ifadelerinde karakter sabitleri tek tırnak içinde
+        /// yazılır.
         ///
         /// Örnek PL/I:
         ///
@@ -100,174 +205,133 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// INIT(';')
         /// INITIAL('ABCD')
         ///
-        /// Lexer bu ifadelerdeki tırnak içi değeri StringLiteral token'ı olarak
-        /// parser'a taşımalıdır.
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Kaynak metindeki tek tırnakları syntax işareti olarak kabul eder ve
+        /// token text değerine yalnızca tırnak içindeki gerçek karakter değerini
+        /// taşır.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - ' '   => " "
+        /// - ';'   => ";"
+        /// - 'ABCD' => "ABCD"
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - INIT / INITIAL başlangıç değeri parse edilirken
-        /// - Gelecekte assignment ve string expression parse edilirken
+        /// - ParseOptionalInitialValue içerisinde
+        /// - INIT / INITIAL başlangıç değeri modellemesinde
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// PL/I string operasyonları, assignment ifadeleri, karşılaştırmalar ve
-        /// concat işlemleri desteklendiğinde string literal okuma merkezi olarak
-        /// bu method üzerinden yapılacaktır.
+        /// Escape edilmiş karakter sabitleri veya daha gelişmiş string literal
+        /// parse kuralları gerektiğinde bu method genişletilecektir.
         /// </summary>
-        private Pl1Token ReadStringLiteral()
+        private void TokenizeStringLiteral()
         {
-            var location = GetCurrentLocation();
+            var tokenStart = _position;
 
             Advance();
 
-            var startPosition = _position;
+            var valueStart = _position;
 
-            while (!IsAtEnd() && Current != '\'')
+            while (!IsAtEnd() &&
+                   Current != '\'')
             {
                 Advance();
             }
 
-            var text = _source[startPosition.._position];
+            var value = _source.Substring(
+                valueStart,
+                _position - valueStart);
 
             if (!IsAtEnd())
             {
                 Advance();
             }
 
-            return new Pl1Token(
+            _tokens.Add(new Pl1Token(
                 Pl1TokenKind.StringLiteral,
-                text,
-                location);
+                value,
+                new SourceLocation(tokenStart, 0, 0)));
         }
 
-        private char Current => IsAtEnd() ? '\0' : _source[_position];
+        /// <summary>
+        /// Identifier olarak okunan metnin PL/I keyword olup olmadığını belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodunda keyword ve identifier söz dizimsel olarak benzer
+        /// karakterlerden oluşur.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Lexer'ın identifier metnini parser'ın anlayacağı doğru token türüne
+        /// dönüştürmesini sağlar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED DECIMAL
+        /// - FIXED DEC
+        /// - DECIMAL FIXED
+        /// - DEC FIXED
+        /// - FIXED BINARY
+        /// - FIXED BIN
+        /// - BINARY FIXED
+        /// - BIN FIXED
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TokenizeIdentifierOrKeyword içerisinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// PIC / PICTURE, DIM / DIMENSION gibi keyword synonym destekleri
+        /// eklendikçe bu mapping genişletilecektir.
+        /// </summary>
+        private static Pl1TokenKind GetKeywordKind(string text)
+        {
+            return text.ToUpperInvariant() switch
+            {
+                "DCL" => Pl1TokenKind.DclKeyword,
+                "DECLARE" => Pl1TokenKind.DclKeyword,
+                "FIXED" => Pl1TokenKind.FixedKeyword,
+                "DECIMAL" => Pl1TokenKind.DecimalKeyword,
+                "DEC" => Pl1TokenKind.DecKeyword,
+                "BINARY" => Pl1TokenKind.BinaryKeyword,
+                "BIN" => Pl1TokenKind.BinKeyword,
+                "CHAR" => Pl1TokenKind.CharKeyword,
+                "CHARACTER" => Pl1TokenKind.CharacterKeyword,
+                "VARCHAR" => Pl1TokenKind.VarcharKeyword,
+                "INIT" => Pl1TokenKind.InitKeyword,
+                "INITIAL" => Pl1TokenKind.InitialKeyword,
+                _ => Pl1TokenKind.Identifier
+            };
+        }
+
+        private void AddToken(
+            Pl1TokenKind kind,
+            string text)
+        {
+            _tokens.Add(new Pl1Token(
+                kind,
+                text,
+                new SourceLocation(_position, 0, 0)));
+        }
+
+        private char Current =>
+            IsAtEnd()
+                ? '\0'
+                : _source[_position];
 
         private bool IsAtEnd()
         {
             return _position >= _source.Length;
         }
 
-        private void ReadWhiteSpace()
-        {
-            while (!IsAtEnd() && char.IsWhiteSpace(Current))
-            {
-                Advance();
-            }
-        }
-
-        /// <summary>
-        /// Identifier veya PL/I keyword okur.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I kaynak kodunda keyword ve identifier yapıları aynı karakter
-        /// kurallarıyla başlar.
-        /// Bu nedenle lexer önce metni okur, sonra bu metnin özel bir PL/I
-        /// keyword'ü olup olmadığını belirler.
-        ///
-        /// Örnek PL/I:
-        ///
-        /// DCL PARAM CHAR(08);
-        /// DECLARE CUSTOMER_NAME CHARACTER(25);
-        ///
-        /// Bu örneklerde:
-        /// - DCL / DECLARE declaration başlangıcıdır.
-        /// - CHAR / CHARACTER karakter veri tipidir.
-        /// - PARAM / CUSTOMER_NAME identifier'dır.
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - Tokenize akışı içerisinde harf veya '_' görüldüğünde
-        /// - Parser'ın DCL ve veri tipi tokenlarını doğru ayırabilmesi için
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// BIT, PIC, PICTURE, BINARY, INIT, INITIAL gibi yeni keyword'ler
-        /// desteklendikçe bu switch genişletilecektir.
-        /// </summary>
-        private Pl1Token ReadIdentifierOrKeyword()
-        {
-            var startPosition = _position;
-            var location = GetCurrentLocation();
-
-            while (!IsAtEnd() && (char.IsLetterOrDigit(Current) || Current == '_'))
-            {
-                Advance();
-            }
-
-            var text = _source[startPosition.._position];
-            var upperText = text.ToUpperInvariant();
-
-            var kind = upperText switch
-            {
-                "DCL" => Pl1TokenKind.DclKeyword,
-                "DECLARE" => Pl1TokenKind.DclKeyword,
-
-                "FIXED" => Pl1TokenKind.FixedKeyword,
-
-                "DECIMAL" => Pl1TokenKind.DecimalKeyword,
-                "DEC" => Pl1TokenKind.DecimalKeyword,
-
-                "CHAR" => Pl1TokenKind.CharKeyword,
-                "CHARACTER" => Pl1TokenKind.CharacterKeyword,
-
-                "INIT" => Pl1TokenKind.InitKeyword,
-                "INITIAL" => Pl1TokenKind.InitialKeyword,
-
-                _ => Pl1TokenKind.Identifier
-            };
-
-            return new Pl1Token(kind, text, location);
-        }
-
-        private Pl1Token ReadNumber()
-        {
-            var startPosition = _position;
-            var location = GetCurrentLocation();
-
-            while (!IsAtEnd() && char.IsDigit(Current))
-            {
-                Advance();
-            }
-
-            var text = _source[startPosition.._position];
-
-            return new Pl1Token(Pl1TokenKind.Number, text, location);
-        }
-
-        private Pl1Token CreateSingleCharacterToken(Pl1TokenKind kind)
-        {
-            var location = GetCurrentLocation();
-            var text = Current.ToString();
-
-            Advance();
-
-            return new Pl1Token(kind, text, location);
-        }
-
         private void Advance()
         {
-            if (IsAtEnd())
-            {
-                return;
-            }
-
-            if (Current == '\n')
-            {
-                _line++;
-                _column = 1;
-            }
-            else
-            {
-                _column++;
-            }
-
             _position++;
-        }
-
-        private SourceLocation GetCurrentLocation()
-        {
-            return new SourceLocation(_line, _column, _position);
         }
     }
 }

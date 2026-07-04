@@ -244,22 +244,36 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         ///     5 PARAM CHAR(08) INIT(' '),
         ///     5 PARAM2 CHAR(01) INIT(';');
         ///
-        /// Bu method:
-        /// - DCL keyword'ünü okur
-        /// - ana structure level değerini okur
-        /// - ana structure adını okur
-        /// - member alanları parse eder
-        /// - son semicolon karakterini doğrular
+        /// P04-F kapsamında nested group field yapıları da desteklenir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL 1 PARAME_LIST,
+        ///     5 ADRES_BILGI,
+        ///         10 IL_KOD CHAR(02),
+        ///         10 ILCE_KOD CHAR(03);
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Ana structure bilgisini okur, varsa structure array dimension bilgisini
+        /// parse eder ve alt member hiyerarşisini ParseStructureMembers helper'ı ile
+        /// oluşturur.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DCL 1 PARAME_LIST, 5 PARAM CHAR(08);
+        /// - DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);
+        /// - DCL 1 PARAME_LIST, 5 ADRES_BILGI, 10 IL_KOD CHAR(02);
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - ParseDeclaration methodu DCL sonrasında Number gördüğünde
         /// - PL/I SyntaxTree içerisinde Pl1StructureDeclaration üretmek için
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Structure array, nested structure ve multi-level hierarchy desteği
-        /// geldiğinde bu methodun kapsamı kontrollü şekilde genişletilecektir.
+        /// Çok seviyeli nested structure, group array ve layout length hesabı
+        /// davranışlarına temel olur.
         /// </summary>
         private Pl1StructureDeclaration? ParseStructureDeclaration()
         {
@@ -281,40 +295,6 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 Pl1TokenKind.Comma,
                 "',' bekleniyordu.");
 
-            var members = new List<Pl1StructureMember>();
-
-            while (!IsAtEnd() &&
-                   Current.Kind != Pl1TokenKind.Semicolon)
-            {
-                var member = ParseStructureMember();
-
-                if (member is not null)
-                {
-                    members.Add(member);
-                }
-
-                if (Current.Kind == Pl1TokenKind.Comma)
-                {
-                    Advance();
-                    continue;
-                }
-
-                if (Current.Kind == Pl1TokenKind.Semicolon)
-                {
-                    break;
-                }
-
-                AddUnexpectedTokenDiagnostic(
-                    Current,
-                    "',' veya ';'");
-
-                Advance();
-            }
-
-            Consume(
-                Pl1TokenKind.Semicolon,
-                "';' bekleniyordu.");
-
             if (dclToken is null ||
                 levelToken is null ||
                 nameToken is null)
@@ -332,12 +312,110 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 return null;
             }
 
+            var members = ParseStructureMembers(level);
+
+            Consume(
+                Pl1TokenKind.Semicolon,
+                "';' bekleniyordu.");
+
             return new Pl1StructureDeclaration(
                 level,
                 nameToken.Text,
                 members,
                 dclToken.Location,
                 arraySize);
+        }
+
+        /// <summary>
+        /// Verilen parent level altında bulunan structure member listesini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I structure içinde member alanları düz bir liste gibi görünse de level
+        /// değerleri aslında hiyerarşiyi belirler.
+        ///
+        /// Örnek:
+        ///
+        /// 5 ADRES_BILGI,
+        ///     10 IL_KOD CHAR(02),
+        ///     10 ILCE_KOD CHAR(03)
+        ///
+        /// Burada IL_KOD ve ILCE_KOD, ADRES_BILGI altında child member olarak
+        /// modellenmelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Current token seviyesini parentLevel ile karşılaştırarak hangi member'ın
+        /// mevcut parent altında kalacağını belirler.
+        ///
+        /// Current level parentLevel değerinden küçük veya eşitse mevcut nested
+        /// scope tamamlanmış kabul edilir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 5 PARAM CHAR(08)
+        /// - 5 ADRES_BILGI, 10 IL_KOD CHAR(02)
+        /// - 5 GROUP1, 10 GROUP2, 15 FIELD1 CHAR(01)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseStructureDeclaration içinde root member listesini parse ederken
+        /// - ParseStructureMember içinde nested group child member listesini parse ederken
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Çok seviyeli nested structure ve group field desteğinin parser tarafındaki
+        /// merkezi hiyerarşi kurucusudur.
+        /// </summary>
+        private IReadOnlyList<Pl1StructureMember> ParseStructureMembers(int parentLevel)
+        {
+            var members = new List<Pl1StructureMember>();
+
+            while (!IsAtEnd() &&
+                   Current.Kind != Pl1TokenKind.Semicolon)
+            {
+                if (Current.Kind != Pl1TokenKind.Number)
+                {
+                    AddUnexpectedTokenDiagnostic(
+                        Current,
+                        "Structure member seviye numarası");
+
+                    Advance();
+
+                    continue;
+                }
+
+                if (!int.TryParse(Current.Text, out var currentLevel))
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Structure member seviye numarası sayısal olmalıdır: {Current.Text}",
+                        Current.Location));
+
+                    Advance();
+
+                    continue;
+                }
+
+                if (currentLevel <= parentLevel)
+                {
+                    break;
+                }
+
+                var member = ParseStructureMember();
+
+                if (member is not null)
+                {
+                    members.Add(member);
+                }
+
+                if (Current.Kind == Pl1TokenKind.Comma)
+                {
+                    Advance();
+                }
+            }
+
+            return members;
         }
 
         /// <summary>
@@ -385,33 +463,51 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         }
 
         /// <summary>
-        /// PL/I structure içerisindeki member declaration satırını parse eder.
+        /// PL/I structure içerisindeki tek bir member declaration satırını parse eder.
         ///
         /// Neden var?
         /// ----------------------
         /// Structure declaration içindeki her field ayrı bir member olarak
         /// modellenmelidir.
         ///
-        /// Örnek PL/I:
+        /// P04-F öncesinde member alanlarının veri tipi taşıdığı varsayılıyordu.
+        /// P04-F ile birlikte veri tipi taşımayan nested group field yapıları da
+        /// desteklenir.
+        ///
+        /// Normal field örneği:
         ///
         /// 5 PARAM CHAR(08) INIT(' ')
-        /// 5 PARAM2 CHAR(01) INIT(';')
         ///
-        /// Bu method:
-        /// - member level değerini okur
-        /// - member adını okur
-        /// - member veri tipini ParseDataType ile okur
-        /// - varsa INIT / INITIAL bilgisini parse eder
+        /// Field array örneği:
+        ///
+        /// 5 PARAM_LIST(2) CHAR(10)
+        ///
+        /// Nested group örneği:
+        ///
+        /// 5 ADRES_BILGI,
+        ///     10 IL_KOD CHAR(02),
+        ///     10 ILCE_KOD CHAR(03)
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Member level, name, optional array dimension, optional data type,
+        /// optional initial value ve varsa child member listesini tek modelde toplar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 5 PARAM CHAR(08)
+        /// - 5 PARAM_LIST(2) CHAR(10)
+        /// - 5 ADRES_BILGI, 10 IL_KOD CHAR(02)
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - ParseStructureDeclaration içerisinde
+        /// - ParseStructureMembers içinde
         /// - Pl1StructureDeclaration.Members listesini oluştururken
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Nested structure, member array ve field-level attribute desteği
-        /// eklendiğinde bu method genişletilecektir.
+        /// Nested structure mapping, group field length hesabı ve çok seviyeli layout
+        /// üretimi için parser tarafındaki temel member parse davranışıdır.
         /// </summary>
         private Pl1StructureMember? ParseStructureMember()
         {
@@ -423,12 +519,10 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 Pl1TokenKind.Identifier,
                 "Structure member adı bekleniyordu.");
 
-            var dataType = ParseDataType();
-            var initialValue = ParseOptionalInitialValue();
+            var arraySize = ParseOptionalArraySize();
 
             if (levelToken is null ||
-                nameToken is null ||
-                dataType is null)
+                nameToken is null)
             {
                 return null;
             }
@@ -443,12 +537,48 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 return null;
             }
 
+            if (Current.Kind == Pl1TokenKind.Comma)
+            {
+                Advance();
+
+                var childMembers = ParseStructureMembers(level);
+
+                return new Pl1StructureMember(
+                    level,
+                    nameToken.Text,
+                    null,
+                    levelToken.Location,
+                    null,
+                    arraySize,
+                    childMembers);
+            }
+
+            if (Current.Kind == Pl1TokenKind.Semicolon)
+            {
+                return new Pl1StructureMember(
+                    level,
+                    nameToken.Text,
+                    null,
+                    levelToken.Location,
+                    null,
+                    arraySize);
+            }
+
+            var dataType = ParseDataType();
+            var initialValue = ParseOptionalInitialValue();
+
+            if (dataType is null)
+            {
+                return null;
+            }
+
             return new Pl1StructureMember(
                 level,
                 nameToken.Text,
                 dataType,
                 levelToken.Location,
-                initialValue);
+                initialValue,
+                arraySize);
         }
 
         /// <summary>
@@ -459,41 +589,63 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         /// DCL ifadesinde değişken adı veya structure member adı okunduktan
         /// sonra gelen bölüm veri tipini temsil eder.
         ///
-        /// Örnek PL/I:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Desteklenen PL/I veri tipi keyword'lerini ilgili güçlü tipli model
+        /// sınıflarına yönlendirir.
         ///
-        /// DCL MUST_NO FIXED DECIMAL(8);
-        /// DCL PARAM CHAR(08);
-        /// DCL CUSTOMER_NAME CHARACTER(25);
-        ///
-        /// Bu method:
-        /// - FIXED DECIMAL için Pl1FixedDecimalType
-        /// - CHAR / CHARACTER için Pl1CharacterType
-        ///
-        /// üretir.
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED DECIMAL(p,s)
+        /// - FIXED DEC(p,s)
+        /// - DECIMAL FIXED(p,s)
+        /// - DEC FIXED(p,s)
+        /// - FIXED BINARY(p)
+        /// - FIXED BIN(p)
+        /// - BINARY FIXED(p)
+        /// - BIN FIXED(p)
+        /// - CHAR(n)
+        /// - CHARACTER(n)
+        /// - VARCHAR(n)
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - Tekil DCL declaration parse edilirken
         /// - Structure member parse edilirken
-        /// - Hatalı veya desteklenmeyen veri tipleri için diagnostic üretiminde
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT, FIXED BINARY, PIC / PICTURE, VARYING gibi yeni veri tipleri
-        /// desteklendikçe bu method ilgili parse methodlarına yönlendirme
-        /// yapacak şekilde genişletilecektir.
+        /// PIC / PICTURE, BIT ve DIMENSION gibi yeni veri tipleri ve attribute'lar
+        /// desteklendikçe bu method genişletilecektir.
         /// </summary>
         private Pl1DataType? ParseDataType()
         {
             if (Current.Kind == Pl1TokenKind.FixedKeyword)
             {
-                return ParseFixedDecimalType();
+                return ParseFixedBasedType();
+            }
+
+            if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
+                Current.Kind == Pl1TokenKind.DecKeyword)
+            {
+                return ParseDecimalBasedType();
+            }
+
+            if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
+                Current.Kind == Pl1TokenKind.BinKeyword)
+            {
+                return ParseBinaryBasedType();
             }
 
             if (Current.Kind == Pl1TokenKind.CharKeyword ||
                 Current.Kind == Pl1TokenKind.CharacterKeyword)
             {
                 return ParseCharacterType();
+            }
+
+            if (Current.Kind == Pl1TokenKind.VarcharKeyword)
+            {
+                return ParseVarcharType();
             }
 
             _diagnostics.Add(new Diagnostic(
@@ -505,45 +657,265 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         }
 
         /// <summary>
-        /// PL/I FIXED DECIMAL veri tipini parse eder.
+        /// FIXED keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I kodunda numerik alanlar sıklıkla FIXED DECIMAL(p) veya
-        /// FIXED DECIMAL(p,s) söz dizimi ile tanımlanır.
+        /// PL/I tarafında numeric tipler farklı keyword sıralamalarıyla
+        /// yazılabilir.
         ///
-        /// Örnek PL/I:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// FIXED ile başlayan numeric type söz dizimini ilgili semantic parser'a
+        /// yönlendirir.
         ///
-        /// DCL MUST_NO FIXED DECIMAL(8);
-        /// DCL AMOUNT FIXED DECIMAL(18,2);
-        ///
-        /// Bu method ilgili veri tipini:
-        /// - Precision
-        /// - Scale
-        ///
-        /// bilgileriyle Pl1FixedDecimalType modeline dönüştürür.
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED DECIMAL(p,s)
+        /// - FIXED DEC(p,s)
+        /// - FIXED BINARY(p)
+        /// - FIXED BIN(p)
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - ParseDataType methodu FixedKeyword gördüğünde
-        /// - Basit DCL declaration parse edilirken
-        /// - Structure member veri tipi parse edilirken
+        /// - ParseDataType içerisinde Current token FixedKeyword olduğunda
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// DECIMAL kısaltması, FIXED DECIMAL scale desteği ve farklı numeric
-        /// varyasyonlar bu method üzerinden genişletilecektir.
+        /// FIXED FLOAT gibi farklı numeric family desteği gerekirse bu method
+        /// genişletilecektir.
         /// </summary>
-        private Pl1FixedDecimalType? ParseFixedDecimalType()
+        private Pl1DataType? ParseFixedBasedType()
         {
             var fixedToken = Consume(
                 Pl1TokenKind.FixedKeyword,
                 "FIXED bekleniyordu.");
 
-            Consume(
-                Pl1TokenKind.DecimalKeyword,
-                "DECIMAL bekleniyordu.");
+            if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
+                Current.Kind == Pl1TokenKind.DecKeyword)
+            {
+                return ParseFixedDecimalTypeAfterPrefix(
+                    fixedToken?.Location ?? SourceLocation.Unknown);
+            }
 
+            if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
+                Current.Kind == Pl1TokenKind.BinKeyword)
+            {
+                return ParseFixedBinaryTypeAfterPrefix(
+                    fixedToken?.Location ?? SourceLocation.Unknown);
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"FIXED sonrasında DECIMAL, DEC, BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
+                Current.Location));
+
+            return null;
+        }
+
+        /// <summary>
+        /// DECIMAL / DEC keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I tarafında decimal fixed tipler ters keyword sırasıyla da
+        /// yazılabilir.
+        ///
+        /// Örnek:
+        ///
+        /// DECIMAL FIXED(17,2)
+        /// DEC FIXED(17,2)
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// DECIMAL veya DEC ile başlayan numeric type söz dizimini aynı
+        /// Pl1FixedDecimalType modeline dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DECIMAL FIXED(p,s)
+        /// - DEC FIXED(p,s)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType içerisinde Current token DecimalKeyword veya DecKeyword olduğunda
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// DECIMAL FLOAT gibi farklı decimal tabanlı tipler desteklenirse bu method
+        /// genişletilecektir.
+        /// </summary>
+        private Pl1DataType? ParseDecimalBasedType()
+        {
+            var decimalToken = Current;
+
+            Advance();
+
+            Consume(
+                Pl1TokenKind.FixedKeyword,
+                "FIXED bekleniyordu.");
+
+            return ParseDecimalPrecisionAndScale(
+                decimalToken.Location);
+        }
+
+        /// <summary>
+        /// BINARY / BIN keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I tarafında binary fixed tipler ters keyword sırasıyla da
+        /// yazılabilir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// BINARY veya BIN ile başlayan numeric type söz dizimini aynı
+        /// Pl1FixedBinaryType modeline dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - BINARY FIXED(p)
+        /// - BIN FIXED(p)
+        /// - BINARY FIXED(p,0)
+        /// - BIN FIXED(p,0)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType içerisinde Current token BinaryKeyword veya BinKeyword olduğunda
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Binary fractional mapping veya farklı binary numeric tipler desteklenirse
+        /// bu method genişletilecektir.
+        /// </summary>
+        private Pl1DataType? ParseBinaryBasedType()
+        {
+            var binaryToken = Current;
+
+            Advance();
+
+            Consume(
+                Pl1TokenKind.FixedKeyword,
+                "FIXED bekleniyordu.");
+
+            return ParseBinaryPrecisionAndScale(
+                binaryToken.Location);
+        }
+
+        /// <summary>
+        /// FIXED prefix'i okunduktan sonra gelen DECIMAL / DEC decimal tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// FIXED DECIMAL ve FIXED DEC aynı semantic decimal tipi ifade eder.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// FIXED sonrasındaki DECIMAL / DEC keyword'ünü tüketir ve ortak
+        /// precision / scale parser'ına yönlendirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED DECIMAL(15)
+        /// - FIXED DEC(15,0)
+        /// - FIXED DEC(17,2)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseFixedBasedType içinde
+        /// </summary>
+        private Pl1FixedDecimalType? ParseFixedDecimalTypeAfterPrefix(
+            SourceLocation location)
+        {
+            if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
+                Current.Kind == Pl1TokenKind.DecKeyword)
+            {
+                Advance();
+
+                return ParseDecimalPrecisionAndScale(location);
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"DECIMAL veya DEC bekleniyordu. Gelen token: {Current.Text}",
+                Current.Location));
+
+            return null;
+        }
+
+        /// <summary>
+        /// FIXED prefix'i okunduktan sonra gelen BINARY / BIN tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// FIXED BINARY ve FIXED BIN aynı semantic binary fixed tipi ifade eder.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// FIXED sonrasındaki BINARY / BIN keyword'ünü tüketir ve ortak precision /
+        /// scale parser'ına yönlendirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - FIXED BINARY(15)
+        /// - FIXED BIN(15)
+        /// - FIXED BIN(31)
+        /// - FIXED BIN(15,0)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseFixedBasedType içinde
+        /// </summary>
+        private Pl1FixedBinaryType? ParseFixedBinaryTypeAfterPrefix(
+            SourceLocation location)
+        {
+            if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
+                Current.Kind == Pl1TokenKind.BinKeyword)
+            {
+                Advance();
+
+                return ParseBinaryPrecisionAndScale(location);
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
+                Current.Location));
+
+            return null;
+        }
+
+        /// <summary>
+        /// Decimal numeric type için precision ve optional scale bilgisini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// FIXED DECIMAL, FIXED DEC, DECIMAL FIXED ve DEC FIXED aynı precision /
+        /// scale söz dizimini kullanır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Ortak `(p)` ve `(p,s)` parse davranışını tek noktada toplar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - (15) => Precision 15, Scale null
+        /// - (15,0) => Precision 15, Scale 0
+        /// - (17,2) => Precision 17, Scale 2
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseFixedDecimalTypeAfterPrefix içinde
+        /// - ParseDecimalBasedType içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Decimal precision/scale validasyonları ve farklı numeric synonym'ler
+        /// eklendiğinde merkezi parse noktasıdır.
+        /// </summary>
+        private Pl1FixedDecimalType? ParseDecimalPrecisionAndScale(
+            SourceLocation location)
+        {
             Consume(
                 Pl1TokenKind.OpenParenthesis,
                 "'(' bekleniyordu.");
@@ -552,7 +924,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 Pl1TokenKind.Number,
                 "Precision değeri bekleniyordu.");
 
-            var scale = 0;
+            int? scale = null;
 
             if (Current.Kind == Pl1TokenKind.Comma)
             {
@@ -573,8 +945,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 Pl1TokenKind.CloseParenthesis,
                 "')' bekleniyordu.");
 
-            if (fixedToken is null ||
-                precisionToken is null)
+            if (precisionToken is null)
             {
                 return null;
             }
@@ -592,7 +963,88 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             return new Pl1FixedDecimalType(
                 precision,
                 scale,
-                fixedToken.Location);
+                location);
+        }
+
+        /// <summary>
+        /// Binary fixed numeric type için precision ve optional scale bilgisini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// FIXED BINARY, FIXED BIN, BINARY FIXED ve BIN FIXED aynı precision /
+        /// scale söz dizimini kullanır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Ortak `(p)` ve `(p,s)` parse davranışını tek noktada toplar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - (15) => Precision 15, Scale null
+        /// - (15,0) => Precision 15, Scale 0
+        /// - (31) => Precision 31, Scale null
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseFixedBinaryTypeAfterPrefix içinde
+        /// - ParseBinaryBasedType içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Binary precision/scale validasyonları ve unsupported diagnostic kuralları
+        /// eklendiğinde merkezi parse noktasıdır.
+        /// </summary>
+        private Pl1FixedBinaryType? ParseBinaryPrecisionAndScale(
+            SourceLocation location)
+        {
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            var precisionToken = Consume(
+                Pl1TokenKind.Number,
+                "Binary precision değeri bekleniyordu.");
+
+            int? scale = null;
+
+            if (Current.Kind == Pl1TokenKind.Comma)
+            {
+                Advance();
+
+                var scaleToken = Consume(
+                    Pl1TokenKind.Number,
+                    "Binary scale değeri bekleniyordu.");
+
+                if (scaleToken is not null &&
+                    int.TryParse(scaleToken.Text, out var parsedScale))
+                {
+                    scale = parsedScale;
+                }
+            }
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (precisionToken is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(precisionToken.Text, out var precision))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Binary precision değeri sayısal olmalıdır: {precisionToken.Text}",
+                    precisionToken.Location));
+
+                return null;
+            }
+
+            return new Pl1FixedBinaryType(
+                precision,
+                scale,
+                location);
         }
 
         /// <summary>
@@ -675,6 +1127,78 @@ namespace LegacyCodeTransformer.Pl1.Parsing
             return new Pl1CharacterType(
                 length,
                 typeToken.Location);
+        }
+
+        /// <summary>
+        /// PL/I VARCHAR(n) veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I kaynak kodunda değişken uzunluklu karakter alanlar VARCHAR keyword'ü
+        /// ile tanımlanabilir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL CUSTOMER_NAME VARCHAR(50);
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// VARCHAR keyword'ü ile parantez içindeki uzunluk bilgisini okuyarak
+        /// Pl1VarcharType modeline dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DCL CUSTOMER_NAME VARCHAR(50);
+        /// - 5 CUSTOMER_NAME VARCHAR(50);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType methodu VarcharKeyword gördüğünde
+        /// - Tekil variable declaration parse edilirken
+        /// - Structure member veri tipi parse edilirken
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// VARCHAR alanların EGL char(n) mapping işlemine, structure length
+        /// hesabına ve ileride sqlRecord metadata üretimine temel olur.
+        /// </summary>
+        private Pl1VarcharType? ParseVarcharType()
+        {
+            var varcharToken = Consume(
+                Pl1TokenKind.VarcharKeyword,
+                "VARCHAR bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.OpenParenthesis,
+                "'(' bekleniyordu.");
+
+            var lengthToken = Consume(
+                Pl1TokenKind.Number,
+                "VARCHAR uzunluk değeri bekleniyordu.");
+
+            Consume(
+                Pl1TokenKind.CloseParenthesis,
+                "')' bekleniyordu.");
+
+            if (varcharToken is null ||
+                lengthToken is null)
+            {
+                return null;
+            }
+
+            if (!int.TryParse(lengthToken.Text, out var length))
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"VARCHAR uzunluk değeri sayısal olmalıdır: {lengthToken.Text}",
+                    lengthToken.Location));
+
+                return null;
+            }
+
+            return new Pl1VarcharType(
+                length,
+                varcharToken.Location);
         }
 
         /// <summary>

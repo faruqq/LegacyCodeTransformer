@@ -1,196 +1,60 @@
 ﻿namespace LegacyCodeTransformer.Pl1.Lexing
 {
     /// <summary>
-    /// PL/I lexer tarafından üretilecek token türlerini temsil eder.
+    /// PL/I lexer tarafından üretilebilecek token türlerini temsil eder.
     ///
     /// Neden var?
     /// ----------------------
-    /// Lexer kaynak kodu okurken her anlamlı parçayı bir token olarak üretir.
-    /// Parser ise bu token türlerine bakarak PL/I yapısını anlamlandırır.
+    /// Lexer kaynak PL/I metnini anlamlı parçalara ayırır.
+    /// Parser ise bu parçaların türüne göre syntax model üretir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Keyword, identifier, sayı, string literal ve punctuation gibi
+    /// PL/I kaynak parçalarını güçlü tipli enum değerleriyle temsil eder.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL PARAM CHAR(08) INIT(' ');
+    /// - DCL AMOUNT FIXED DEC(17,2);
+    /// - DCL COUNT FIXED BIN(15);
+    /// - DCL COUNT BIN FIXED(31);
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - PL/I Lexer içerisinde
-    /// - PL/I Parser içerisinde
-    /// - Parser hata mesajlarında
+    /// - PL/I Lexer token üretiminde
+    /// - PL/I Parser token dispatch işlemlerinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// PL/I desteği genişledikçe yeni token türleri bu enum'a eklenecektir.
-    ///
-    /// Örneğin:
-    /// - IF
-    /// - THEN
-    /// - ELSE
-    /// - DO
-    /// - END
-    /// - CALL
-    /// - PROCEDURE
+    /// Yeni PL/I keyword, operator ve declaration türleri eklendikçe
+    /// lexer/parser sözleşmesinin merkezi enum modeli olarak genişletilir.
     /// </summary>
     public enum Pl1TokenKind
     {
-        /// <summary>
-        /// Tanınamayan karakter veya token.
-        /// </summary>
-        Unknown = 0,
+        BadToken,
+        EndOfFile,
 
-        /// <summary>
-        /// Kaynak kodun sonunu temsil eder.
-        /// </summary>
-        EndOfFile = 1,
+        Identifier,
+        Number,
+        StringLiteral,
 
-        /// <summary>
-        /// PL/I DCL keyword'ü.
-        /// </summary>
-        DclKeyword = 2,
+        DclKeyword,
+        FixedKeyword,
+        DecimalKeyword,
+        DecKeyword,
+        BinaryKeyword,
+        BinKeyword,
+        CharKeyword,
+        CharacterKeyword,
+        VarcharKeyword,
+        InitKeyword,
+        InitialKeyword,
 
-        /// <summary>
-        /// PL/I FIXED keyword'ü.
-        /// </summary>
-        FixedKeyword = 3,
-
-        /// <summary>
-        /// PL/I DECIMAL keyword'ü.
-        /// </summary>
-        DecimalKeyword = 4,
-
-        /// <summary>
-        /// Değişken, procedure veya benzeri isimleri temsil eder.
-        /// Örneğin: MUST_NO
-        /// </summary>
-        Identifier = 5,
-
-        /// <summary>
-        /// Sayısal değerleri temsil eder.
-        /// Örneğin: 8
-        /// </summary>
-        Number = 6,
-
-        /// <summary>
-        /// Sol parantez karakteri.
-        /// </summary>
-        OpenParenthesis = 7,
-
-        /// <summary>
-        /// Sağ parantez karakteri.
-        /// </summary>
-        CloseParenthesis = 8,
-
-        /// <summary>
-        /// Noktalı virgül karakteri.
-        /// </summary>
-        Semicolon = 9,
-
-        /// <summary>
-        /// Virgül karakteri.
-        /// FIXED DECIMAL(8,2) desteği için kullanılacaktır.
-        /// </summary>
-        Comma = 10,
-
-        /// <summary>
-        /// PL/I CHAR kısa veri tipi keyword'ü.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I dilinde CHARACTER veri tipinin kısa kullanımı CHAR olarak geçer.
-        /// Gerçek kaynak kodlarda karakter alanlar çoğunlukla CHAR(n) şeklinde
-        /// tanımlanır.
-        ///
-        /// Örnek:
-        ///
-        /// DCL PARAM CHAR(08);
-        ///
-        /// Parser bu token sayesinde CHAR söz dizimini veri tipi başlangıcı
-        /// olarak algılar.
-        /// </summary>
-        CharKeyword = 11,
-
-        /// <summary>
-        /// PL/I CHARACTER uzun veri tipi keyword'ü.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I dilinde CHAR ve CHARACTER aynı karakter veri tipi ailesini
-        /// temsil eder.
-        ///
-        /// Bazı kaynak kodlarda kısa form CHAR, bazı kaynaklarda uzun form
-        /// CHARACTER kullanılabilir.
-        ///
-        /// Örnek:
-        ///
-        /// DECLARE PARAM CHARACTER(08);
-        ///
-        /// Parser bu token sayesinde CHARACTER söz dizimini CHAR ile aynı
-        /// veri tipi modeline dönüştürür.
-        /// </summary>
-        CharacterKeyword = 12,
-
-        /// <summary>
-        /// PL/I INIT keyword'üdür.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I declaration ifadelerinde değişkene başlangıç değeri vermek için
-        /// INIT keyword'ü kullanılır.
-        ///
-        /// Örnek:
-        ///
-        /// DCL PARAM CHAR(08) INIT(' ');
-        ///
-        /// Parser bu token sayesinde declaration içerisinde başlangıç değeri
-        /// parse adımına geçebilir.
-        /// </summary>
-        InitKeyword = 13,
-
-        /// <summary>
-        /// PL/I INITIAL keyword'üdür.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I dilinde INITIAL, INIT keyword'ünün uzun kullanımıdır.
-        /// Bazı kaynak kodlarda INIT, bazı kaynak kodlarda INITIAL kullanılabilir.
-        ///
-        /// Örnek:
-        ///
-        /// DCL PARAM CHAR(04) INITIAL('ABCD');
-        ///
-        /// Parser iki kullanımı da aynı başlangıç değeri modeline dönüştürür.
-        /// </summary>
-        InitialKeyword = 14,
-
-        /// <summary>
-        /// Karakter sabitlerini temsil eder.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I INIT / INITIAL söz diziminde başlangıç değerleri çoğunlukla
-        /// tek tırnak içerisindeki karakter sabitleri olarak verilir.
-        ///
-        /// Örnek:
-        ///
-        /// INIT(' ')
-        /// INIT(';')
-        /// INITIAL('ABCD')
-        ///
-        /// Bu token, tırnak içindeki değerin parser'a taşınmasını sağlar.
-        /// </summary>
-        StringLiteral = 15,
-
-        /// <summary>
-        /// Yıldız karakterini temsil eder.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// PL/I INIT söz diziminde (*) kullanımı, başlangıç değerinin ilgili
-        /// tüm elemanlara uygulanacağını belirtir.
-        ///
-        /// Örnek:
-        ///
-        /// INIT((*)' ')
-        ///
-        /// Parser bu token sayesinde tekrar faktörünün tüm elemanlar anlamına
-        /// geldiğini anlayabilir.
-        /// </summary>
-        Asterisk = 16
+        OpenParenthesis,
+        CloseParenthesis,
+        Comma,
+        Semicolon,
+        Asterisk
     }
 }

@@ -49,7 +49,7 @@ namespace LegacyCodeTransformer.Application.Services
         ///
         /// Beklenen varsayılan EGL:
         ///
-        /// MustNo decimal(8,0);
+        /// MustNo decimal(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -79,13 +79,13 @@ namespace LegacyCodeTransformer.Application.Services
         /// DCL MUST_NO FIXED DECIMAL(8);
         ///
         /// PascalCase:
-        /// MustNo decimal(8,0);
+        /// MustNo decimal(8);
         ///
         /// CamelCase:
-        /// mustNo decimal(8,0);
+        /// mustNo decimal(8);
         ///
         /// Preserve:
-        /// MUST_NO decimal(8,0);
+        /// MUST_NO decimal(8);
         ///
         /// Nerede kullanılır?
         /// ----------------------

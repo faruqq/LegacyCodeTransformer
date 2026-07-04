@@ -1492,6 +1492,24 @@ DCL 1 PARAME_LIST,
 
 ---
 
+## Decision 045 - PL/I structure array ifadeleri EGL basicRecord parent array field olarak üretilecektir.
+
+## Karar
+
+PL/I tarafında ana structure adı üzerinde dimension bilgisi varsa bu yapı EGL tarafında aynı record içinde parent array field olarak üretilecektir.
+
+Örnek PL/I:
+
+``pli
+DCL 1 DIZI(6),
+    3 DIZI_PARAM1 CHAR(01) INIT((*)' '),
+    3 DIZI_PARAM2 CHAR(02) INIT((*)' '),
+    3 DIZI_PARAM3 CHAR(02) INIT((*)' '),
+    3 DIZI_PARAM4 CHAR(02) INIT((*)' '),
+    3 DIZI_PARAM5 CHAR(08) INIT((*)' ');
+
+
+
 ## Decision 046 - EGL output casing ve indentation kuralları korunacaktır
 
 ### Karar
@@ -1600,6 +1618,363 @@ Eksik veya farklı formatta yazılan decision kayıtları zamanla dokümantasyon
 - Dokümantasyon
 - Decisions.md
 - Geliştirme süreci
+
+### Durum
+
+✅ Aktif
+
+## Decision 048 - PL/I structure member array ifadeleri EGL field array olarak üretilecektir
+
+### Karar
+
+PL/I structure member üzerinde dimension bilgisi varsa bu bilgi EGL tarafında aynı record field üzerinde array suffix olarak üretilecektir.
+
+Örnek PL/I:
+
+    DCL 1 PARAME_LIST,
+        5 PARAM_LIST(2) CHAR(10);
+
+Beklenen EGL:
+
+    record ParameList type basicRecord
+            10 ParamList char(10)[2];
+    end
+
+Bu karar yalnızca structure member üzerinde bulunan field-level array dimension desteğini kapsar.
+
+İlk kapsamda desteklenen syntax:
+
+    5 FIELD_NAME(2) CHAR(10)
+    5 FIELD_NAME(3) FIXED DECIMAL(9,4)
+
+İlk kapsamda desteklenmeyecek syntax:
+
+    5 FIELD_NAME CHAR(10) DIM(2)
+    5 FIELD_NAME CHAR(10) DIMENSION(2)
+
+Structure array ile member array birlikte kullanılırsa parent field length hesabında member array çarpanı dikkate alınacaktır.
+
+Örnek PL/I:
+
+    DCL 1 DIZI(6),
+        3 DIZI_PARAM1(2) CHAR(10),
+        3 DIZI_PARAM2 CHAR(5);
+
+Beklenen EGL:
+
+    record Dizi type basicRecord
+        5 Dizi char(25)[6];
+            10 DiziParam1 char(10)[2];
+            10 DiziParam2 char(5);
+    end
+
+Parent field length hesabı:
+
+    DIZI_PARAM1 => CHAR(10) * 2 = 20
+    DIZI_PARAM2 => CHAR(5) = 5
+    Toplam => 25
+
+### Gerekçe
+
+Gerçek PL/I structure tanımlarında yalnızca ana structure değil, structure member alanları da dimension bilgisi taşıyabilir.
+
+Bu dimension bilgisinin parser aşamasında kaybedilmemesi ve EGL output tarafında field array suffix olarak üretilmesi gerekir.
+
+EGL tarafında bu kullanım mevcut basicRecord layout standardıyla uyumludur.
+
+Member array bilgisinin ayrı bir record olarak modellenmesi yerine aynı field üzerinde `[n]` suffix olarak üretilmesi, mevcut EGL output standardını ve field hiyerarşisini korur.
+
+Parent structure array length hesabında member array çarpanının dikkate alınması gerekir. Aksi halde parent field `char(totalLength)[arraySize]` değeri eksik hesaplanır ve layout hatalı olur.
+
+### Etkilediği Modüller
+
+- PL1 Parser
+- PL1 Syntax Model
+- Transpilers
+- EGL Record Field Model
+- EGL Code Generator
+- Application Tests
+- Transpiler Tests
+- Parser Tests
+- Dokümantasyon
+
+### Durum
+
+✅ Aktif
+
+## Decision 049 - PL/I nested structure ifadeleri EGL parent group field ve child field olarak üretilecektir
+
+### Karar
+
+PL/I structure içerisinde veri tipi olmayan ve altında daha alt seviyeli field'lar bulunan member ifadeleri nested structure / group field olarak kabul edilecektir.
+
+Örnek PL/I:
+
+    DCL 1 PARAME_LIST,
+        5 ADRES_BILGI,
+            10 IL_KOD CHAR(02),
+            10 ILCE_KOD CHAR(03);
+
+Bu yapı EGL tarafında aynı basicRecord içerisinde parent group field ve child field olarak üretilecektir.
+
+Beklenen EGL:
+
+    record ParameList type basicRecord
+        5 AdresBilgi char(5);
+            10 IlKod char(2);
+            10 IlceKod char(3);
+    end
+
+Nested group field için veri tipi `char(totalLength)` olarak üretilecektir.
+
+`totalLength`, group altındaki child field storage length toplamından hesaplanacaktır.
+
+İlk kapsamda desteklenen length hesabı:
+
+- `CHAR(n) => n`
+- `FIXED DECIMAL(p,s) => p`
+- Field-level array varsa `baseLength * arraySize`
+- Nested group varsa altındaki child field toplamı
+
+EGL level üretim standardı Decision 046 ile uyumlu olacaktır:
+
+- Parent / group field level: `5`
+- Child field level: `10`
+- Daha derin nested child field level: `15`
+- Daha derin seviyeler için level değeri 5 artarak devam eder
+
+İlk kapsamda desteklenecek örnek:
+
+    DCL 1 PARAME_LIST,
+        5 ADRES_BILGI,
+            10 IL_KOD CHAR(02),
+            10 ILCE_KOD CHAR(03);
+
+İlk kapsamda desteklenmeyecek konular:
+
+- `UNION`
+- `REDEFINES`
+- `LIKE`
+- `BASED`
+- `REFER`
+- Çok seviyeli karmaşık OCCURS / DIMENSION syntax
+- sqlRecord mapping
+
+### Gerekçe
+
+Gerçek PL/I structure tanımlarında bazı member satırları doğrudan veri tipi taşımaz. Bu satırlar alt seviyeli field'ları gruplayan parent / group alanlardır.
+
+Bu yapıların yok sayılması, alt field'ların record içerisinde bağlamını kaybetmesine neden olur.
+
+EGL basicRecord tarafında bu group alanların aynı record içerisinde parent field olarak üretilmesi kurum standardıyla uyumludur.
+
+Parent group field length değerinin child field toplamından hesaplanması, legacy layout bilgisinin korunmasını sağlar.
+
+Bu karar, P04-D structure array ve P04-E member array kararlarıyla uyumludur. Aynı length hesaplama yaklaşımı nested group yapıları için de genişletilecektir.
+
+### Etkilediği Modüller
+
+- PL1 Parser
+- PL1 Syntax Model
+- Transpilers
+- EGL Record Field Model
+- EGL Code Generator
+- Parser Tests
+- Transpiler Tests
+- Generator Tests
+- Application Tests
+- Dokümantasyon
+
+### Durum
+
+✅ Aktif
+
+## Decision 050 - PL/I VARCHAR ifadeleri EGL char olarak üretilecektir
+
+### Karar
+
+PL/I tarafındaki `VARCHAR(n)` veri tipi parser tarafından ayrı bir PL/I veri tipi modeli olarak temsil edilecektir.
+
+Örnek PL/I:
+
+    DCL CUSTOMER_NAME VARCHAR(50);
+
+Parser modeli:
+
+    Pl1VarcharType
+    - Length: 50
+
+EGL tarafında ilk kapsamda `VARCHAR(n)` tipi `char(n)` olarak üretilecektir.
+
+Beklenen EGL:
+
+    CustomerName char(50);
+
+Structure member içinde kullanım da aynı dönüşüm kuralını kullanacaktır.
+
+Örnek PL/I:
+
+    DCL 1 CUSTOMER_INFO,
+        5 CUSTOMER_NAME VARCHAR(50);
+
+Beklenen EGL:
+
+    record CustomerInfo type basicRecord
+            10 CustomerName char(50);
+    end
+
+Structure array ve nested group length hesabında `VARCHAR(n)` fixed length gibi ele alınacaktır.
+
+Length hesabı:
+
+    VARCHAR(n) => n
+
+### Gerekçe
+
+Kurum EGL kod standardında karakter alanlar ağırlıklı olarak `char(n)` formatında temsil edilmektedir.
+
+Paylaşılan EGL örneklerinde `string` kullanımına rastlanmamıştır.
+
+Bu nedenle PL/I `VARCHAR(n)` tipini EGL tarafında `string` olarak üretmek erken ve hatalı bir varsayım olur.
+
+`VARCHAR(n)` içindeki uzunluk bilgisinin EGL `char(n)` çıktısına taşınması hem mevcut type standardıyla uyumludur hem de layout length hesabının korunmasını sağlar.
+
+Bu karar, Decision 046 kapsamında belirtilen EGL output casing ve type koruma kurallarıyla uyumludur.
+
+### Etkilediği Modüller
+
+- PL1 Lexer
+- PL1 Parser
+- PL1 Type Model
+- EGL Type Model
+- EGL Code Generator
+- Transpilers
+- Parser Tests
+- Transpiler Tests
+- Generator Tests
+- Application Tests
+- Dokümantasyon
+
+### Durum
+
+✅ Aktif
+
+## Decision 051 - PL/I numeric type mapping stratejisi aşamalı ve semantic korumalı yapılacaktır
+
+### Karar
+
+PL/I tarafındaki numeric veri tipleri tek seferde dar bir mapping ile ele alınmayacaktır.
+
+Numeric type desteği aşamalı olarak geliştirilecektir.
+
+İlk ana hedefler:
+
+- FIXED DECIMAL / FIXED DEC
+- DECIMAL FIXED / DEC FIXED
+- FIXED BINARY / FIXED BIN
+- BINARY FIXED / BIN FIXED
+- PICTURE / PIC
+
+PL/I tarafındaki synonym kullanımlar aynı semantic modele map edilecektir.
+
+Decimal numeric tipler için kullanılacak PL/I model:
+
+    Pl1FixedDecimalType
+    - Precision: int
+    - Scale: int?
+
+`Scale` nullable olacaktır.
+
+Bunun nedeni `FIXED DEC(15)` ile `FIXED DEC(15,0)` ifadelerinin aynı output'a üretilmemesi gerektiğidir.
+
+EGL decimal output standardı:
+
+- `FIXED DEC(15)` => `decimal(15)`
+- `FIXED DEC(15,0)` => `decimal(15,0)`
+- `FIXED DEC(17,2)` => `decimal(17,2)`
+- `DEC FIXED(17,2)` => `decimal(17,2)`
+- `FIXED DEC(09,4)` => `decimal(9,4)`
+
+Binary fixed numeric tipler için kullanılacak PL/I model:
+
+    Pl1FixedBinaryType
+    - Precision: int
+    - Scale: int?
+
+İlk kapsamda yalnızca scale değeri olmayan veya scale değeri `0` olan binary integer mapping desteklenecektir.
+
+EGL binary integer output standardı:
+
+- `FIXED BIN(15)` => `smallint`
+- `BIN FIXED(15)` => `smallint`
+- `FIXED BINARY(15)` => `smallint`
+- `BINARY FIXED(15)` => `smallint`
+- `FIXED BIN(31)` => `int`
+- `BIN FIXED(31)` => `int`
+- `FIXED BINARY(31)` => `int`
+- `BINARY FIXED(31)` => `int`
+
+EGL tarafında küçük integer type için standart casing:
+
+    smallint
+
+`smallInt` kullanılmayacaktır.
+
+Eğer mevcut kod veya testlerde `smallInt` varsa `smallint` olarak normalize edilecektir.
+
+İlk kapsamda desteklenmeyen binary precision veya scale kullanımları diagnostic üretecektir.
+
+Örnek desteklenmeyen kullanım:
+
+    FIXED BIN(13,4)
+
+Bu kullanım binary fractional alan olduğu için ilk kapsamda otomatik olarak `smallint`, `int`, `decimal` veya `num` tiplerinden birine çevrilmeyecektir.
+
+PICTURE / PIC tipleri ayrı alt fazda ele alınacaktır.
+
+PIC mapping için ilk taslak hedef:
+
+- `PIC '999'` => numeric picture model
+- `PIC '9'` => numeric picture model
+- `PIC '(13)9V99'` => numeric picture model
+- `PIC 'ZZ9'` => formatted numeric picture model
+
+PIC tarafında `S`, `V`, `Z`, `9`, repeat count, sign ve formatting karakterleri ayrı parse edilmeden EGL output üretimi yapılmayacaktır.
+
+### Gerekçe
+
+PL/I numeric type sistemi birden fazla synonym, precision, scale ve picture format kombinasyonu içerir.
+
+Dar bir mapping ile doğrudan kod üretmek yanlış EGL çıktısına neden olabilir.
+
+Özellikle `decimal(15)` ve `decimal(15,0)` kurum standardında farklı kabul edilmektedir.
+
+Bu nedenle decimal scale bilgisinin nullable olarak korunması gerekir.
+
+Benzer şekilde `smallint` ve `smallInt` teknik olarak çalışsa bile dönüşüm aracının deterministik ve standart output üretmesi gerekir.
+
+Proje standardı gereği EGL type casing değerleri birebir korunacaktır. Bu yüzden küçük integer output tipi `smallint` olarak sabitlenmiştir.
+
+Binary fixed tarafında yaygın integer kullanımlar olan precision 15 ve 31 güvenli şekilde `smallint` ve `int` olarak üretilebilir.
+
+Ancak scale içeren binary fixed ifadeler farklı semantic taşıdığı için ilk kapsamda diagnostic üretmek daha güvenlidir.
+
+PIC ifadeleri ise yalnızca numeric alan değil, format bilgisi de taşıyabilir. Bu yüzden ayrı model ve ayrı mapping fazı gerektirir.
+
+### Etkilediği Modüller
+
+- PL1 Lexer
+- PL1 Parser
+- PL1 Type Model
+- EGL Type Model
+- EGL Code Generator
+- Transpilers
+- Diagnostic sistemi
+- Parser Tests
+- Transpiler Tests
+- Generator Tests
+- Application Tests
+- Dokümantasyon
 
 ### Durum
 
