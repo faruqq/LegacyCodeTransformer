@@ -465,4 +465,74 @@ public sealed class EglCodeGeneratorTests
         // Assert
         Assert.Equal("Param2 num(5,2);" + Environment.NewLine, result);
     }
+
+    /// <summary>
+    /// EGL character type modelinden Param6 char(3) kaynak kodu üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator'ın EglCharacterType(3) modelini char(3) olarak yazdırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// EglVariableDeclaration adı Param6, veri tipi EglCharacterType(3).
+    ///
+    /// Beklenen temel çıktı nedir?
+    /// Param6 char(3);
+    /// </summary>
+    [Fact]
+    public void Generate_WithAlphanumericPicCharacterDeclaration_ShouldGenerateCharDeclaration()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Param6",
+                new EglCharacterType(3, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Param6 char(3);" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL character type modelinden Param7 char(20) kaynak kodu üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator'ın parser/transpiler tarafından taşınan length değerini char length olarak koruduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// EglVariableDeclaration adı Param7, veri tipi EglCharacterType(20).
+    ///
+    /// Beklenen temel çıktı nedir?
+    /// Param7 char(20);
+    /// </summary>
+    [Fact]
+    public void Generate_WithRepeatedAlphanumericPicCharacterDeclaration_ShouldGenerateCharDeclarationWithLength()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Param7",
+                new EglCharacterType(20, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Param7 char(20);" + Environment.NewLine, result);
+    }
 }

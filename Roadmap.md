@@ -217,70 +217,18 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ smallint / int casing standardı
 - ✅ PIC / PICTURE ayrı model parse desteği
 - ✅ Güvenli numeric PIC subset → EGL num mapping desteği
+- ✅ Alphanumeric PIC subset → EGL char mapping desteği
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
 
-## Tamamlanan Alt Fazlar
-### P04-A — CHAR / CHARACTER Desteği
-PL/I CHAR / CHARACTER veri tipleri parse edilip EGL char tipine dönüştürülmektedir.
-
-### P04-B — INIT / INITIAL Parse Desteği
-PL/I INIT / INITIAL bilgisi Syntax Tree üzerinde korunmaktadır.
-
-### P04-C — Basic Structure Declaration Desteği
-PL/I structure declaration ifadeleri EGL record olarak modellenmektedir.
-
-### P04-D — PL/I Structure Array / Dimension Desteği
-PL/I structure adı üzerinde bulunan dimension bilgisi parse edilmektedir.
-
-### P04-E — PL/I Structure Member Array / Field Dimension Desteği
-PL/I structure member üzerinde bulunan dimension bilgisi parse edilmektedir.
-
-### P04-F — PL/I Nested Structure Desteği
-PL/I structure içinde veri tipi olmayan group member alanları nested group olarak parse edilmektedir.
-
-### P04-G — PL/I VARCHAR Desteği
-PL/I VARCHAR(n) veri tipi EGL tarafında char(n) olarak üretilmektedir.
-
-### P04-H — PL/I Numeric Type Foundation
-PL/I decimal ve binary numeric type mapping stratejisi aşamalı ve semantic korumalı olarak geliştirilmektedir.
-
-### P04-I — PL/I PIC / PICTURE Desteği
-PL/I PIC / PICTURE veri tipi ayrı Pl1PictureType modeliyle parse edilmektedir.
-
-Güvenli numeric PIC subset EGL tarafında num olarak üretilmektedir.
-
-Desteklenen örnekler:
-
-    DCL SAYI PIC '999';
-    DCL TUTAR PIC '999V99';
-    DCL TUTAR PIC '(13)9V99';
-
-Beklenen EGL:
-
-    Sayi num(3);
-    Tutar num(5,2);
-    Tutar num(15,2);
-
-Şimdilik formatted PIC örnekleri diagnostic üretir:
-
-    DCL SAYI PIC 'ZZ9';
-    DCL TUTAR PIC 'Z,ZZ9V.99';
-    DCL TUTAR PIC 'S999';
-
 ## Aktif Alt Hedef
-- Formatted PIC / alphanumeric PIC ayrımının genişletilmesi
+- Signed PIC sınıflandırması
 
 ## Sıradaki Alt Hedefler
+- Formatted PIC diagnostic kapsamının genişletilmesi
 - BIT desteği
 - DIM / DIMENSION syntax desteği
 - sqlRecord mapping desteği
 - INIT değerlerinin EGL default value olarak üretilmesi
-
-## Başarı Kriteri
-Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini ve declaration yapılarını uçtan uca desteklemesi.
-
-## Sonraki Faz
-P05 — PL/I Statement Desteği
 
 ---
 

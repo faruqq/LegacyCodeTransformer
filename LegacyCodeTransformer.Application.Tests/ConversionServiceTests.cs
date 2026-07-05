@@ -994,5 +994,330 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Equal(expected, result.Output);
             Assert.Empty(result.Diagnostics);
         }
+
+        /// <summary>
+        /// PL/I PIC 'XXX' kullanımının uçtan uca EGL char(3) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ının alphanumeric PIC pattern'i char(n) olarak ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM6 PIC 'XXX';
+        ///
+        /// Beklenen temel çıktı:
+        /// Param6 char(3);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithAlphanumericPicDeclaration_ShouldGenerateCharDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM6 PIC 'XXX';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param6 char(3);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I PIC '(20)X' kullanımının repeat count ile EGL char(20) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser'ın alphanumeric repeat syntax length bilgisini hesapladığını ve generator'ın char(n) çıktısı ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM7 PIC '(20)X';
+        ///
+        /// Beklenen temel çıktı:
+        /// Param7 char(20);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithRepeatedAlphanumericPicDeclaration_ShouldGenerateCharDeclarationWithLength()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM7 PIC '(20)X';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param7 char(20);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I PIC 'AAA' kullanımının EGL char(3) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// A karakterlerinden oluşan alphanumeric PIC pattern'in karakter alanı olarak dönüştürüldüğünü doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM8 PIC 'AAA';
+        ///
+        /// Beklenen temel çıktı:
+        /// Param8 char(3);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithAlphabeticPicDeclaration_ShouldGenerateCharDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM8 PIC 'AAA';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param8 char(3);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I PIC 'AXXAA' mixed alphanumeric pattern kullanımının EGL char(5) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// A ve X karakterlerinden oluşan mixed alphanumeric PIC pattern'in toplam length ile üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM9 PIC 'AXXAA';
+        ///
+        /// Beklenen temel çıktı:
+        /// Param9 char(5);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithMixedAlphanumericPicDeclaration_ShouldGenerateCharDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM9 PIC 'AXXAA';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param9 char(5);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Structure array içindeki alphanumeric PIC alanlarının parent array length hesabına dahil edildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ında PIC 'XXX' ve PIC '(20)X' alanlarının char length olarak hesaplandığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 DIZI(2), 3 KOD PIC 'XXX', 3 AD PIC '(20)X';
+        ///
+        /// Beklenen temel çıktı:
+        /// Parent array field length 3 + 20 = 23 olmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithStructureArrayHavingAlphanumericPicFields_ShouldCalculateParentLength()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source =
+                "DCL 1 DIZI(2), " +
+                "3 KOD PIC 'XXX', " +
+                "3 AD PIC '(20)X';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record Dizi type basicRecord" + Environment.NewLine +
+                "    5 Dizi char(23)[2];" + Environment.NewLine +
+                "        10 Kod char(3);" + Environment.NewLine +
+                "        10 Ad char(20);" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Nested group içindeki alphanumeric PIC alanlarının group field length hesabına dahil edildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Veri tipi olmayan nested group altında bulunan PIC 'AAA' ve PIC 'AXXAA' alanlarının toplam group char length değerine dahil edildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 MUSTERI, 3 ADRES, 5 IL PIC 'AAA', 5 KOD PIC 'AXXAA';
+        ///
+        /// Beklenen temel çıktı:
+        /// ADRES group field length 3 + 5 = 8 olmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithNestedGroupHavingAlphanumericPicFields_ShouldCalculateGroupLength()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source =
+                "DCL 1 MUSTERI, " +
+                "3 ADRES, " +
+                "5 IL PIC 'AAA', " +
+                "5 KOD PIC 'AXXAA';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record Musteri type basicRecord" + Environment.NewLine +
+                "    5 Adres char(8);" + Environment.NewLine +
+                "        10 Il char(3);" + Environment.NewLine +
+                "        10 Kod char(5);" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Signed numeric PIC declaration bilgisinin EGL num(p) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ının PIC 'S999' pattern'ını numeric alan olarak kabul ettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL TUTAR PIC 'S999';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Tutar num(3); çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSignedNumericPicDeclaration_ShouldGenerateNumDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL TUTAR PIC 'S999';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Tutar num(3);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Signed numeric PIC declaration içindeki implied decimal bilgisinin EGL num(p,s) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC 'S999V99' pattern'ında S bilgisinin metadata olarak korunduğunu fakat EGL output tarafında num(5,2) üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL TUTAR PIC 'S999V99';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Tutar num(5,2); çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSignedNumericPicDeclarationHavingScale_ShouldGenerateNumDeclarationWithScale()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL TUTAR PIC 'S999V99';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Tutar num(5,2);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Signed numeric PIC repeat declaration bilgisinin EGL num(p) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC 'S(8)9' pattern'ındaki repeat syntax bilgisinin precision 8 olarak hesaplanıp EGL num(8) çıktısına taşındığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL SAYAC PIC 'S(8)9';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Sayac num(8); çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSignedRepeatedNumericPicDeclaration_ShouldGenerateNumDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL SAYAC PIC 'S(8)9';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Sayac num(8);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Signed numeric PIC repeat declaration içindeki scale bilgisinin EGL num(p,s) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC 'S(10)9V99' pattern'ındaki repeat ve scale bilgisinin birlikte hesaplanarak EGL num(12,2) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL TUTAR PIC 'S(10)9V99';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Tutar num(12,2); çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSignedRepeatedNumericPicDeclarationHavingScale_ShouldGenerateNumDeclarationWithScale()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL TUTAR PIC 'S(10)9V99';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Tutar num(12,2);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
     }
 }

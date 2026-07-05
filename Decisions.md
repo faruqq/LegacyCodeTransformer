@@ -2126,3 +2126,38 @@ Bu yaklaşım:
 
 ### Durum
 Accepted
+
+## Decision 054 - Assistant Output Delivery Standard
+
+### Karar
+Production code, parser, transpiler, generator, model, helper ve test önerileri verilirken her snippet kendi açıklama standardına uygun verilecektir.
+
+Method veya test methodu önerilerinde açıklama şu bilgileri içerecektir:
+- Neden var?
+- Ne çözüyor?
+- Hangi örneği destekliyor?
+- Nerede kullanılır?
+- Gelecekte neye temel olur?
+
+Test methodlarında açıklama daha kısa olabilir ancak şu bilgiler bulunacaktır:
+- Bu test neyi doğrular?
+- Hangi input'u test eder?
+- Beklenen temel model/çıktı nedir?
+
+Bir class içindeki method değiştirilecekse mutlaka class path, method adı ve işlem tipi açıkça yazılacaktır.
+
+Tek cevapta mümkün olduğunca anlamlı bir feature batch'i verilecektir. Gereksiz mikro adımlara bölünmeyecektir.
+
+### Gerekçe
+Parçalı, eksik açıklamalı veya class/method bağlamı belirtilmeden verilen öneriler uygulama hatasına neden olabilir. Projede kod standardı ve dokümantasyon standardı korunmalıdır.
+
+### Etkilediği Modüller
+- Decisions.md
+- Roadmap.md
+- ModuleSummaries.md
+- Production code önerileri
+- Unit test önerileri
+- Parser / Transpiler / Generator değişiklikleri
+
+### Durum
+Accepted

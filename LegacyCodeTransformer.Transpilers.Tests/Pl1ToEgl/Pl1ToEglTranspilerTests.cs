@@ -1543,4 +1543,228 @@ public sealed class Pl1ToEglTranspilerTests
         Assert.NotNull(result.SyntaxTree);
         Assert.Empty(result.SyntaxTree!.Declarations);
     }
+
+    /// <summary>
+    /// PIC 'XXX' alphanumeric declaration bilgisinin EGL char(3) tipine dönüştürüldüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın Pl1PictureType üzerindeki IsAlphanumeric ve Length bilgilerini kullanarak EglCharacterType ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1PictureType RawPattern: XXX, Category: Alphanumeric, Length: 3.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration adı Param6, veri tipi EglCharacterType(3) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithAlphanumericPictureType_ShouldCreateEglCharacterDeclaration()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM6",
+                new Pl1PictureType(
+                    "XXX",
+                    Pl1PictureCategory.Alphanumeric,
+                    null,
+                    null,
+                    3,
+                    false,
+                    false,
+                    true,
+                    false,
+                    true,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param6", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglCharacterType>(variableDeclaration.DataType);
+        Assert.Equal(3, dataType.Length);
+    }
+
+    /// <summary>
+    /// PIC '(20)X' alphanumeric repeat declaration bilgisinin EGL char(20) tipine dönüştürüldüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın parser tarafından hesaplanmış Length değerini char length olarak taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1PictureType RawPattern: (20)X, Category: Alphanumeric, Length: 20.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration adı Param7, veri tipi EglCharacterType(20) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithRepeatedAlphanumericPictureType_ShouldCreateEglCharacterDeclarationWithLength()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM7",
+                new Pl1PictureType(
+                    "(20)X",
+                    Pl1PictureCategory.Alphanumeric,
+                    null,
+                    null,
+                    20,
+                    false,
+                    false,
+                    true,
+                    false,
+                    true,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param7", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglCharacterType>(variableDeclaration.DataType);
+        Assert.Equal(20, dataType.Length);
+    }
+
+    /// <summary>
+    /// PIC 'AAA' alphabetic declaration bilgisinin EGL char(3) tipine dönüştürüldüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// A karakterlerinden oluşan PIC pattern'ın alphanumeric karakter alanı olarak dönüştürüldüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1PictureType RawPattern: AAA, Category: Alphanumeric, Length: 3.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration adı Param8, veri tipi EglCharacterType(3) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithAlphabeticPictureType_ShouldCreateEglCharacterDeclaration()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM8",
+                new Pl1PictureType(
+                    "AAA",
+                    Pl1PictureCategory.Alphanumeric,
+                    null,
+                    null,
+                    3,
+                    false,
+                    false,
+                    true,
+                    false,
+                    true,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param8", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglCharacterType>(variableDeclaration.DataType);
+        Assert.Equal(3, dataType.Length);
+    }
+
+    /// <summary>
+    /// PIC 'AXXAA' mixed alphanumeric declaration bilgisinin EGL char(5) tipine dönüştürüldüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// A ve X karakterlerinden oluşan mixed alphanumeric PIC pattern'ın toplam length ile character field olarak dönüştürüldüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1PictureType RawPattern: AXXAA, Category: Alphanumeric, Length: 5.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration adı Param9, veri tipi EglCharacterType(5) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithMixedAlphanumericPictureType_ShouldCreateEglCharacterDeclaration()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM9",
+                new Pl1PictureType(
+                    "AXXAA",
+                    Pl1PictureCategory.Alphanumeric,
+                    null,
+                    null,
+                    5,
+                    false,
+                    false,
+                    true,
+                    false,
+                    true,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param9", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglCharacterType>(variableDeclaration.DataType);
+        Assert.Equal(5, dataType.Length);
+    }
 }

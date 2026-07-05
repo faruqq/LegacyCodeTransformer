@@ -811,3 +811,97 @@ PL/I PIC / PICTURE veri tipi ayrı bir model olarak parse edilmeye başlandı. B
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi formatted PIC / alphanumeric PIC ayrımının genişletilmesidir.
+
+---
+# 2026-07-05 — P04-I2 Alphanumeric PIC Mapping Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PIC / PICTURE pattern semantic classification genişletildi. Numeric ve formatted ayrımına ek olarak alphanumeric PIC pattern'lar parser aşamasında ayrı kategori olarak sınıflandırılmaktadır.
+
+Alphanumeric PIC pattern'lar EGL tarafında char(n) olarak üretilmektedir.
+
+## Desteklenen PL/I Kodları
+
+    DCL PARAM6 PIC 'XXX';
+    DCL PARAM7 PIC '(20)X';
+    DCL PARAM8 PIC 'AAA';
+    DCL PARAM9 PIC 'AXXAA';
+
+## Beklenen EGL Çıktıları
+
+    Param6 char(3);
+    Param7 char(20);
+    Param8 char(3);
+    Param9 char(5);
+
+## Yapılanlar
+- Pl1PictureCategory modeli eklendi.
+- Pl1PictureType modeli semantic classification bilgilerini taşıyacak şekilde genişletildi.
+- Parser tarafında alphanumeric PIC pattern tanıma desteği eklendi.
+- Parser tarafında alphanumeric PIC length hesabı eklendi.
+- Transpiler tarafında alphanumeric PIC → EglCharacterType mapping eklendi.
+- Structure array ve nested group length hesaplarına alphanumeric PIC length dahil edildi.
+- Parser, Transpiler, Generator ve Application testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- Signed PIC mapping
+- Formatted PIC semantic mapping
+- Display format metadata üretimi
+- BIT desteği
+
+## İlgili Kararlar
+- Decision 052 - PIC / PICTURE ayrı modelle parse edilip güvenli numeric alt küme EGL num tipine dönüştürülecektir.
+- Decision 053 - PIC / PICTURE pattern semantic classification parser aşamasında yapılacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi signed PIC sınıflandırmasıdır.
+
+---
+# 2026-07-05 — P04-I3 Signed PIC Classification Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PIC / PICTURE pattern semantic classification signed numeric PIC pattern'ları destekleyecek şekilde genişletildi.
+
+Signed PIC pattern'larda baştaki S karakteri numeric precision hesabına dahil edilmez. Sign bilgisi Pl1PictureType üzerinde IsSigned metadata olarak korunur.
+
+EGL tarafında num tipi signed numeric değerleri temsil edebildiği için output değişmez.
+
+## Desteklenen PL/I Kodları
+
+    DCL TUTAR PIC 'S999';
+    DCL TUTAR PIC 'S999V99';
+    DCL SAYAC PIC 'S(8)9';
+    DCL TUTAR PIC 'S(10)9V99';
+
+## Beklenen EGL Çıktıları
+
+    Tutar num(3);
+    Tutar num(5,2);
+    Sayac num(8);
+    Tutar num(12,2);
+
+## Yapılanlar
+- Signed PIC pattern analyzer testleri eklendi.
+- Signed PIC conversion service testleri eklendi.
+- S prefix bilgisinin IsSigned metadata olarak korunduğu doğrulandı.
+- EGL output tarafında numeric mapping davranışının değişmediği doğrulandı.
+
+## Kapsam Dışı Bırakılanlar
+- Leading + / - sign edit mask mapping
+- Trailing sign pattern desteği
+- Formatted signed PIC mapping
+- Display format metadata üretimi
+
+## İlgili Kararlar
+- Decision 052 - PIC / PICTURE ayrı modelle parse edilip güvenli numeric alt küme EGL num tipine dönüştürülecektir.
+- Decision 053 - PIC / PICTURE pattern semantic classification parser aşamasında yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi formatted PIC diagnostic kapsamının genişletilmesidir.
