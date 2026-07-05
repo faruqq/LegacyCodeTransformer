@@ -1319,5 +1319,129 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Equal(expected, result.Output);
             Assert.Empty(result.Diagnostics);
         }
+
+        /// <summary>
+        /// Zero suppression içeren formatted PIC declaration bilgisinin diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser'ın PIC 'ZZ9' pattern'ını okuyabildiğini, fakat Transpiler'ın semantic kayıp riski nedeniyle EGL output üretmediğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL SAYI PIC 'ZZ9';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve desteklenmeyen PIC pattern diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithZeroSuppressFormattedPicDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL SAYI PIC 'ZZ9';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "Desteklenmeyen PIC pattern: ZZ9",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// Thousands separator ve display decimal point içeren formatted PIC declaration bilgisinin diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC 'Z,ZZ9V.99' pattern'ının formatted kabul edildiğini ve doğrudan EGL num mapping yapılmadığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL TUTAR PIC 'Z,ZZ9V.99';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve desteklenmeyen PIC pattern diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSeparatorFormattedPicDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL TUTAR PIC 'Z,ZZ9V.99';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "Desteklenmeyen PIC pattern: Z,ZZ9V.99",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// Leading plus edit mask içeren formatted PIC declaration bilgisinin diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC '+999' pattern'ındaki + karakterinin signed numeric metadata değil, formatted edit mask olarak ele alındığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL SAYI PIC '+999';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve desteklenmeyen PIC pattern diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithLeadingPlusFormattedPicDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL SAYI PIC '+999';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "Desteklenmeyen PIC pattern: +999",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// Leading minus edit mask içeren formatted PIC declaration bilgisinin diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PIC '-999' pattern'ındaki - karakterinin signed numeric metadata değil, formatted edit mask olarak ele alındığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL SAYI PIC '-999';
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve desteklenmeyen PIC pattern diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithLeadingMinusFormattedPicDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL SAYI PIC '-999';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "Desteklenmeyen PIC pattern: -999",
+                result.Diagnostics[0].Message);
+        }
     }
 }

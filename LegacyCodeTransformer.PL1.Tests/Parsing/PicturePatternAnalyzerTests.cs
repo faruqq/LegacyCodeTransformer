@@ -336,4 +336,124 @@ public sealed class PicturePatternAnalyzerTests
         Assert.False(analysis.IsFormatted);
         Assert.True(analysis.SupportsDirectEglMapping);
     }
+
+    /// <summary>
+    /// Z edit mask karakteri içeren PIC pattern bilgisinin formatted olarak sınıflandırıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Analyzer'ın Z karakterini storage digit değil, display/edit mask karakteri olarak değerlendirdiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ZZ9
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Formatted, IsFormatted true, SupportsDirectEglMapping false olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Analyze_WithZeroSuppressFormattedPicturePattern_ShouldReturnFormattedAnalysis()
+    {
+        // Act
+        var analysis = PicturePatternAnalyzer.Analyze("ZZ9");
+
+        // Assert
+        Assert.Equal(Pl1PictureCategory.Formatted, analysis.Category);
+        Assert.Null(analysis.Precision);
+        Assert.Null(analysis.Scale);
+        Assert.Null(analysis.Length);
+        Assert.False(analysis.IsSigned);
+        Assert.False(analysis.IsNumeric);
+        Assert.False(analysis.IsAlphanumeric);
+        Assert.True(analysis.IsFormatted);
+        Assert.False(analysis.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// Thousands separator ve display decimal point içeren PIC pattern bilgisinin formatted olarak sınıflandırıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Analyzer'ın virgül ve nokta karakterlerini doğrudan EGL num mapping yapılmayacak format maskesi olarak değerlendirdiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Z,ZZ9V.99
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Formatted, IsFormatted true, SupportsDirectEglMapping false olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Analyze_WithSeparatorFormattedPicturePattern_ShouldReturnFormattedAnalysis()
+    {
+        // Act
+        var analysis = PicturePatternAnalyzer.Analyze("Z,ZZ9V.99");
+
+        // Assert
+        Assert.Equal(Pl1PictureCategory.Formatted, analysis.Category);
+        Assert.Null(analysis.Precision);
+        Assert.Null(analysis.Scale);
+        Assert.Null(analysis.Length);
+        Assert.False(analysis.IsSigned);
+        Assert.False(analysis.IsNumeric);
+        Assert.False(analysis.IsAlphanumeric);
+        Assert.True(analysis.IsFormatted);
+        Assert.False(analysis.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// Leading plus sign içeren PIC pattern bilgisinin formatted olarak sınıflandırıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Analyzer'ın + karakterini numeric sign metadata değil, formatted edit mask olarak değerlendirdiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// +999
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Formatted, IsFormatted true, SupportsDirectEglMapping false olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Analyze_WithLeadingPlusFormattedPicturePattern_ShouldReturnFormattedAnalysis()
+    {
+        // Act
+        var analysis = PicturePatternAnalyzer.Analyze("+999");
+
+        // Assert
+        Assert.Equal(Pl1PictureCategory.Formatted, analysis.Category);
+        Assert.Null(analysis.Precision);
+        Assert.Null(analysis.Scale);
+        Assert.Null(analysis.Length);
+        Assert.False(analysis.IsSigned);
+        Assert.False(analysis.IsNumeric);
+        Assert.False(analysis.IsAlphanumeric);
+        Assert.True(analysis.IsFormatted);
+        Assert.False(analysis.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// Leading minus sign içeren PIC pattern bilgisinin formatted olarak sınıflandırıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Analyzer'ın - karakterini numeric sign metadata değil, formatted edit mask olarak değerlendirdiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// -999
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Formatted, IsFormatted true, SupportsDirectEglMapping false olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Analyze_WithLeadingMinusFormattedPicturePattern_ShouldReturnFormattedAnalysis()
+    {
+        // Act
+        var analysis = PicturePatternAnalyzer.Analyze("-999");
+
+        // Assert
+        Assert.Equal(Pl1PictureCategory.Formatted, analysis.Category);
+        Assert.Null(analysis.Precision);
+        Assert.Null(analysis.Scale);
+        Assert.Null(analysis.Length);
+        Assert.False(analysis.IsSigned);
+        Assert.False(analysis.IsNumeric);
+        Assert.False(analysis.IsAlphanumeric);
+        Assert.True(analysis.IsFormatted);
+        Assert.False(analysis.SupportsDirectEglMapping);
+    }
 }

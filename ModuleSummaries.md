@@ -905,3 +905,50 @@ EGL tarafında num tipi signed numeric değerleri temsil edebildiği için outpu
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi formatted PIC diagnostic kapsamının genişletilmesidir.
+
+---
+# 2026-07-05 — P04-I4 Formatted PIC Diagnostic Kapsamı
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PIC / PICTURE pattern semantic classification kapsamında formatted numeric PIC örneklerinin doğrudan EGL numeric mapping yapılmadan diagnostic üretmesi testlerle genişletildi.
+
+Formatted PIC pattern'lar display/edit mask bilgisi taşıdığı için doğrudan EGL num(p,s) tipine çevrilmez. Böylece sıfır bastırma, separator, display decimal point veya sign edit mask bilgisi semantic kayba uğratılmaz.
+
+## Diagnostic Üreten PL/I Kodları
+
+    DCL SAYI PIC 'ZZ9';
+    DCL TUTAR PIC 'Z,ZZ9V.99';
+    DCL SAYI PIC '+999';
+    DCL SAYI PIC '-999';
+
+## Beklenen Davranış
+
+    Conversion başarısız olur.
+    Output null döner.
+    Diagnostic mesajında desteklenmeyen PIC pattern belirtilir.
+
+## Yapılanlar
+- Formatted PIC analyzer test kapsamı genişletildi.
+- Zero suppression örneği diagnostic davranışıyla doğrulandı.
+- Thousands separator ve display decimal point örneği diagnostic davranışıyla doğrulandı.
+- Leading plus edit mask örneği diagnostic davranışıyla doğrulandı.
+- Leading minus edit mask örneği diagnostic davranışıyla doğrulandı.
+- Roadmap aktif hedefi Signed PIC sonrasına göre güncellendi.
+
+## Kapsam Dışı Bırakılanlar
+- Formatted PIC için EGL display metadata üretimi
+- Formatted PIC değerlerinin char tabanlı korunması
+- CR / DB trailing sign pattern desteği
+- Currency symbol mapping
+- Formatted PIC için otomatik num dönüşümü
+
+## İlgili Kararlar
+- Decision 052 - PIC / PICTURE ayrı modelle parse edilip güvenli numeric alt küme EGL num tipine dönüştürülecektir.
+- Decision 053 - PIC / PICTURE pattern semantic classification parser aşamasında yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi BIT desteğidir.

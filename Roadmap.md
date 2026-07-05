@@ -218,17 +218,23 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ PIC / PICTURE ayrı model parse desteği
 - ✅ Güvenli numeric PIC subset → EGL num mapping desteği
 - ✅ Alphanumeric PIC subset → EGL char mapping desteği
+- ✅ Signed PIC classification desteği
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
 
 ## Aktif Alt Hedef
-- Signed PIC sınıflandırması
+- Formatted PIC diagnostic kapsamının genişletilmesi
 
 ## Sıradaki Alt Hedefler
-- Formatted PIC diagnostic kapsamının genişletilmesi
 - BIT desteği
 - DIM / DIMENSION syntax desteği
 - sqlRecord mapping desteği
 - INIT değerlerinin EGL default value olarak üretilmesi
+
+## Başarı Kriteri
+Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini ve declaration yapılarını uçtan uca desteklemesi.
+
+## Sonraki Faz
+P05 — PL/I Statement Desteği
 
 ---
 
