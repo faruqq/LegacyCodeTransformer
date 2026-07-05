@@ -231,26 +231,26 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Neden var?
         /// ----------------------
-        /// DCL ile tanımlanan basit değişkenler EGL tarafında doğrudan
-        /// variable declaration olarak üretilir.
+        /// DCL ile tanımlanan basit değişkenler EGL tarafında doğrudan variable declaration olarak üretilir.
         ///
-        /// Örnek PL/I:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// PL/I scalar ve array variable declaration bilgisini EGL variable declaration modeline taşır.
         ///
-        /// DCL MUST_NO FIXED DECIMAL(8);
-        ///
-        /// Örnek EGL:
-        ///
-        /// MustNo decimal(8);
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DCL MUST_NO FIXED DECIMAL(8); => MustNo decimal(8);
+        /// - DCL PARAM CHAR(10) DIM(2); => Param char(10)[2];
+        /// - DCL PARAM(2) CHAR(10); => Param char(10)[2];
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - TranspileDeclaration dispatch methodu içerisinde
         /// - Tekil variable declaration dönüşümlerinde
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Array dimension ve default value mapping kuralları eklendiğinde
-        /// bu method genişletilecektir.
+        /// Default value mapping ve çok boyutlu array mapping kuralları eklendiğinde bu method genişletilecektir.
         /// </summary>
         private EglVariableDeclaration? TranspileVariableDeclaration(
             Pl1VariableDeclaration declaration)
@@ -272,7 +272,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     declaration.Name,
                     _namingOptions.Style),
                 dataType,
-                declaration.Location);
+                declaration.Location,
+                declaration.ArraySize);
         }
 
         /// <summary>

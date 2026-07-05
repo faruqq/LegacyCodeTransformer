@@ -261,13 +261,11 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I kaynak kodunda keyword ve identifier söz dizimsel olarak benzer
-        /// karakterlerden oluşur.
+        /// PL/I kaynak kodunda keyword ve identifier söz dizimsel olarak benzer karakterlerden oluşur.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Lexer'ın identifier metnini parser'ın anlayacağı doğru token türüne
-        /// dönüştürmesini sağlar.
+        /// Lexer'ın identifier metnini parser'ın anlayacağı doğru token türüne dönüştürmesini sağlar.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
@@ -281,6 +279,9 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// - BIN FIXED
         /// - PIC
         /// - PICTURE
+        /// - BIT
+        /// - DIM
+        /// - DIMENSION
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -288,8 +289,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// DIM / DIMENSION gibi keyword synonym destekleri eklendikçe bu mapping
-        /// genişletilecektir.
+        /// Yeni keyword synonym destekleri eklendikçe bu mapping genişletilecektir.
         /// </summary>
         private static Pl1TokenKind GetKeywordKind(string text)
         {
@@ -310,6 +310,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "INIT" => Pl1TokenKind.InitKeyword,
                 "INITIAL" => Pl1TokenKind.InitialKeyword,
                 "BIT" => Pl1TokenKind.BitKeyword,
+                "DIM" => Pl1TokenKind.DimKeyword,
+                "DIMENSION" => Pl1TokenKind.DimensionKeyword,
                 _ => Pl1TokenKind.Identifier
             };
         }

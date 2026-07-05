@@ -176,9 +176,38 @@ namespace LegacyCodeTransformer.Egl.Generation
             return new string(' ', depth * 4);
         }
 
+        /// <summary>
+        /// EGL variable declaration modelinden kaynak kod satırı üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// EglVariableDeclaration modeli doğrudan string değildir. Generator aşamasında gerçek EGL kaynak kodu satırına çevrilmelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Scalar variable ve array variable declaration output formatını merkezi olarak üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - Param char(10);
+        /// - Param char(10)[2];
+        /// - Amount decimal(15,2);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - GenerateDeclaration içinde EglVariableDeclaration branch'inde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Default value, nullable annotation veya daha gelişmiş EGL variable syntax üretimi bu method üzerinden genişletilebilir.
+        /// </summary>
         private static string GenerateVariableDeclaration(EglVariableDeclaration declaration)
         {
-            return $"{declaration.Name} {GenerateDataType(declaration.DataType)};";
+            var arraySuffix = declaration.ArraySize.HasValue
+                ? $"[{declaration.ArraySize.Value}]"
+                : string.Empty;
+
+            return $"{declaration.Name} {GenerateDataType(declaration.DataType)}{arraySuffix};";
         }
 
         /// <summary>

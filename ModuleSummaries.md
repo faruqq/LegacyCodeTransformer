@@ -998,3 +998,56 @@ BIT tipi şimdilik EGL tarafında otomatik dönüştürülmemektedir. Çünkü B
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi DIM / DIMENSION syntax desteğidir.
+
+---
+# 2026-07-05 — P04-K DIM / DIMENSION Syntax Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I DIM / DIMENSION attribute syntax desteği eklendi.
+
+Bu geliştirme ile hem top-level variable declaration hem de structure member declaration üzerinde veri tipi sonrasında gelen DIM(n) / DIMENSION(n) bilgisi parse edilip array size olarak modele taşınmaktadır.
+
+## Desteklenen PL/I Kodları
+
+    DCL PARAM CHAR(10) DIM(2);
+    DCL PARAM CHAR(10) DIMENSION(2);
+    DCL PARAM(2) CHAR(10);
+    DCL 1 REC,
+        5 PARAM CHAR(10) DIM(2);
+
+## Beklenen EGL Çıktıları
+
+    Param char(10)[2];
+
+    record Rec type basicRecord
+        10 Param char(10)[2];
+    end
+
+## Yapılanlar
+- Pl1TokenKind içine DimKeyword ve DimensionKeyword eklendi.
+- Lexer tarafında DIM ve DIMENSION keyword mapping desteği eklendi.
+- Pl1VariableDeclaration modeli ArraySize bilgisi taşıyacak şekilde genişletildi.
+- EglVariableDeclaration modeli ArraySize bilgisi taşıyacak şekilde genişletildi.
+- Parser tarafında variable DIM / DIMENSION parse desteği eklendi.
+- Parser tarafında structure member DIM / DIMENSION parse desteği eklendi.
+- Transpiler tarafında top-level variable array size bilgisi EGL modeline taşındı.
+- Generator tarafında top-level variable array suffix üretimi eklendi.
+- Parser ve Application testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- Çok boyutlu DIMENSION desteği
+- Lower-bound / upper-bound range syntax desteği
+- DIMENSION attribute'ın veri tipinden önce kullanıldığı varyasyonlar
+- BIT alanları için EGL mapping
+- INIT değerlerinin array elemanlarına yayılması
+
+## İlgili Kararlar
+- Decision 046 - EGL output casing ve indentation kuralları korunacaktır.
+- Decision 048 - PL/I structure member array ifadeleri EGL field array olarak üretilecektir.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi sqlRecord mapping desteğidir.

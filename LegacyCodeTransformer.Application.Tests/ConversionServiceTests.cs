@@ -1505,5 +1505,100 @@ namespace LegacyCodeTransformer.Application.Tests
                 "Structure member uzunluğu hesaplanamayan PL/I member veri tipi: Pl1BitType",
                 result.Diagnostics[0].Message);
         }
+
+        /// <summary>
+        /// Top-level DIM attribute kullanımının EGL array variable çıktısı ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ının DIM(2) bilgisini top-level variable array suffix olarak ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(10) DIM(2);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(10)[2]; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithVariableDimAttribute_ShouldGenerateArrayDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(10) DIM(2);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param char(10)[2];" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Top-level DIMENSION attribute kullanımının EGL array variable çıktısı ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// DIMENSION keyword synonym bilgisinin DIM ile aynı şekilde EGL array suffix ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(10) DIMENSION(2);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(10)[2]; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithVariableDimensionAttribute_ShouldGenerateArrayDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(10) DIMENSION(2);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param char(10)[2];" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Structure member DIM attribute kullanımının EGL record field array çıktısı ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Structure member üzerindeki DIM(2) bilgisinin EglRecordFieldDeclaration.ArraySize olarak taşındığını ve generator tarafından [2] suffix üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 REC, 5 PARAM CHAR(10) DIM(2);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Record içinde 10 Param char(10)[2]; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithStructureMemberDimAttribute_ShouldGenerateFieldArrayDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL 1 REC, 5 PARAM CHAR(10) DIM(2);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record Rec type basicRecord" + Environment.NewLine +
+                "        10 Param char(10)[2];" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
     }
 }

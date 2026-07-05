@@ -1836,4 +1836,116 @@ public sealed class Pl1ParserTests
         var dataType = Assert.IsType<Pl1BitType>(member.DataType);
         Assert.Equal(8, dataType.Length);
     }
+
+    /// <summary>
+    /// Top-level variable declaration içinde DIM attribute bilgisinin array size olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın veri tipi sonrasında gelen DIM(2) bilgisini Pl1VariableDeclaration.ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(10) DIM(2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVariableDimAttribute_ShouldSetVariableArraySize()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM CHAR(10) DIM(2);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(2, variableDeclaration.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// Top-level variable declaration içinde DIMENSION attribute bilgisinin array size olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DIMENSION keyword synonym bilgisini DIM ile aynı semantic array size olarak ele aldığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(10) DIMENSION(2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVariableDimensionAttribute_ShouldSetVariableArraySize()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM CHAR(10) DIMENSION(2);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(2, variableDeclaration.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// Structure member içinde DIM attribute bilgisinin member array size olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member veri tipi sonrasında gelen DIM(2) bilgisini Pl1StructureMember.ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 REC, 5 PARAM CHAR(10) DIM(2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Member adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureMemberDimAttribute_ShouldSetMemberArraySize()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL 1 REC, 5 PARAM CHAR(10) DIM(2);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+
+        var member = Assert.Single(structureDeclaration.Members);
+        Assert.Equal("PARAM", member.Name);
+        Assert.Equal(2, member.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
 }

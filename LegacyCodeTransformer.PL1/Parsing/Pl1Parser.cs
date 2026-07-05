@@ -170,32 +170,28 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodunda DCL / DECLARE ile başlayan ve seviye numarası
-    /// içermeyen ifadeler tekil değişken tanımı oluşturur.
+    /// PL/I kaynak kodunda DCL / DECLARE ile başlayan ve seviye numarası içermeyen ifadeler tekil değişken tanımı oluşturur.
     ///
-    /// Örnek PL/I:
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Değişken adını, optional name-based array bilgisini, veri tipini, optional DIM / DIMENSION bilgisini ve optional INIT / INITIAL değerini parse eder.
     ///
-    /// DCL MUST_NO FIXED DECIMAL(8);
-    /// DCL PARAM CHAR(08);
-    /// DCL PARAM CHAR(08) INIT(' ');
-    /// DECLARE CUSTOMER_NAME CHARACTER(25) INITIAL(' ');
-    ///
-    /// Bu method:
-    /// - declaration başlangıcını okur
-    /// - değişken adını okur
-    /// - veri tipini ParseDataType methoduna devreder
-    /// - varsa INIT / INITIAL başlangıç değerini parse eder
-    /// - statement sonundaki noktalı virgülü doğrular
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL MUST_NO FIXED DECIMAL(8);
+    /// - DCL PARAM CHAR(08) INIT(' ');
+    /// - DCL PARAM(2) CHAR(10);
+    /// - DCL PARAM CHAR(10) DIM(2);
+    /// - DCL PARAM CHAR(10) DIMENSION(2);
     ///
     /// Nerede kullanılır?
     /// ----------------------
     /// - ParseDeclaration dispatch methodunda
     /// - Tekil PL/I variable declaration üretiminde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Array dimension ve çoklu declaration desteği eklendiğinde bu method
-    /// kontrollü şekilde genişletilecektir.
+    /// Çok boyutlu DIMENSION ve farklı array declaration varyasyonları bu method üzerinden genişletilecektir.
     /// </summary>
     private Pl1VariableDeclaration? ParseVariableDeclaration()
     {
@@ -207,7 +203,14 @@ public sealed class Pl1Parser
             Pl1TokenKind.Identifier,
             "Değişken adı bekleniyordu.");
 
+        var nameArraySize = ParseOptionalArraySize();
         var dataType = ParseDataType();
+        var dimensionArraySize = ParseOptionalDimensionSize();
+        var arraySize = ResolveArraySize(
+            nameArraySize,
+            dimensionArraySize,
+            identifierToken?.Location ?? SourceLocation.Unknown);
+
         var initialValue = ParseOptionalInitialValue();
 
         Consume(
@@ -223,7 +226,8 @@ public sealed class Pl1Parser
             identifierToken.Text,
             dataType,
             dclToken.Location,
-            initialValue);
+            initialValue,
+            arraySize);
     }
 
     /// <summary>
@@ -457,36 +461,18 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// Structure declaration içindeki her field ayrı bir member olarak
-    /// modellenmelidir.
-    ///
-    /// P04-F öncesinde member alanlarının veri tipi taşıdığı varsayılıyordu.
-    /// P04-F ile birlikte veri tipi taşımayan nested group field yapıları da
-    /// desteklenir.
-    ///
-    /// Normal field örneği:
-    ///
-    /// 5 PARAM CHAR(08) INIT(' ')
-    ///
-    /// Field array örneği:
-    ///
-    /// 5 PARAM_LIST(2) CHAR(10)
-    ///
-    /// Nested group örneği:
-    ///
-    /// 5 ADRES_BILGI,
-    ///     10 IL_KOD CHAR(02),
-    ///     10 ILCE_KOD CHAR(03)
+    /// Structure declaration içindeki her field ayrı bir member olarak modellenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Member level, name, optional array dimension, optional data type,
-    /// optional initial value ve varsa child member listesini tek modelde toplar.
+    /// Member level, name, optional name-based array size, optional data type, optional DIM / DIMENSION size, optional initial value ve varsa child member listesini tek modelde toplar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - 5 PARAM CHAR(08)
     /// - 5 PARAM_LIST(2) CHAR(10)
+    /// - 5 PARAM_LIST CHAR(10) DIM(2)
+    /// - 5 PARAM_LIST CHAR(10) DIMENSION(2)
     /// - 5 ADRES_BILGI, 10 IL_KOD CHAR(02)
     ///
     /// Nerede kullanılır?
@@ -496,8 +482,7 @@ public sealed class Pl1Parser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Nested structure mapping, group field length hesabı ve çok seviyeli layout
-    /// üretimi için parser tarafındaki temel member parse davranışıdır.
+    /// Nested structure mapping, group field length hesabı, field-level DIMENSION ve çok seviyeli layout üretimi için parser tarafındaki temel member parse davranışıdır.
     /// </summary>
     private Pl1StructureMember? ParseStructureMember()
     {
@@ -509,7 +494,7 @@ public sealed class Pl1Parser
             Pl1TokenKind.Identifier,
             "Structure member adı bekleniyordu.");
 
-        var arraySize = ParseOptionalArraySize();
+        var nameArraySize = ParseOptionalArraySize();
 
         if (levelToken is null || nameToken is null)
         {
@@ -538,7 +523,7 @@ public sealed class Pl1Parser
                 null,
                 levelToken.Location,
                 null,
-                arraySize,
+                nameArraySize,
                 childMembers);
         }
 
@@ -550,10 +535,16 @@ public sealed class Pl1Parser
                 null,
                 levelToken.Location,
                 null,
-                arraySize);
+                nameArraySize);
         }
 
         var dataType = ParseDataType();
+        var dimensionArraySize = ParseOptionalDimensionSize();
+        var arraySize = ResolveArraySize(
+            nameArraySize,
+            dimensionArraySize,
+            nameToken.Location);
+
         var initialValue = ParseOptionalInitialValue();
 
         if (dataType is null)
@@ -568,6 +559,118 @@ public sealed class Pl1Parser
             levelToken.Location,
             initialValue,
             arraySize);
+    }
+
+    /// <summary>
+    /// PL/I DIM / DIMENSION attribute bilgisini parse eder.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// PL/I array declaration bilgisi değişken adından sonra parantezle verilebildiği gibi DIM veya DIMENSION attribute ile de verilebilir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Veri tipi sonrasında gelen DIM(n) veya DIMENSION(n) bilgisini array size değerine dönüştürür.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL PARAM CHAR(10) DIM(2);
+    /// - DCL PARAM CHAR(10) DIMENSION(2);
+    /// - 5 PARAM CHAR(10) DIM(2)
+    /// - 5 PARAM CHAR(10) DIMENSION(2)
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseVariableDeclaration içinde
+    /// - ParseStructureMember içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Çok boyutlu DIMENSION syntax ve lower-bound / upper-bound array range desteği bu method üzerinden genişletilebilir.
+    /// </summary>
+    private int? ParseOptionalDimensionSize()
+    {
+        if (Current.Kind != Pl1TokenKind.DimKeyword &&
+            Current.Kind != Pl1TokenKind.DimensionKeyword)
+        {
+            return null;
+        }
+
+        var dimensionToken = Current;
+        Advance();
+
+        Consume(
+            Pl1TokenKind.OpenParenthesis,
+            "'(' bekleniyordu.");
+
+        var sizeToken = Consume(
+            Pl1TokenKind.Number,
+            "DIM / DIMENSION boyutu bekleniyordu.");
+
+        Consume(
+            Pl1TokenKind.CloseParenthesis,
+            "')' bekleniyordu.");
+
+        if (sizeToken is null)
+        {
+            return null;
+        }
+
+        if (int.TryParse(sizeToken.Text, out var arraySize))
+        {
+            return arraySize;
+        }
+
+        _diagnostics.Add(new Diagnostic(
+            DiagnosticSeverity.Error,
+            $"DIM / DIMENSION boyutu sayısal olmalıdır: {sizeToken.Text}",
+            dimensionToken.Location));
+
+        return null;
+    }
+
+    /// <summary>
+    /// Name-based array size ile DIM / DIMENSION attribute size bilgisini tek değere indirger.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Aynı declaration içinde hem PARAM(2) hem de DIM(3) verilirse iki farklı array size kaynağı oluşur.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Tek array size değerini seçer. İki kaynak da doluysa diagnostic üretir ve name-based size değerini öncelikli kabul eder.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - PARAM(2) CHAR(10) => 2
+    /// - PARAM CHAR(10) DIM(2) => 2
+    /// - PARAM(2) CHAR(10) DIM(3) => diagnostic + 2
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseVariableDeclaration içinde
+    /// - ParseStructureMember içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Çok boyutlu dimension veya array range desteği geldiğinde array metadata merge davranışının merkezi noktası olur.
+    /// </summary>
+    private int? ResolveArraySize(
+        int? nameArraySize,
+        int? dimensionArraySize,
+        SourceLocation location)
+    {
+        if (nameArraySize.HasValue && dimensionArraySize.HasValue)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                "Array boyutu hem isim sonrasında hem de DIM / DIMENSION attribute ile verilemez.",
+                location));
+
+            return nameArraySize;
+        }
+
+        return nameArraySize ?? dimensionArraySize;
     }
 
     /// <summary>

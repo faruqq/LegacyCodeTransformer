@@ -222,10 +222,9 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
 
 ## Aktif Alt Hedef
-- BIT desteği
+- DIM / DIMENSION syntax desteği
 
 ## Sıradaki Alt Hedefler
-- DIM / DIMENSION syntax desteği
 - sqlRecord mapping desteği
 - INIT değerlerinin EGL default value olarak üretilmesi
 

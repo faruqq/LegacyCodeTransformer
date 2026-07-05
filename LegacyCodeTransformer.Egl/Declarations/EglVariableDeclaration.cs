@@ -1,58 +1,76 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 
-namespace LegacyCodeTransformer.Egl.Declarations
+namespace LegacyCodeTransformer.Egl.Declarations;
+
+/// <summary>
+/// EGL değişken tanımını temsil eder.
+///
+/// Neden var?
+/// ----------------------
+/// PL/I declaration ifadeleri hedef dilde EGL değişken declaration modeline dönüştürülecektir.
+///
+/// Ne çözüyor?
+/// ----------------------
+/// Scalar ve array EGL variable declaration ifadelerini tek modelde temsil eder.
+///
+/// Hangi örneği destekliyor?
+/// ----------------------
+/// - MustNo decimal(8);
+/// - Param char(10);
+/// - Param char(10)[2];
+///
+/// Nerede kullanılır?
+/// ----------------------
+/// - PL/I → EGL Transpiler çıktısında
+/// - EGL Code Generator içerisinde
+///
+/// Gelecekte neye temel olur?
+/// ----------------------
+/// Default value, nullable bilgisi, array metadata ve daha karmaşık EGL declaration üretimleri bu model üzerinden genişletilebilir.
+/// </summary>
+public sealed class EglVariableDeclaration : EglDeclaration
 {
+    public string Name { get; }
+
+    public EglDataType DataType { get; }
+
+    public int? ArraySize { get; }
+
     /// <summary>
-    /// EGL değişken tanımını temsil eder.
+    /// EGL değişken declaration modelini oluşturur.
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I declaration ifadeleri hedef dilde EGL değişken declaration
-    /// modeline dönüştürülecektir.
+    /// Transpiler PL/I variable declaration bilgisini EGL variable declaration modeline taşımak zorundadır.
     ///
-    /// Örnek EGL kodu:
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Değişken adı, EGL veri tipi ve optional array size bilgisini tek modelde tutar.
     ///
-    /// mustNo decimal(8);
-    ///
-    /// Bu modelde:
-    /// - Name: mustNo
-    /// - DataType: EglDecimalType
-    ///
-    /// olarak temsil edilir.
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - Param char(10);
+    /// - Param char(10)[2];
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - PL/I → EGL Transpiler çıktısında
-    /// - EGL Code Generator içerisinde
+    /// - Pl1ToEglTranspiler.TranspileVariableDeclaration içinde
+    /// - EglCodeGenerator.GenerateVariableDeclaration içinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// İleride string, int, boolean, record veya daha karmaşık EGL tipleri
-    /// aynı declaration modeli üzerinden üretilebilir.
+    /// Top-level array, default value ve annotation üretimi gibi davranışlara temel olur.
     /// </summary>
-    public sealed class EglVariableDeclaration : EglDeclaration
+    public EglVariableDeclaration(
+        string name,
+        EglDataType dataType,
+        SourceLocation location,
+        int? arraySize = null)
+        : base(location)
     {
-        /// <summary>
-        /// EGL değişken adıdır.
-        /// Örneğin: mustNo
-        /// </summary>
-        public string Name { get; }
-
-        /// <summary>
-        /// EGL değişken tipidir.
-        /// Örneğin: decimal(8,0)
-        /// </summary>
-        public EglDataType DataType { get; }
-
-        public EglVariableDeclaration(
-            string name,
-            EglDataType dataType,
-            SourceLocation location)
-            : base(location)
-        {
-            Name = name;
-            DataType = dataType;
-        }
+        Name = name;
+        DataType = dataType;
+        ArraySize = arraySize;
     }
 }
