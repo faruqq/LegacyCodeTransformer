@@ -1480,3 +1480,39 @@ NumericTypeParser helper sınıfı eklendi. Pl1Parser artık numeric type parsin
 
 ## Sonraki Adım
 Bir sonraki refactor adımı InitialValueParser ve DimensionParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R5 InitialValueParser ve DimensionParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde INIT / INITIAL ve DIM / DIMENSION parsing sorumlulukları Pl1Parser içinden çıkarıldı.
+
+InitialValueParser ve DimensionParser helper sınıfları eklendi. Pl1Parser artık initialization ve dimension parsing için yalnızca helper parser'ları çağırır ve token position bilgisini günceller.
+
+## Yapılanlar
+- InitialValueParser helper sınıfı eklendi.
+- InitialValueParseResult modeli eklendi.
+- InitialRepeatInfo modeli InitialValueParser içine taşındı.
+- DimensionParser helper sınıfı eklendi.
+- DimensionParseResult modeli eklendi.
+- Pl1Parser.ParseOptionalInitialValue methodu sadeleştirildi.
+- Pl1Parser.ParseOptionalArraySize methodu sadeleştirildi.
+- Pl1Parser.ParseOptionalDimensionSize methodu sadeleştirildi.
+- Pl1Parser.ResolveArraySize methodu sadeleştirildi.
+- InitialValueParser unit testleri eklendi.
+- DimensionParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı StructureParser extraction olacaktır.

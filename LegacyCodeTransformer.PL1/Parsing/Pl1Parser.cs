@@ -416,45 +416,42 @@ public sealed class Pl1Parser
     /// <summary>
     /// PL/I declaration adından sonra gelen opsiyonel array dimension bilgisini parse eder.
     ///
-    /// Örnek:
+    /// Neden var?
+    /// ----------------------
+    /// Declaration adı sonrasında parantez içinde array size verilebilir.
     ///
-    /// DCL 1 DIZI(6),
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat name-based array size
+    /// parsing sorumluluğunu DimensionParser helper sınıfına devreder.
     ///
-    /// Bu örnekte array size değeri 6 olarak döner.
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL PARAM(2) CHAR(10);
+    /// - DCL 1 DIZI(6), ...
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseVariableDeclaration içinde
+    /// - ParseStructureDeclaration içinde
+    /// - ParseStructureMember içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Çok boyutlu array syntax Pl1Parser büyütülmeden DimensionParser içinde geliştirilebilir.
     /// </summary>
     private int? ParseOptionalArraySize()
     {
-        if (Current.Kind != Pl1TokenKind.OpenParenthesis)
-        {
-            return null;
-        }
+        var parser = new DimensionParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        Advance();
+        var result = parser.ParseOptionalArraySize();
 
-        var sizeToken = Consume(
-            Pl1TokenKind.Number,
-            "Array boyutu bekleniyordu.");
+        _position = result.Position;
 
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (sizeToken is null)
-        {
-            return null;
-        }
-
-        if (int.TryParse(sizeToken.Text, out var arraySize))
-        {
-            return arraySize;
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"Array boyutu sayısal olmalıdır: {sizeToken.Text}",
-            sizeToken.Location));
-
-        return null;
+        return result.ArraySize;
     }
 
     /// <summary>
@@ -567,18 +564,17 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I array declaration bilgisi değişken adından sonra parantezle verilebildiği gibi DIM veya DIMENSION attribute ile de verilebilir.
+    /// Veri tipi sonrasında DIM veya DIMENSION attribute ile array size verilebilir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Veri tipi sonrasında gelen DIM(n) veya DIMENSION(n) bilgisini array size değerine dönüştürür.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DIM / DIMENSION parsing
+    /// sorumluluğunu DimensionParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - DCL PARAM CHAR(10) DIM(2);
-    /// - DCL PARAM CHAR(10) DIMENSION(2);
-    /// - 5 PARAM CHAR(10) DIM(2)
-    /// - 5 PARAM CHAR(10) DIMENSION(2)
+    /// - DIM(2)
+    /// - DIMENSION(2)
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -587,47 +583,20 @@ public sealed class Pl1Parser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Çok boyutlu DIMENSION syntax ve lower-bound / upper-bound array range desteği bu method üzerinden genişletilebilir.
+    /// DIMENSION range ve çok boyutlu syntax Pl1Parser büyütülmeden DimensionParser içinde geliştirilebilir.
     /// </summary>
     private int? ParseOptionalDimensionSize()
     {
-        if (Current.Kind != Pl1TokenKind.DimKeyword &&
-            Current.Kind != Pl1TokenKind.DimensionKeyword)
-        {
-            return null;
-        }
+        var parser = new DimensionParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        var dimensionToken = Current;
-        Advance();
+        var result = parser.ParseOptionalDimensionSize();
 
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
+        _position = result.Position;
 
-        var sizeToken = Consume(
-            Pl1TokenKind.Number,
-            "DIM / DIMENSION boyutu bekleniyordu.");
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (sizeToken is null)
-        {
-            return null;
-        }
-
-        if (int.TryParse(sizeToken.Text, out var arraySize))
-        {
-            return arraySize;
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"DIM / DIMENSION boyutu sayısal olmalıdır: {sizeToken.Text}",
-            dimensionToken.Location));
-
-        return null;
+        return result.ArraySize;
     }
 
     /// <summary>
@@ -635,17 +604,17 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// Aynı declaration içinde hem PARAM(2) hem de DIM(3) verilirse iki farklı array size kaynağı oluşur.
+    /// ParseVariableDeclaration ve ParseStructureMember iki farklı array size kaynağı okuyabilir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Tek array size değerini seçer. İki kaynak da doluysa diagnostic üretir ve name-based size değerini öncelikli kabul eder.
+    /// Array size conflict çözümleme sorumluluğunu DimensionParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - PARAM(2) CHAR(10) => 2
-    /// - PARAM CHAR(10) DIM(2) => 2
-    /// - PARAM(2) CHAR(10) DIM(3) => diagnostic + 2
+    /// - PARAM(2) CHAR(10)
+    /// - PARAM CHAR(10) DIM(2)
+    /// - PARAM(2) CHAR(10) DIM(3)
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -654,24 +623,22 @@ public sealed class Pl1Parser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Çok boyutlu dimension veya array range desteği geldiğinde array metadata merge davranışının merkezi noktası olur.
+    /// Çok boyutlu array metadata merge davranışı DimensionParser içinde geliştirilebilir.
     /// </summary>
     private int? ResolveArraySize(
         int? nameArraySize,
         int? dimensionArraySize,
         SourceLocation location)
     {
-        if (nameArraySize.HasValue && dimensionArraySize.HasValue)
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                "Array boyutu hem isim sonrasında hem de DIM / DIMENSION attribute ile verilemez.",
-                location));
+        var parser = new DimensionParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-            return nameArraySize;
-        }
-
-        return nameArraySize ?? dimensionArraySize;
+        return parser.ResolveArraySize(
+            nameArraySize,
+            dimensionArraySize,
+            location);
     }
 
     /// <summary>
@@ -1116,164 +1083,42 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I değişken tanımlarında veri tipinden sonra başlangıç değeri
-    /// verilebilir.
+    /// ParseVariableDeclaration ve ParseStructureMember akışları veri tipinden sonra
+    /// opsiyonel initialization bilgisi okuyabilmelidir.
     ///
-    /// Örnek PL/I:
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat INIT / INITIAL syntax
+    /// çözümleme sorumluluğunu InitialValueParser helper sınıfına devreder.
     ///
-    /// DCL PARAM CHAR(08) INIT(' ');
-    /// DCL PARAM2 CHAR(01) INIT(';');
-    /// DCL PARAM3 CHAR(8) INIT((08)' ');
-    /// DCL PARAM4 CHAR(8) INIT((*)' ');
-    /// DCL PARAM5 CHAR(4) INITIAL('ABCD');
-    ///
-    /// Bu method:
-    /// - INIT / INITIAL yoksa null döner
-    /// - INIT(' ') için Pl1InitialValue üretir
-    /// - INIT((08)' ') için RepeatCount = 8 üretir
-    /// - INIT((*)' ') için AppliesToAllElements = true üretir
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - INIT(' ')
+    /// - INITIAL(';')
+    /// - INIT((08)' ')
+    /// - INIT((*)' ')
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseVariableDeclaration içerisinde
-    /// - ParseStructureMember içerisinde
-    /// - PL/I declaration modeline başlangıç değeri bilgisini eklemek için
+    /// - ParseVariableDeclaration içinde
+    /// - ParseStructureMember içinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// EGL default value üretimi kararlaştırıldığında bu bilgi Transpiler
-    /// veya Generator tarafında kullanılabilecektir.
-    /// Structure array desteği geldiğinde INIT((*)' ') kullanımı bu model
-    /// üzerinden anlamlandırılacaktır.
+    /// Initialization parsing davranışı Pl1Parser büyütülmeden InitialValueParser içinde geliştirilebilir.
     /// </summary>
     private Pl1InitialValue? ParseOptionalInitialValue()
     {
-        if (Current.Kind != Pl1TokenKind.InitKeyword &&
-            Current.Kind != Pl1TokenKind.InitialKeyword)
-        {
-            return null;
-        }
+        var parser = new InitialValueParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        var initToken = Current;
+        var result = parser.ParseOptionalInitialValue();
 
-        if (Current.Kind == Pl1TokenKind.InitKeyword)
-        {
-            Consume(
-                Pl1TokenKind.InitKeyword,
-                "INIT bekleniyordu.");
-        }
-        else
-        {
-            Consume(
-                Pl1TokenKind.InitialKeyword,
-                "INITIAL bekleniyordu.");
-        }
+        _position = result.Position;
 
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
-
-        var repeatInfo = ParseOptionalInitialRepeatFactor();
-
-        var valueToken = Consume(
-            Pl1TokenKind.StringLiteral,
-            "Başlangıç değeri için karakter sabiti bekleniyordu.");
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (valueToken is null)
-        {
-            return null;
-        }
-
-        return new Pl1InitialValue(
-            valueToken.Text,
-            repeatInfo.RepeatCount,
-            repeatInfo.AppliesToAllElements,
-            initToken.Location);
-    }
-
-    /// <summary>
-    /// PL/I INIT / INITIAL içindeki opsiyonel tekrar faktörünü parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I başlangıç değeri söz diziminde aynı değerin tekrar ettirilmesi
-    /// veya tüm elemanlara uygulanması için tekrar faktörü kullanılabilir.
-    ///
-    /// Örnek PL/I:
-    ///
-    /// INIT((08)' ')
-    /// INIT((*)' ')
-    /// INITIAL((4)'*')
-    ///
-    /// Bu method:
-    /// - (08) için RepeatCount = 8
-    /// - (*) için AppliesToAllElements = true
-    /// - tekrar faktörü yoksa varsayılan değerler
-    ///
-    /// üretir.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseOptionalInitialValue içerisinde
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Array ve structure initialization desteği geldiğinde repeat factor
-    /// davranışı bu method üzerinden genişletilecektir.
-    /// </summary>
-    private InitialRepeatInfo ParseOptionalInitialRepeatFactor()
-    {
-        if (Current.Kind != Pl1TokenKind.OpenParenthesis)
-        {
-            return InitialRepeatInfo.None;
-        }
-
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
-
-        int? repeatCount = null;
-        var appliesToAllElements = false;
-
-        if (Current.Kind == Pl1TokenKind.Number)
-        {
-            var repeatToken = Consume(
-                Pl1TokenKind.Number,
-                "Tekrar sayısı bekleniyordu.");
-
-            if (repeatToken is not null &&
-                int.TryParse(repeatToken.Text, out var parsedRepeatCount))
-            {
-                repeatCount = parsedRepeatCount;
-            }
-        }
-        else if (Current.Kind == Pl1TokenKind.Asterisk)
-        {
-            Consume(
-                Pl1TokenKind.Asterisk,
-                "'*' bekleniyordu.");
-
-            appliesToAllElements = true;
-        }
-        else
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"INIT tekrar faktörü için sayı veya '*' bekleniyordu. Gelen token: {Current.Text}",
-                Current.Location));
-        }
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        return new InitialRepeatInfo(
-            repeatCount,
-            appliesToAllElements);
+        return result.InitialValue;
     }
 
     /// <summary>
