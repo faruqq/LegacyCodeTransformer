@@ -2013,4 +2013,189 @@ public sealed class Pl1ToEglTranspilerTests
             "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
             result.Diagnostics[0].Message);
     }
+
+    /// <summary>
+    /// PL/I REAL tipinin EGL smallfloat tipine dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın Pl1FloatingTypeKind.Real değerini EglSmallFloatType olarak map ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1FloatingType Kind Real, Base Unspecified, Precision null.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration veri tipi EglSmallFloatType olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithRealFloatingType_ShouldCreateEglSmallFloatType()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "RATE",
+                new Pl1FloatingType(
+                    Pl1FloatingTypeKind.Real,
+                    Pl1FloatingBase.Unspecified,
+                    null,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Rate", variableDeclaration.Name);
+        Assert.IsType<EglSmallFloatType>(variableDeclaration.DataType);
+    }
+
+    /// <summary>
+    /// PL/I DOUBLE PRECISION tipinin EGL float tipine dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın Pl1FloatingTypeKind.DoublePrecision değerini EglFloatType olarak map ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1FloatingType Kind DoublePrecision, Base Unspecified, Precision null.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration veri tipi EglFloatType olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDoublePrecisionFloatingType_ShouldCreateEglFloatType()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "RATE",
+                new Pl1FloatingType(
+                    Pl1FloatingTypeKind.DoublePrecision,
+                    Pl1FloatingBase.Unspecified,
+                    null,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Rate", variableDeclaration.Name);
+        Assert.IsType<EglFloatType>(variableDeclaration.DataType);
+    }
+
+    /// <summary>
+    /// PL/I binary FLOAT tipinin EGL float tipine dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın FLOAT BIN(53) semantic bilgisini EglFloatType olarak map ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1FloatingType Kind Float, Base Binary, Precision 53.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration veri tipi EglFloatType olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithBinaryFloatingType_ShouldCreateEglFloatType()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "RATE",
+                new Pl1FloatingType(
+                    Pl1FloatingTypeKind.Float,
+                    Pl1FloatingBase.Binary,
+                    53,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Rate", variableDeclaration.Name);
+        Assert.IsType<EglFloatType>(variableDeclaration.DataType);
+    }
+
+    /// <summary>
+    /// PL/I FLOAT DECIMAL tipinin şimdilik diagnostic ürettiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın decimal floating semantic taşıyan FLOAT DECIMAL bilgisini otomatik EGL float tipine çevirmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1FloatingType Kind Float, Base Decimal, Precision 16.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Transpilation başarısız olmalı ve FLOAT DECIMAL diagnostic mesajı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDecimalFloatingType_ShouldReturnDiagnostic()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "RATE",
+                new Pl1FloatingType(
+                    Pl1FloatingTypeKind.Float,
+                    Pl1FloatingBase.Decimal,
+                    16,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Single(result.Diagnostics);
+        Assert.Contains(
+            "FLOAT DECIMAL veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Decimal, Precision: 16",
+            result.Diagnostics[0].Message);
+    }
 }

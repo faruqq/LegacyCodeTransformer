@@ -2186,3 +2186,36 @@ sqlRecord ise tablo metadata, column mapping, SQL context veya kullanıcı seçi
 
 ### Durum
 Accepted
+
+## Decision 056 - FLOAT / REAL / DOUBLE EGL Mapping
+
+### Karar
+PL/I floating point tipleri EGL tarafına aşamalı ve semantic korumalı şekilde map edilecektir.
+
+İlk güvenli mapping kapsamı:
+
+    REAL                  -> smallfloat
+    DOUBLE                -> float
+    DOUBLE PRECISION      -> float
+    FLOAT                 -> float
+    FLOAT BINARY          -> float
+    FLOAT BIN(p)          -> float
+
+FLOAT DECIMAL ve FLOAT DECIMAL(p) şimdilik otomatik EGL mapping kapsamı dışında bırakılacaktır.
+
+### Gerekçe
+EGL tarafında FLOAT ve SMALLFLOAT numeric primitive tipleri mevcuttur. REAL tipi single precision floating semantic taşıdığı için smallfloat ile, DOUBLE / DOUBLE PRECISION ise double precision floating semantic taşıdığı için float ile eşleştirilecektir.
+
+FLOAT DECIMAL decimal floating semantic taşıyabileceğinden doğrudan EGL float mapping yapmak semantic kayıp riski oluşturabilir. Bu nedenle FLOAT DECIMAL için mapping kararı ayrıca değerlendirilecektir.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.Transpilers
+- LegacyCodeTransformer.EGL
+- LegacyCodeTransformer.Application
+- Test projeleri
+- Roadmap.md
+- ModuleSummaries.md
+
+### Durum
+Accepted

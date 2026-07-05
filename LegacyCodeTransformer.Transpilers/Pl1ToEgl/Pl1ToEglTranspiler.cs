@@ -1006,26 +1006,30 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
-        /// PL/I FLOAT / REAL / DOUBLE veri tipi için EGL mapping kararını yönetir.
+        /// PL/I FLOAT / REAL / DOUBLE veri tipini EGL floating veri tipine dönüştürür.
         ///
         /// Neden var?
         /// ----------------------
-        /// Floating point tipler fixed decimal veya fixed binary ile aynı semantic anlama
-        /// sahip değildir. Doğrudan decimal veya int mapping yapmak precision ve runtime
-        /// davranış kaybına neden olabilir.
+        /// Parser artık FLOAT / REAL / DOUBLE ailesini Pl1FloatingType olarak korur.
+        /// Bu modelin güvenli subset'i EGL tarafında float veya smallfloat olarak üretilebilir.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// FLOAT ailesi parser tarafından desteklense bile şimdilik otomatik EGL mapping
-        /// yapılmasını engeller ve açık diagnostic üretir.
+        /// REAL tipini EGL smallfloat olarak, DOUBLE / DOUBLE PRECISION ve binary FLOAT tiplerini
+        /// EGL float olarak map eder.
+        ///
+        /// FLOAT DECIMAL ise decimal floating semantic taşıyabileceği için şimdilik diagnostic
+        /// üretir ve otomatik mapping yapılmaz.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// - DCL RATE FLOAT;
-        /// - DCL RATE FLOAT DECIMAL(16);
-        /// - DCL RATE FLOAT BIN(53);
-        /// - DCL RATE REAL;
-        /// - DCL RATE DOUBLE PRECISION;
+        /// - DCL RATE REAL; => Rate smallfloat;
+        /// - DCL RATE DOUBLE; => Rate float;
+        /// - DCL RATE DOUBLE PRECISION; => Rate float;
+        /// - DCL RATE FLOAT; => Rate float;
+        /// - DCL RATE FLOAT BINARY; => Rate float;
+        /// - DCL RATE FLOAT BIN(53); => Rate float;
+        /// - DCL RATE FLOAT DECIMAL(16); => diagnostic
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -1033,14 +1037,31 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// EGL tarafında float / decimal / custom numeric mapping kararı verildiğinde
-        /// merkezi floating type mapping noktası olarak genişletilecektir.
+        /// FLOAT DECIMAL için ayrı mapping kararı, precision limit validation ve SQL metadata
+        /// üretimi gerektiğinde bu method genişletilecektir.
         /// </summary>
         private EglDataType? TranspileFloatingType(Pl1FloatingType floatingType)
         {
+            if (floatingType.Kind == Pl1FloatingTypeKind.Real)
+            {
+                return new EglSmallFloatType(floatingType.Location);
+            }
+
+            if (floatingType.Kind == Pl1FloatingTypeKind.DoublePrecision)
+            {
+                return new EglFloatType(floatingType.Location);
+            }
+
+            if (floatingType.Kind == Pl1FloatingTypeKind.Float &&
+                (floatingType.Base == Pl1FloatingBase.Unspecified ||
+                 floatingType.Base == Pl1FloatingBase.Binary))
+            {
+                return new EglFloatType(floatingType.Location);
+            }
+
             _diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
-                $"FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: {floatingType.Kind}, Base: {floatingType.Base}, Precision: {floatingType.Precision?.ToString() ?? "null"}",
+                $"FLOAT DECIMAL veri tipi için EGL mapping henüz desteklenmiyor. Kind: {floatingType.Kind}, Base: {floatingType.Base}, Precision: {floatingType.Precision?.ToString() ?? "null"}",
                 floatingType.Location));
 
             return null;

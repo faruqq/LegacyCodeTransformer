@@ -1209,3 +1209,63 @@ EGL mapping şimdilik yapılmamaktadır. Floating point tipler fixed decimal vey
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi FLOAT / REAL / DOUBLE semantic mapping değerlendirmesidir.
+
+---
+# 2026-07-05 — P04-NB FLOAT / REAL / DOUBLE EGL Mapping
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I floating point tip ailesi için güvenli EGL mapping subset eklendi.
+
+REAL tipi EGL smallfloat olarak üretilir. DOUBLE ve DOUBLE PRECISION tipleri EGL float olarak üretilir. FLOAT ve FLOAT BINARY / FLOAT BIN(p) tipleri EGL float olarak üretilir.
+
+FLOAT DECIMAL ve FLOAT DECIMAL(p) tipleri decimal floating semantic taşıyabileceği için otomatik EGL mapping kapsamı dışında bırakılmıştır ve diagnostic üretmektedir.
+
+## Desteklenen PL/I Kodları
+
+    DCL RATE REAL;
+    DCL RATE DOUBLE;
+    DCL RATE DOUBLE PRECISION;
+    DCL RATE FLOAT;
+    DCL RATE FLOAT BINARY;
+    DCL RATE FLOAT BIN(53);
+
+## Beklenen EGL Çıktıları
+
+    Rate smallfloat;
+    Rate float;
+    Rate float;
+    Rate float;
+    Rate float;
+    Rate float;
+
+## Diagnostic Üreten PL/I Kodları
+
+    DCL RATE FLOAT DECIMAL;
+    DCL RATE FLOAT DECIMAL(16);
+
+## Yapılanlar
+- EglFloatType modeli eklendi.
+- EglSmallFloatType modeli eklendi.
+- Transpiler tarafında REAL → smallfloat mapping eklendi.
+- Transpiler tarafında DOUBLE / DOUBLE PRECISION → float mapping eklendi.
+- Transpiler tarafında FLOAT / FLOAT BINARY / FLOAT BIN(p) → float mapping eklendi.
+- FLOAT DECIMAL için semantic diagnostic davranışı eklendi.
+- Generator tarafında float ve smallfloat output üretimi eklendi.
+- Transpiler ve Application testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- FLOAT DECIMAL için kesin EGL mapping
+- Floating precision limit validation
+- Runtime rounding / overflow davranışı
+- SQL metadata üretimi
+
+## İlgili Kararlar
+- Decision 051 - Numeric type mapping semantic korumalı ve aşamalı yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 056 - FLOAT / REAL / DOUBLE EGL mapping semantic korumalı yapılacaktır.
+
+## Sonraki Adım
+P04 kapanış değerlendirmesi yapılacak, ardından parser internal refactor ile P05 hazırlığına geçilecektir.
