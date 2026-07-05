@@ -598,6 +598,7 @@ public sealed class Pl1Parser
     /// - VARCHAR(n)
     /// - PIC '999'
     /// - PICTURE '999V99'
+    /// - BIT(n)
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -606,7 +607,7 @@ public sealed class Pl1Parser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// DIMENSION, BIT ve daha gelişmiş PIC pattern parse davranışları
+    /// DIMENSION, BIT literal INIT ve daha gelişmiş BIT mapping davranışları
     /// desteklendikçe bu method genişletilecektir.
     /// </summary>
     private Pl1DataType? ParseDataType()
@@ -645,12 +646,85 @@ public sealed class Pl1Parser
             return ParsePictureType();
         }
 
+        if (Current.Kind == Pl1TokenKind.BitKeyword)
+        {
+            return ParseBitType();
+        }
+
         _diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
             Current.Location));
 
         return null;
+    }
+
+    /// <summary>
+    /// PL/I BIT(n) veri tipini parse eder.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// PL/I kaynak kodunda bit string alanları BIT keyword'ü ile tanımlanır.
+    /// BIT tipi CHAR veya numeric veri tipi değildir; ayrı modelle korunmalıdır.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// BIT keyword'ünden sonra gelen parantez içi uzunluk değerini okuyarak
+    /// Pl1BitType modeline dönüştürür.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL FLAG BIT(1);
+    /// - DCL MASK BIT(8);
+    /// - 5 STATUS_FLAGS BIT(8);
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseDataType methodu BitKeyword gördüğünde
+    /// - Tekil variable declaration parse edilirken
+    /// - Structure member veri tipi parse edilirken
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// BIT literal INIT, BIT(1) boolean mapping veya bit string preserving
+    /// mapping kararları alındığında merkezi parser davranışı olarak kalır.
+    /// </summary>
+    private Pl1BitType? ParseBitType()
+    {
+        var bitToken = Consume(
+            Pl1TokenKind.BitKeyword,
+            "BIT bekleniyordu.");
+
+        Consume(
+            Pl1TokenKind.OpenParenthesis,
+            "'(' bekleniyordu.");
+
+        var lengthToken = Consume(
+            Pl1TokenKind.Number,
+            "BIT uzunluk değeri bekleniyordu.");
+
+        Consume(
+            Pl1TokenKind.CloseParenthesis,
+            "')' bekleniyordu.");
+
+        if (bitToken is null || lengthToken is null)
+        {
+            return null;
+        }
+
+        if (!int.TryParse(lengthToken.Text, out var length))
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"BIT uzunluk değeri sayısal olmalıdır: {lengthToken.Text}",
+                lengthToken.Location));
+
+            return null;
+        }
+
+        return new Pl1BitType(
+            length,
+            bitToken.Location);
     }
 
     /// <summary>

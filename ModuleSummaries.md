@@ -952,3 +952,49 @@ Formatted PIC pattern'lar display/edit mask bilgisi taşıdığı için doğruda
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi BIT desteğidir.
+
+---
+# 2026-07-05 — P04-J BIT Parse Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I BIT(n) veri tipi parser seviyesinde desteklenmeye başladı.
+
+BIT tipi şimdilik EGL tarafında otomatik dönüştürülmemektedir. Çünkü BIT(n) bit string semantic taşır ve doğrudan char(n) veya numeric tipe dönüştürülmesi semantic kayba neden olabilir.
+
+## Desteklenen PL/I Kodları
+
+    DCL FLAG BIT(1);
+    DCL MASK BIT(8);
+    DCL 1 FLAGS,
+        5 MASK BIT(8);
+
+## Beklenen Davranış
+
+    Parser Pl1BitType modeli üretir.
+    Length bilgisi korunur.
+    Transpiler EGL mapping için diagnostic üretir.
+
+## Yapılanlar
+- Pl1BitType modeli eklendi.
+- Lexer tarafında BIT keyword olarak tanındı.
+- Parser tarafında BIT(n) parse desteği eklendi.
+- Transpiler tarafında BIT için açık diagnostic üretildi.
+- BIT variable declaration parser testleri eklendi.
+- BIT structure member parser testleri eklendi.
+- BIT conversion diagnostic testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- BIT(1) → boolean mapping
+- BIT(n) → char/binary preserving mapping
+- BIT literal INIT desteği
+- BIT expression / assignment desteği
+- BIT alanların EGL output olarak üretilmesi
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi DIM / DIMENSION syntax desteğidir.

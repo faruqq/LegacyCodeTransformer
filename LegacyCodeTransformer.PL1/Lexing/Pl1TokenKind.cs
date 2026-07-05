@@ -53,6 +53,7 @@
         PictureKeyword,
         InitKeyword,
         InitialKeyword,
+        BitKeyword,
 
         OpenParenthesis,
         CloseParenthesis,

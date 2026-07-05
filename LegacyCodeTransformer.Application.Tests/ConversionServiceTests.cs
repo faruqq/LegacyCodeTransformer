@@ -1443,5 +1443,67 @@ namespace LegacyCodeTransformer.Application.Tests
                 "Desteklenmeyen PIC pattern: -999",
                 result.Diagnostics[0].Message);
         }
+
+        /// <summary>
+        /// BIT(1) declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// BIT veri tipinin parse edildiğini fakat henüz EGL mapping yapılmadığı için conversion sonucunun başarısız olduğunu doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL FLAG BIT(1);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve BIT mapping desteklenmiyor diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithBitDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL FLAG BIT(1);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "BIT veri tipi için EGL mapping henüz desteklenmiyor. Length: 1",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// Structure member içinde BIT(8) kullanıldığında conversion diagnostic üretildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// BIT veri tipinin structure member olarak parse edildiğini fakat structure length / EGL mapping henüz desteklenmediği için diagnostic üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 FLAGS, 5 MASK BIT(8);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve BIT member length hesaplanamadığı için diagnostic üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithBitStructureMember_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL 1 FLAGS, 5 MASK BIT(8);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "Structure member uzunluğu hesaplanamayan PL/I member veri tipi: Pl1BitType",
+                result.Diagnostics[0].Message);
+        }
     }
 }

@@ -1761,4 +1761,79 @@ public sealed class Pl1ParserTests
         Assert.False(dataType.IsFormatted);
         Assert.True(dataType.SupportsDirectEglMapping);
     }
+
+    /// <summary>
+    /// PL/I BIT(1) declaration bilgisinin Pl1BitType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın BIT keyword'ünü veri tipi olarak tanıdığını ve parantez içindeki length bilgisini Pl1BitType modeline taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL FLAG BIT(1);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı FLAG, veri tipi Pl1BitType ve Length 1 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBitDeclaration_ShouldCreateBitType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL FLAG BIT(1);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("FLAG", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1BitType>(variableDeclaration.DataType);
+        Assert.Equal(1, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I BIT(8) structure member bilgisinin Pl1BitType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member içinde BIT veri tipini desteklediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 FLAGS, 5 MASK BIT(8);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Structure adı FLAGS, member adı MASK, member veri tipi Pl1BitType ve Length 8 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBitStructureMember_ShouldCreateBitType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL 1 FLAGS, 5 MASK BIT(8);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+
+        Assert.Equal("FLAGS", structureDeclaration.Name);
+
+        var member = Assert.Single(structureDeclaration.Members);
+        Assert.Equal("MASK", member.Name);
+
+        var dataType = Assert.IsType<Pl1BitType>(member.DataType);
+        Assert.Equal(8, dataType.Length);
+    }
 }

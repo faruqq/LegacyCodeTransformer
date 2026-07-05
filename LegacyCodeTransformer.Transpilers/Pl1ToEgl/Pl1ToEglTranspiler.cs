@@ -660,6 +660,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - PIC '999V99' => 5
         /// - PIC 'XXX' => 3
         /// - PIC '(20)X' => 20
+        /// - BIT(8) => null
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -669,8 +670,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT, formatted PIC ve farklı storage type hesapları geldikçe
-        /// bu method genişletilecektir.
+        /// BIT için storage-preserving mapping kararı alındığında bu method
+        /// Pl1BitType branch'i ile genişletilecektir.
         /// </summary>
         private static int? CalculateDataTypeLength(Pl1DataType dataType)
         {
@@ -687,6 +688,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     pictureType.Precision.Value,
                 Pl1PictureType { IsAlphanumeric: true, Length: not null } pictureType =>
                     pictureType.Length.Value,
+                Pl1BitType => null,
                 _ => null
             };
         }
@@ -861,6 +863,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - FIXED BIN(31) => int
         /// - PIC '999' => num(3)
         /// - PIC '999V99' => num(5,2)
+        /// - BIT(1) => diagnostic
+        /// - BIT(8) => diagnostic
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -870,37 +874,65 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT, formatted PIC ve sqlRecord özel tip mapping kuralları eklendikçe
-        /// bu method genişletilecektir.
+        /// BIT için EGL tarafında kesin mapping kararı alındığında bu method
+        /// Pl1BitType branch'i üzerinden genişletilecektir.
         /// </summary>
         private EglDataType? TranspileDataType(Pl1DataType dataType)
         {
             return dataType switch
             {
-                Pl1FixedDecimalType fixedDecimalType =>
-                    new EglDecimalType(
-                        fixedDecimalType.Precision,
-                        fixedDecimalType.Scale,
-                        fixedDecimalType.Location),
-
-                Pl1FixedBinaryType fixedBinaryType =>
-                    TranspileFixedBinaryType(fixedBinaryType),
-
-                Pl1CharacterType characterType =>
-                    new EglCharacterType(
-                        characterType.Length,
-                        characterType.Location),
-
-                Pl1VarcharType varcharType =>
-                    new EglCharacterType(
-                        varcharType.Length,
-                        varcharType.Location),
-
-                Pl1PictureType pictureType =>
-                    TranspilePictureType(pictureType),
-
+                Pl1FixedDecimalType fixedDecimalType => new EglDecimalType(
+                    fixedDecimalType.Precision,
+                    fixedDecimalType.Scale,
+                    fixedDecimalType.Location),
+                Pl1FixedBinaryType fixedBinaryType => TranspileFixedBinaryType(fixedBinaryType),
+                Pl1CharacterType characterType => new EglCharacterType(
+                    characterType.Length,
+                    characterType.Location),
+                Pl1VarcharType varcharType => new EglCharacterType(
+                    varcharType.Length,
+                    varcharType.Location),
+                Pl1PictureType pictureType => TranspilePictureType(pictureType),
+                Pl1BitType bitType => TranspileBitType(bitType),
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// PL/I BIT(n) veri tipi için EGL mapping kararını yönetir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I BIT(n) tipi bit string semantic taşır. Bu tipi doğrudan EGL char(n)
+        /// veya numeric tipe çevirmek bit-level anlam kaybına neden olabilir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// BIT tipi parser tarafından desteklense bile şimdilik otomatik EGL mapping
+        /// yapılmasını engeller ve açık diagnostic üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DCL FLAG BIT(1);
+        /// - DCL MASK BIT(8);
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileDataType içinde Pl1BitType yakalandığında
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// BIT(1) boolean mapping, BIT(n) char/binary preserving mapping veya
+        /// hedef dile özel bit string mapping kararları burada uygulanacaktır.
+        /// </summary>
+        private EglDataType? TranspileBitType(Pl1BitType bitType)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"BIT veri tipi için EGL mapping henüz desteklenmiyor. Length: {bitType.Length}",
+                bitType.Location));
+
+            return null;
         }
 
         /// <summary>

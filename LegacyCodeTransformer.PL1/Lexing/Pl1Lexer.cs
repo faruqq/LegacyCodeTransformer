@@ -309,6 +309,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "PICTURE" => Pl1TokenKind.PictureKeyword,
                 "INIT" => Pl1TokenKind.InitKeyword,
                 "INITIAL" => Pl1TokenKind.InitialKeyword,
+                "BIT" => Pl1TokenKind.BitKeyword,
                 _ => Pl1TokenKind.Identifier
             };
         }
