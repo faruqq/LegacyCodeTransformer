@@ -215,38 +215,6 @@ public sealed class PicturePatternAnalyzerTests
         Assert.True(analysis.SupportsDirectEglMapping);
     }
 
-    [Fact]
-    public void Analyze_WithSignedNumericPicturePatternHavingScale_ShouldReturnSignedNumericAnalysisWithScale()
-    {
-        var analysis = PicturePatternAnalyzer.Analyze("S999V99");
-
-        Assert.Equal(Pl1PictureCategory.Numeric, analysis.Category);
-        Assert.Equal(5, analysis.Precision);
-        Assert.Equal(2, analysis.Scale);
-        Assert.Equal(5, analysis.Length);
-        Assert.True(analysis.IsSigned);
-        Assert.True(analysis.IsNumeric);
-        Assert.False(analysis.IsAlphanumeric);
-        Assert.False(analysis.IsFormatted);
-        Assert.True(analysis.SupportsDirectEglMapping);
-    }
-
-    [Fact]
-    public void Analyze_WithSignedRepeatedNumericPicturePattern_ShouldReturnSignedNumericAnalysis()
-    {
-        var analysis = PicturePatternAnalyzer.Analyze("S(8)9");
-
-        Assert.Equal(Pl1PictureCategory.Numeric, analysis.Category);
-        Assert.Equal(8, analysis.Precision);
-        Assert.Null(analysis.Scale);
-        Assert.Equal(8, analysis.Length);
-        Assert.True(analysis.IsSigned);
-        Assert.True(analysis.IsNumeric);
-        Assert.False(analysis.IsAlphanumeric);
-        Assert.False(analysis.IsFormatted);
-        Assert.True(analysis.SupportsDirectEglMapping);
-    }
-
     /// <summary>
     /// Signed numeric PIC pattern içindeki implied decimal bilgisinin sign metadata ile birlikte analiz edildiğini doğrular.
     ///

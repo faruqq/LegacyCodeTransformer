@@ -61,34 +61,34 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     public sealed class Pl1ToEglTranspiler
     {
         private readonly DiagnosticBag _diagnostics = new();
-        private readonly IdentifierNamingOptions _namingOptions;
+        private readonly Pl1ToEglTranspilerOptions _options;
 
         /// <summary>
         /// PL/I → EGL Transpiler instance'ını varsayılan ayarlarla oluşturur.
         ///
         /// Neden var?
         /// ----------------------
-        /// En basit kullanımda dışarıdan naming options verilmeden
-        /// transpiler oluşturulabilmelidir.
+        /// En basit kullanımda dışarıdan options verilmeden transpiler oluşturulabilmelidir.
         ///
-        /// Varsayılan naming strategy IdentifierNamingOptions.Default
-        /// üzerinden gelir.
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Varsayılan olarak PascalCase identifier naming ve basicRecord record type üretimini kullanır.
         ///
-        /// Mevcut kararımıza göre varsayılan identifier dönüşümü
-        /// PascalCase davranışıdır.
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// new Pl1ToEglTranspiler()
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// - Application pipeline içerisinde
         /// - Unit testlerde varsayılan dönüşüm davranışını doğrulamada
         ///
-        /// Gelecekte ne işe yarayacak?
+        /// Gelecekte neye temel olur?
         /// ----------------------
-        /// CLI veya UI üzerinden farklı naming style seçimi geldiğinde
-        /// diğer constructor kullanılacaktır.
+        /// Transpiler option sayısı artsa bile default constructor geriye uyumlu kalır.
         /// </summary>
         public Pl1ToEglTranspiler()
-            : this(IdentifierNamingOptions.Default)
+            : this(Pl1ToEglTranspilerOptions.Default)
         {
         }
 
@@ -97,31 +97,59 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I identifier adlarının EGL tarafında Preserve, CamelCase veya
-        /// PascalCase gibi farklı stratejilerle üretilebilmesi gerekir.
+        /// Önceki API kullanımını bozmadan yalnızca identifier naming strategy verilmesini desteklemek gerekir.
         ///
-        /// Örnek:
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Eski constructor davranışını korur ve naming options bilgisini yeni Pl1ToEglTranspilerOptions modeline adapte eder.
         ///
-        /// MUST_NO
-        ///
-        /// PascalCase:
-        /// MustNo
-        ///
-        /// CamelCase:
-        /// mustNo
-        ///
-        /// Preserve:
-        /// MUST_NO
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// new Pl1ToEglTranspiler(new IdentifierNamingOptions(IdentifierNamingStyle.CamelCase))
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - Unit testlerde farklı naming strategy davranışlarını doğrulamada
-        /// - Application pipeline içerisinde kullanıcı seçimi geldiğinde
-        /// - Gelecekte CLI parametresi üzerinden naming style verildiğinde
+        /// - Mevcut unit testlerde
+        /// - ConversionService mevcut overload içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Geriye uyumlu API korunurken yeni options modeli ana giriş noktası haline gelir.
         /// </summary>
         public Pl1ToEglTranspiler(IdentifierNamingOptions namingOptions)
+            : this(new Pl1ToEglTranspilerOptions(namingOptions))
         {
-            _namingOptions = namingOptions ?? IdentifierNamingOptions.Default;
+        }
+
+        /// <summary>
+        /// PL/I → EGL Transpiler instance'ını verilen transpiler options ile oluşturur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Naming strategy dışında record type strategy gibi yeni dönüşüm ayarları da yönetilebilir olmalıdır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Transpiler davranışını tek options modeli üzerinden konfigüre eder.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// new Pl1ToEglTranspiler(new Pl1ToEglTranspilerOptions(
+        ///     IdentifierNamingOptions.Default,
+        ///     EglRecordTypeStrategy.SqlRecord))
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - sqlRecord mapping testlerinde
+        /// - Application pipeline options overload içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// sqlRecord metadata, default value üretimi ve farklı EGL output ayarları bu options modeli üzerinden genişletilebilir.
+        /// </summary>
+        public Pl1ToEglTranspiler(Pl1ToEglTranspilerOptions options)
+        {
+            _options = options ?? Pl1ToEglTranspilerOptions.Default;
         }
 
         /// <summary>
@@ -236,12 +264,13 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Ne çözüyor?
         /// ----------------------
         /// PL/I scalar ve array variable declaration bilgisini EGL variable declaration modeline taşır.
+        /// Veri tipi dönüşümü başarısız olursa diagnostic tekrarını engeller.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         /// - DCL MUST_NO FIXED DECIMAL(8); => MustNo decimal(8);
         /// - DCL PARAM CHAR(10) DIM(2); => Param char(10)[2];
-        /// - DCL PARAM(2) CHAR(10); => Param char(10)[2];
+        /// - DCL FLAG BIT(1); => tek BIT diagnostic üretir.
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -250,19 +279,23 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Default value mapping ve çok boyutlu array mapping kuralları eklendiğinde bu method genişletilecektir.
+        /// Yeni unsupported veri tipleri eklendiğinde duplicate diagnostic üretmeden merkezi hata yönetimi sağlar.
         /// </summary>
         private EglVariableDeclaration? TranspileVariableDeclaration(
             Pl1VariableDeclaration declaration)
         {
+            var diagnosticCountBeforeDataType = _diagnostics.Diagnostics.Count;
             var dataType = TranspileDataType(declaration.DataType);
 
             if (dataType is null)
             {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Desteklenmeyen PL/I veri tipi: {declaration.DataType.GetType().Name}",
-                    declaration.Location));
+                if (_diagnostics.Diagnostics.Count == diagnosticCountBeforeDataType)
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Desteklenmeyen PL/I veri tipi: {declaration.DataType.GetType().Name}",
+                        declaration.Location));
+                }
 
                 return null;
             }
@@ -270,7 +303,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             return new EglVariableDeclaration(
                 IdentifierNameTransformer.Transform(
                     declaration.Name,
-                    _namingOptions.Style),
+                    _options.NamingOptions.Style),
                 dataType,
                 declaration.Location,
                 declaration.ArraySize);
@@ -346,41 +379,23 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I seviye numaralı structure yapıları EGL tarafında record olarak
-        /// temsil edilir.
-        ///
-        /// P04-F ile birlikte structure içinde nested group field desteği de eklenmiştir.
+        /// PL/I seviye numaralı structure yapıları EGL tarafında record olarak temsil edilir.
+        /// Firmadaki DB2 erişim fonksiyonlarında sqlRecord kullanımı gerektiği için record type seçimi explicit strategy ile yönetilmelidir.
         ///
         /// Ne çözüyor?
         /// ----------------------
         /// Structure member listesini EGL record field listesine dönüştürür.
-        ///
-        /// Normal typed field:
-        ///
-        /// 5 PARAM CHAR(08)
-        ///
-        /// EGL:
-        ///
-        /// 10 Param char(8);
-        ///
-        /// Nested group field:
-        ///
-        /// 5 ADRES_BILGI,
-        ///     10 IL_KOD CHAR(02),
-        ///     10 ILCE_KOD CHAR(03)
-        ///
-        /// EGL:
-        ///
-        /// 5 AdresBilgi char(5);
-        ///     10 IlKod char(2);
-        ///     10 IlceKod char(3);
-        ///
-        /// Structure array varsa önce parent array field üretilir:
-        ///
-        /// 5 Dizi char(totalLength)[arraySize];
+        /// Record type değerini hardcoded basicRecord yerine Pl1ToEglTranspilerOptions.RecordTypeStrategy üzerinden belirler.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
+        /// Default strategy:
+        /// record CustomerInfo type basicRecord
+        ///
+        /// SqlRecord strategy:
+        /// record CustomerInfo type sqlRecord
+        ///
+        /// Ayrıca şu PL/I yapılarını destekler:
         /// - Basic structure declaration
         /// - Structure array declaration
         /// - Structure member array declaration
@@ -390,11 +405,11 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// ----------------------
         /// - TranspileDeclaration dispatch methodu içerisinde
         /// - Structure declaration dönüşümünde
+        /// - basicRecord / sqlRecord output üretiminde
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Çok seviyeli nested structure, group array, sqlRecord mapping ve daha
-        /// gelişmiş layout hesaplama kurallarına temel olur.
+        /// sqlRecord metadata, table name, column metadata, SQL annotation ve DCLGEN tabanlı mapping kuralları bu methodun oluşturduğu record model üzerine eklenecektir.
         /// </summary>
         private EglRecordDeclaration? TranspileStructureDeclaration(
             Pl1StructureDeclaration declaration)
@@ -414,7 +429,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     5,
                     IdentifierNameTransformer.Transform(
                         declaration.Name,
-                        _namingOptions.Style),
+                        _options.NamingOptions.Style),
                     new EglCharacterType(
                         elementLength.Value,
                         declaration.Location),
@@ -438,10 +453,45 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             return new EglRecordDeclaration(
                 IdentifierNameTransformer.Transform(
                     declaration.Name,
-                    _namingOptions.Style),
-                "basicRecord",
+                    _options.NamingOptions.Style),
+                GetEglRecordType(),
                 fields,
                 declaration.Location);
+        }
+
+        /// <summary>
+        /// Transpiler options değerine göre EGL record type string karşılığını üretir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// EGL tarafında record declaration type değeri basicRecord veya sqlRecord olabilir.
+        /// Firma DB2 erişim fonksiyonlarında sqlRecord kullanımı gerektiği için bu değer kontrollü şekilde seçilebilir olmalıdır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Record type strategy bilgisini EGL output'ta kullanılacak exact keyword değerine dönüştürür.
+        /// basicRecord ve sqlRecord casing değerleri EGL output standardına uygun olarak birebir korunur.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - EglRecordTypeStrategy.BasicRecord => basicRecord
+        /// - EglRecordTypeStrategy.SqlRecord => sqlRecord
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileStructureDeclaration içinde EglRecordDeclaration oluşturulurken
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// indexedRecord, serialRecord, table metadata veya DCLGEN tabanlı record type seçimi gerekirse merkezi mapping noktası olarak genişletilir.
+        /// </summary>
+        private string GetEglRecordType()
+        {
+            return _options.RecordTypeStrategy switch
+            {
+                EglRecordTypeStrategy.SqlRecord => "sqlRecord",
+                _ => "basicRecord"
+            };
         }
 
         /// <summary>
@@ -699,37 +749,20 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I structure member alanları artık yalnızca tek typed field olmak
-        /// zorunda değildir.
-        ///
-        /// Bir member:
-        ///
-        /// - Normal typed field olabilir.
-        /// - Field array olabilir.
-        /// - Nested group field olabilir.
+        /// PL/I structure member alanları normal typed field, field array veya nested group field olabilir.
         ///
         /// Ne çözüyor?
         /// ----------------------
         /// Normal field için tek EGL field üretir.
-        ///
-        /// Nested group için önce group parent field üretir, ardından child member
-        /// alanlarını bir sonraki EGL level ile üretir.
+        /// Nested group için parent group field ve child field listesini recursive olarak üretir.
+        /// Veri tipi dönüşümü diagnostic ürettiyse ikinci generic diagnostic üretmez.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// Normal field:
-        ///
-        /// 5 PARAM CHAR(08)
-        ///
-        /// Field array:
-        ///
-        /// 5 PARAM_LIST(2) CHAR(10)
-        ///
-        /// Nested group:
-        ///
-        /// 5 ADRES_BILGI,
-        ///     10 IL_KOD CHAR(02),
-        ///     10 ILCE_KOD CHAR(03)
+        /// - 5 PARAM CHAR(08)
+        /// - 5 PARAM_LIST(2) CHAR(10)
+        /// - 5 PARAM_LIST CHAR(10) DIM(2)
+        /// - 5 FLAG BIT(1) => tek BIT diagnostic üretir.
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -738,8 +771,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Çok seviyeli nested structure, group array ve layout hesaplama desteğini
-        /// genişletmek için temel dönüşüm noktasıdır.
+        /// Çok seviyeli nested structure, sqlRecord field metadata ve unsupported type diagnostic yönetimi için temel dönüşüm noktasıdır.
         /// </summary>
         private IReadOnlyList<EglRecordFieldDeclaration> TranspileStructureMember(
             Pl1StructureMember member,
@@ -760,7 +792,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     eglLevel,
                     IdentifierNameTransformer.Transform(
                         member.Name,
-                        _namingOptions.Style),
+                        _options.NamingOptions.Style),
                     new EglCharacterType(
                         groupLength.Value,
                         member.Location),
@@ -789,14 +821,18 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 return fields;
             }
 
+            var diagnosticCountBeforeDataType = _diagnostics.Diagnostics.Count;
             var dataType = TranspileDataType(member.DataType);
 
             if (dataType is null)
             {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Desteklenmeyen PL/I structure member veri tipi: {member.DataType.GetType().Name}",
-                    member.Location));
+                if (_diagnostics.Diagnostics.Count == diagnosticCountBeforeDataType)
+                {
+                    _diagnostics.Add(new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Desteklenmeyen PL/I structure member veri tipi: {member.DataType.GetType().Name}",
+                        member.Location));
+                }
 
                 return fields;
             }
@@ -805,7 +841,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 eglLevel,
                 IdentifierNameTransformer.Transform(
                     member.Name,
-                    _namingOptions.Style),
+                    _options.NamingOptions.Style),
                 dataType,
                 member.Location,
                 member.ArraySize));

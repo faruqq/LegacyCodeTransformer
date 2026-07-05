@@ -1051,3 +1051,55 @@ Bu geliştirme ile hem top-level variable declaration hem de structure member de
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi sqlRecord mapping desteğidir.
+
+---
+# 2026-07-05 — P04-L sqlRecord Mapping Foundation
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+EGL record type üretimi options tabanlı hale getirildi.
+
+PL/I structure declaration ifadeleri varsayılan olarak basicRecord üretmeye devam eder. sqlRecord üretimi otomatik yapılmaz; açık şekilde EglRecordTypeStrategy.SqlRecord seçildiğinde record type sqlRecord olarak üretilir.
+
+## Desteklenen PL/I Kodları
+
+    DCL 1 CUSTOMER_INFO,
+        5 CUSTOMER_NAME CHAR(20);
+
+## Varsayılan EGL Çıktısı
+
+    record CustomerInfo type basicRecord
+        10 CustomerName char(20);
+    end
+
+## SqlRecord Strategy EGL Çıktısı
+
+    record CustomerInfo type sqlRecord
+        10 CustomerName char(20);
+    end
+
+## Yapılanlar
+- EglRecordTypeStrategy enum modeli eklendi.
+- Pl1ToEglTranspilerOptions modeli eklendi.
+- Transpiler constructor yapısı options destekleyecek şekilde genişletildi.
+- Mevcut naming constructor geriye uyumlu bırakıldı.
+- Structure declaration record type üretimi options tabanlı hale getirildi.
+- ConversionService options overload ile genişletildi.
+- Varsayılan basicRecord davranışı testlerle korundu.
+- sqlRecord strategy testlerle doğrulandı.
+
+## Kapsam Dışı Bırakılanlar
+- sqlRecord tablo adı metadata üretimi
+- Column metadata üretimi
+- SQL annotation üretimi
+- DCLGEN / table schema parse desteği
+- Otomatik sqlRecord tespiti
+
+## İlgili Kararlar
+- Decision 046 - EGL output casing ve indentation kuralları korunacaktır.
+- Decision 055 - sqlRecord üretimi opt-in record type strategy ile yönetilecektir.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi INIT değerlerinin EGL default value olarak üretilmesidir.

@@ -222,7 +222,7 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
 
 ## Aktif Alt Hedef
-- DIM / DIMENSION syntax desteği
+- sqlRecord mapping desteği
 
 ## Sıradaki Alt Hedefler
 - sqlRecord mapping desteği

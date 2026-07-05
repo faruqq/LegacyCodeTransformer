@@ -1,5 +1,6 @@
 ﻿using LegacyCodeTransformer.Application.Services;
 using LegacyCodeTransformer.Transpilers.Naming;
+using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
 
 namespace LegacyCodeTransformer.Application.Tests
 {
@@ -1476,16 +1477,16 @@ namespace LegacyCodeTransformer.Application.Tests
         }
 
         /// <summary>
-        /// Structure member içinde BIT(8) kullanıldığında conversion diagnostic üretildiğini doğrular.
+        /// Structure member içinde BIT(8) kullanıldığında BIT mapping diagnostic üretildiğini doğrular.
         ///
         /// Bu test neyi doğrular?
-        /// BIT veri tipinin structure member olarak parse edildiğini fakat structure length / EGL mapping henüz desteklenmediği için diagnostic üretildiğini doğrular.
+        /// BIT veri tipinin structure member olarak parse edildiğini fakat henüz EGL mapping yapılmadığı için conversion sonucunun başarısız olduğunu doğrular.
         ///
         /// Hangi input'u test eder?
         /// DCL 1 FLAGS, 5 MASK BIT(8);
         ///
         /// Beklenen temel model/çıktı nedir?
-        /// Conversion başarısız olmalı, Output null olmalı ve BIT member length hesaplanamadığı için diagnostic üretilmelidir.
+        /// Conversion başarısız olmalı, Output null olmalı ve BIT mapping desteklenmiyor diagnostic mesajı üretilmelidir.
         /// </summary>
         [Fact]
         public void ConvertPl1ToEgl_WithBitStructureMember_ShouldReturnDiagnostic()
@@ -1502,7 +1503,7 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Null(result.Output);
             Assert.Single(result.Diagnostics);
             Assert.Contains(
-                "Structure member uzunluğu hesaplanamayan PL/I member veri tipi: Pl1BitType",
+                "BIT veri tipi için EGL mapping henüz desteklenmiyor. Length: 8",
                 result.Diagnostics[0].Message);
         }
 
@@ -1594,6 +1595,82 @@ namespace LegacyCodeTransformer.Application.Tests
             var expected =
                 "record Rec type basicRecord" + Environment.NewLine +
                 "        10 Param char(10)[2];" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// Varsayılan conversion davranışında PL/I structure declaration bilgisinin basicRecord olarak üretildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// sqlRecord option eklense bile mevcut default output standardının değişmediğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 CUSTOMER_INFO, 5 CUSTOMER_NAME CHAR(20);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// record CustomerInfo type basicRecord çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithDefaultOptions_ShouldGenerateBasicRecord()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source =
+                "DCL 1 CUSTOMER_INFO, " +
+                "5 CUSTOMER_NAME CHAR(20);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "record CustomerInfo type basicRecord" + Environment.NewLine +
+                "        10 CustomerName char(20);" + Environment.NewLine +
+                "end" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// SqlRecord strategy seçildiğinde PL/I structure declaration bilgisinin sqlRecord olarak üretildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Application pipeline'ın Pl1ToEglTranspilerOptions bilgisini Transpiler'a taşıdığını ve generator'ın sqlRecord output ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL 1 CUSTOMER_INFO, 5 CUSTOMER_NAME CHAR(20);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// record CustomerInfo type sqlRecord çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithSqlRecordOptions_ShouldGenerateSqlRecord()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source =
+                "DCL 1 CUSTOMER_INFO, " +
+                "5 CUSTOMER_NAME CHAR(20);";
+
+            var options = new Pl1ToEglTranspilerOptions(
+                IdentifierNamingOptions.Default,
+                EglRecordTypeStrategy.SqlRecord);
+
+            // Act
+            var result = service.ConvertPl1ToEgl(
+                source,
+                options);
+
+            // Assert
+            var expected =
+                "record CustomerInfo type sqlRecord" + Environment.NewLine +
+                "        10 CustomerName char(20);" + Environment.NewLine +
                 "end" + Environment.NewLine;
 
             Assert.True(result.Success);

@@ -1767,4 +1767,110 @@ public sealed class Pl1ToEglTranspilerTests
         var dataType = Assert.IsType<EglCharacterType>(variableDeclaration.DataType);
         Assert.Equal(5, dataType.Length);
     }
+
+    /// <summary>
+    /// Varsayılan transpiler options ile PL/I structure declaration bilgisinin EGL basicRecord olarak üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// sqlRecord desteği eklense bile default record type davranışının basicRecord olarak korunduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1StructureDeclaration adı CUSTOMER_INFO ve tek CHAR member içerir.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglRecordDeclaration.RecordType basicRecord olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDefaultRecordTypeStrategy_ShouldCreateBasicRecord()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1StructureDeclaration(
+                1,
+                "CUSTOMER_INFO",
+                new[]
+                {
+                    new Pl1StructureMember(
+                        5,
+                        "CUSTOMER_NAME",
+                        new Pl1CharacterType(20, SourceLocation.Unknown),
+                        SourceLocation.Unknown)
+                },
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var recordDeclaration = Assert.IsType<EglRecordDeclaration>(declaration);
+
+        Assert.Equal("CustomerInfo", recordDeclaration.Name);
+        Assert.Equal("basicRecord", recordDeclaration.RecordType);
+    }
+
+    /// <summary>
+    /// SqlRecord strategy ile PL/I structure declaration bilgisinin EGL sqlRecord olarak üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspilerOptions.RecordTypeStrategy SqlRecord seçildiğinde EglRecordDeclaration.RecordType değerinin sqlRecord olduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1StructureDeclaration adı CUSTOMER_INFO ve tek CHAR member içerir.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglRecordDeclaration.RecordType sqlRecord olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithSqlRecordTypeStrategy_ShouldCreateSqlRecord()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1StructureDeclaration(
+                1,
+                "CUSTOMER_INFO",
+                new[]
+                {
+                    new Pl1StructureMember(
+                        5,
+                        "CUSTOMER_NAME",
+                        new Pl1CharacterType(20, SourceLocation.Unknown),
+                        SourceLocation.Unknown)
+                },
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var options = new Pl1ToEglTranspilerOptions(
+            IdentifierNamingOptions.Default,
+            EglRecordTypeStrategy.SqlRecord);
+
+        var transpiler = new Pl1ToEglTranspiler(options);
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var recordDeclaration = Assert.IsType<EglRecordDeclaration>(declaration);
+
+        Assert.Equal("CustomerInfo", recordDeclaration.Name);
+        Assert.Equal("sqlRecord", recordDeclaration.RecordType);
+    }
 }

@@ -2161,3 +2161,28 @@ Parçalı, eksik açıklamalı veya class/method bağlamı belirtilmeden verilen
 
 ### Durum
 Accepted
+
+## Decision 055 - EGL Record Type Selection
+
+### Karar
+PL/I structure declaration ifadeleri varsayılan olarak EGL basicRecord üretmeye devam edecektir.
+
+sqlRecord üretimi otomatik yapılmayacaktır. İlk aşamada sqlRecord üretimi açık transpiler/application option ile seçilecektir.
+
+### Gerekçe
+PL/I structure declaration tek başına veritabanı tablosu semantiği taşımaz. Bu nedenle her structure declaration ifadesini otomatik sqlRecord yapmak semantic olarak risklidir.
+
+basicRecord mevcut güvenli default davranıştır.
+
+sqlRecord ise tablo metadata, column mapping, SQL context veya kullanıcı seçimi gerektirebilir. Bu metadata henüz parser modelinde bulunmadığı için sqlRecord üretimi opt-in olmalıdır.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.Transpilers
+- LegacyCodeTransformer.Application
+- LegacyCodeTransformer.EGL
+- Test projeleri
+- Roadmap.md
+- ModuleSummaries.md
+
+### Durum
+Accepted
