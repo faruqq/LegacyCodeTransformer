@@ -1546,3 +1546,33 @@ DataTypeParser helper sınıfı eklendi. Pl1Parser artık veri tipi parsing içi
 
 ## Sonraki Adım
 Bir sonraki refactor adımı StructureParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R7 StructureParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde structure declaration parsing sorumluluğu Pl1Parser içinden çıkarıldı.
+
+StructureParser helper sınıfı eklendi. Pl1Parser artık structure declaration için yalnızca StructureParser çağırır ve token position bilgisini günceller. StructureParser, root structure, structure array, member listesi, nested group, member dimension, member INIT ve member data type parsing akışlarını koordine eder.
+
+## Yapılanlar
+- StructureParser helper sınıfı eklendi.
+- StructureParseResult modeli eklendi.
+- Pl1Parser.ParseStructureDeclaration methodu sadeleştirildi.
+- Pl1Parser içindeki ParseStructureMembers ve ParseStructureMember methodları kaldırıldı.
+- StructureParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- VariableDeclarationParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı VariableDeclarationParser extraction olacaktır.

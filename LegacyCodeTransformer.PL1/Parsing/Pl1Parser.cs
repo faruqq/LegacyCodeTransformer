@@ -236,181 +236,41 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I structure declaration ifadeleri DCL sonrasında seviye numarası
-    /// ile başlar ve altında member alanlar içerir.
-    ///
-    /// Örnek PL/I:
-    ///
-    /// DCL 1 PARAME_LIST,
-    ///     5 PARAM CHAR(08) INIT(' '),
-    ///     5 PARAM2 CHAR(01) INIT(';');
-    ///
-    /// P04-F kapsamında nested group field yapıları da desteklenir.
-    ///
-    /// Örnek PL/I:
-    ///
-    /// DCL 1 PARAME_LIST,
-    ///     5 ADRES_BILGI,
-    ///         10 IL_KOD CHAR(02),
-    ///         10 ILCE_KOD CHAR(03);
+    /// ParseDeclaration methodu DCL sonrasında Number gördüğünde structure declaration
+    /// parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Ana structure bilgisini okur, varsa structure array dimension bilgisini
-    /// parse eder ve alt member hiyerarşisini ParseStructureMembers helper'ı ile
-    /// oluşturur.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat structure declaration,
+    /// member, nested member, member data type, member INIT ve member dimension parsing
+    /// sorumluluğunu StructureParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - DCL 1 PARAME_LIST, 5 PARAM CHAR(08);
-    /// - DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);
-    /// - DCL 1 PARAME_LIST, 5 ADRES_BILGI, 10 IL_KOD CHAR(02);
+    /// - DCL 1 REC, 5 PARAM CHAR(08);
+    /// - DCL 1 DIZI(6), 3 KOD CHAR(01);
+    /// - DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDeclaration methodu DCL sonrasında Number gördüğünde
-    /// - PL/I SyntaxTree içerisinde Pl1StructureDeclaration üretmek için
+    /// - ParseDeclaration dispatch methodu içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Çok seviyeli nested structure, group array ve layout length hesabı
-    /// davranışlarına temel olur.
+    /// Pl1Parser structure detaylarıyla büyümeden StructureParser içinde geliştirilebilir.
     /// </summary>
     private Pl1StructureDeclaration? ParseStructureDeclaration()
     {
-        var dclToken = Consume(
-            Pl1TokenKind.DclKeyword,
-            "DCL bekleniyordu.");
+        var parser = new StructureParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        var levelToken = Consume(
-            Pl1TokenKind.Number,
-            "Structure seviye numarası bekleniyordu.");
+        var result = parser.ParseStructureDeclaration();
 
-        var nameToken = Consume(
-            Pl1TokenKind.Identifier,
-            "Structure adı bekleniyordu.");
+        _position = result.Position;
 
-        var arraySize = ParseOptionalArraySize();
-
-        Consume(
-            Pl1TokenKind.Comma,
-            "',' bekleniyordu.");
-
-        if (dclToken is null || levelToken is null || nameToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(levelToken.Text, out var level))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Structure seviye numarası sayısal olmalıdır: {levelToken.Text}",
-                levelToken.Location));
-
-            return null;
-        }
-
-        var members = ParseStructureMembers(level);
-
-        Consume(
-            Pl1TokenKind.Semicolon,
-            "';' bekleniyordu.");
-
-        return new Pl1StructureDeclaration(
-            level,
-            nameToken.Text,
-            members,
-            dclToken.Location,
-            arraySize);
-    }
-
-    /// <summary>
-    /// Verilen parent level altında bulunan structure member listesini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I structure içinde member alanları düz bir liste gibi görünse de level
-    /// değerleri aslında hiyerarşiyi belirler.
-    ///
-    /// Örnek:
-    ///
-    /// 5 ADRES_BILGI,
-    ///     10 IL_KOD CHAR(02),
-    ///     10 ILCE_KOD CHAR(03)
-    ///
-    /// Burada IL_KOD ve ILCE_KOD, ADRES_BILGI altında child member olarak
-    /// modellenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Current token seviyesini parentLevel ile karşılaştırarak hangi member'ın
-    /// mevcut parent altında kalacağını belirler.
-    ///
-    /// Current level parentLevel değerinden küçük veya eşitse mevcut nested
-    /// scope tamamlanmış kabul edilir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - 5 PARAM CHAR(08)
-    /// - 5 ADRES_BILGI, 10 IL_KOD CHAR(02)
-    /// - 5 GROUP1, 10 GROUP2, 15 FIELD1 CHAR(01)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseStructureDeclaration içinde root member listesini parse ederken
-    /// - ParseStructureMember içinde nested group child member listesini parse ederken
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Çok seviyeli nested structure ve group field desteğinin parser tarafındaki
-    /// merkezi hiyerarşi kurucusudur.
-    /// </summary>
-    private IReadOnlyList<Pl1StructureMember> ParseStructureMembers(int parentLevel)
-    {
-        var members = new List<Pl1StructureMember>();
-
-        while (!IsAtEnd() && Current.Kind != Pl1TokenKind.Semicolon)
-        {
-            if (Current.Kind != Pl1TokenKind.Number)
-            {
-                AddUnexpectedTokenDiagnostic(
-                    Current,
-                    "Structure member seviye numarası");
-
-                Advance();
-                continue;
-            }
-
-            if (!int.TryParse(Current.Text, out var currentLevel))
-            {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Structure member seviye numarası sayısal olmalıdır: {Current.Text}",
-                    Current.Location));
-
-                Advance();
-                continue;
-            }
-
-            if (currentLevel <= parentLevel)
-            {
-                break;
-            }
-
-            var member = ParseStructureMember();
-            if (member is not null)
-            {
-                members.Add(member);
-            }
-
-            if (Current.Kind == Pl1TokenKind.Comma)
-            {
-                Advance();
-            }
-        }
-
-        return members;
+        return result.Declaration;
     }
 
     /// <summary>
@@ -454,110 +314,7 @@ public sealed class Pl1Parser
         return result.ArraySize;
     }
 
-    /// <summary>
-    /// PL/I structure içerisindeki tek bir member declaration satırını parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Structure declaration içindeki her field ayrı bir member olarak modellenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Member level, name, optional name-based array size, optional data type, optional DIM / DIMENSION size, optional initial value ve varsa child member listesini tek modelde toplar.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - 5 PARAM CHAR(08)
-    /// - 5 PARAM_LIST(2) CHAR(10)
-    /// - 5 PARAM_LIST CHAR(10) DIM(2)
-    /// - 5 PARAM_LIST CHAR(10) DIMENSION(2)
-    /// - 5 ADRES_BILGI, 10 IL_KOD CHAR(02)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseStructureMembers içinde
-    /// - Pl1StructureDeclaration.Members listesini oluştururken
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Nested structure mapping, group field length hesabı, field-level DIMENSION ve çok seviyeli layout üretimi için parser tarafındaki temel member parse davranışıdır.
-    /// </summary>
-    private Pl1StructureMember? ParseStructureMember()
-    {
-        var levelToken = Consume(
-            Pl1TokenKind.Number,
-            "Structure member seviye numarası bekleniyordu.");
-
-        var nameToken = Consume(
-            Pl1TokenKind.Identifier,
-            "Structure member adı bekleniyordu.");
-
-        var nameArraySize = ParseOptionalArraySize();
-
-        if (levelToken is null || nameToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(levelToken.Text, out var level))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Structure member seviye numarası sayısal olmalıdır: {levelToken.Text}",
-                levelToken.Location));
-
-            return null;
-        }
-
-        if (Current.Kind == Pl1TokenKind.Comma)
-        {
-            Advance();
-
-            var childMembers = ParseStructureMembers(level);
-
-            return new Pl1StructureMember(
-                level,
-                nameToken.Text,
-                null,
-                levelToken.Location,
-                null,
-                nameArraySize,
-                childMembers);
-        }
-
-        if (Current.Kind == Pl1TokenKind.Semicolon)
-        {
-            return new Pl1StructureMember(
-                level,
-                nameToken.Text,
-                null,
-                levelToken.Location,
-                null,
-                nameArraySize);
-        }
-
-        var dataType = ParseDataType();
-        var dimensionArraySize = ParseOptionalDimensionSize();
-        var arraySize = ResolveArraySize(
-            nameArraySize,
-            dimensionArraySize,
-            nameToken.Location);
-
-        var initialValue = ParseOptionalInitialValue();
-
-        if (dataType is null)
-        {
-            return null;
-        }
-
-        return new Pl1StructureMember(
-            level,
-            nameToken.Text,
-            dataType,
-            levelToken.Location,
-            initialValue,
-            arraySize);
-    }
+   
 
     /// <summary>
     /// PL/I DIM / DIMENSION attribute bilgisini parse eder.
