@@ -1979,3 +1979,109 @@ PIC ifadeleri ise yalnızca numeric alan değil, format bilgisi de taşıyabilir
 ### Durum
 
 ✅ Aktif
+
+## Decision 052 - PL/I PIC / PICTURE ifadeleri ayrı model ile parse edilecek ve aşamalı olarak EGL numeric type'lara dönüştürülecektir
+
+### Karar
+
+PL/I tarafındaki `PIC` / `PICTURE` ifadeleri ilk aşamada ayrı bir PL/I veri tipi modeli olarak temsil edilecektir.
+
+Kullanılacak model:
+
+    Pl1PictureType
+    - RawPattern: string
+    - Precision: int?
+    - Scale: int?
+    - IsSigned: bool
+    - IsNumeric: bool
+    - IsFormatted: bool
+
+Örnek PL/I:
+
+    DCL PARAM1 PIC '999';
+    DCL PARAM2 PIC '9';
+    DCL PARAM3 PIC '(13)9V99';
+    DCL PARAM4 PIC 'ZZ9';
+    DCL PARAM5 PIC 'S999';
+
+İlk kapsamda yalnızca güvenli numeric picture pattern'leri EGL output'a dönüştürülecektir.
+
+İlk desteklenecek pattern türleri:
+
+- `PIC '9'`
+- `PIC '999'`
+- `PIC '(n)9'`
+- `PIC '9V99'`
+- `PIC '(n)9V99'`
+- `PIC 'S999'`
+- `PIC 'S(n)9'`
+- `PIC 'S(13)9V99'`
+
+İlk kapsamda desteklenmeyecek veya diagnostic üretilecek pattern türleri:
+
+- `Z`
+- `,`
+- `.`
+- `+`
+- `-`
+- `/`
+- formatted picture pattern'leri
+- alphanumeric picture pattern'leri
+- currency / edit mask içeren pattern'ler
+
+Numeric ve formatting içermeyen PIC pattern'leri EGL tarafında `num(p)` veya `num(p,s)` olarak üretilecektir.
+
+Örnek mapping:
+
+    PIC '9' => num(1)
+    PIC '999' => num(3)
+    PIC '(5)9' => num(5)
+    PIC '9V99' => num(3,2)
+    PIC '(13)9V99' => num(15,2)
+    PIC 'S999' => num(3)
+    PIC 'S(13)9V99' => num(15,2)
+
+`S` sign bilgisini ifade eder. İlk kapsamda EGL output'a ayrıca sign suffix/prefix üretilmeyecektir. Ancak `IsSigned = true` olarak modelde korunacaktır.
+
+`V` decimal point değildir; implied decimal point bilgisidir. Output tarafında scale hesabına dahil edilecektir.
+
+Örnek:
+
+    PIC '999V99'
+
+Bu pattern toplam 5 digit taşır ve 2 digit scale içerir.
+
+Beklenen EGL:
+
+    num(5,2)
+
+### Gerekçe
+
+PL/I PIC / PICTURE ifadeleri yalnızca numeric uzunluk bilgisi taşımaz. Aynı zamanda sign, implied decimal, formatting ve edit mask bilgisi de taşıyabilir.
+
+Bu nedenle PIC ifadelerini doğrudan `decimal`, `num`, `char` veya başka bir EGL tipe çevirmek risklidir.
+
+İlk aşamada pattern bilgisinin kaybedilmeden `Pl1PictureType` modeli üzerinde saklanması gerekir.
+
+Güvenli numeric alt küme desteklendikten sonra formatted picture pattern'leri ayrı karar ve ayrı mapping fazında ele alınacaktır.
+
+Bu yaklaşım yanlış EGL output üretimini engeller ve PIC desteğini kontrollü şekilde büyütmemizi sağlar.
+
+### Etkilediği Modüller
+
+- PL1 Lexer
+- PL1 Parser
+- PL1 Type Model
+- EGL Type Model
+- EGL Code Generator
+- Transpilers
+- Diagnostic sistemi
+- Parser Tests
+- Transpiler Tests
+- Generator Tests
+- Application Tests
+- Dokümantasyon
+
+### Durum
+
+✅ Aktif

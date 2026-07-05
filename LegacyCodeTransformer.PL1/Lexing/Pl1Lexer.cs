@@ -279,6 +279,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// - FIXED BIN
         /// - BINARY FIXED
         /// - BIN FIXED
+        /// - PIC
+        /// - PICTURE
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -286,8 +288,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// PIC / PICTURE, DIM / DIMENSION gibi keyword synonym destekleri
-        /// eklendikçe bu mapping genişletilecektir.
+        /// DIM / DIMENSION gibi keyword synonym destekleri eklendikçe bu mapping
+        /// genişletilecektir.
         /// </summary>
         private static Pl1TokenKind GetKeywordKind(string text)
         {
@@ -303,6 +305,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "CHAR" => Pl1TokenKind.CharKeyword,
                 "CHARACTER" => Pl1TokenKind.CharacterKeyword,
                 "VARCHAR" => Pl1TokenKind.VarcharKeyword,
+                "PIC" => Pl1TokenKind.PicKeyword,
+                "PICTURE" => Pl1TokenKind.PictureKeyword,
                 "INIT" => Pl1TokenKind.InitKeyword,
                 "INITIAL" => Pl1TokenKind.InitialKeyword,
                 _ => Pl1TokenKind.Identifier

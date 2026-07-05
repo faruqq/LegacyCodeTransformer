@@ -202,6 +202,8 @@ namespace LegacyCodeTransformer.Egl.Generation
         /// - EglCharacterType(8) => char(8)
         /// - EglSmallIntType => smallint
         /// - EglIntType => int
+        /// - EglNumType(3, null) => num(3)
+        /// - EglNumType(5, 2) => num(5,2)
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -211,8 +213,8 @@ namespace LegacyCodeTransformer.Egl.Generation
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// num, PIC ve farklı numeric output türleri eklendiğinde data type üretimi
-        /// merkezi olarak buradan yönetilecektir.
+        /// Formatted PIC ve farklı numeric output türleri eklendiğinde data type
+        /// üretimi merkezi olarak buradan yönetilecektir.
         /// </summary>
         private static string GenerateDataType(EglDataType dataType)
         {
@@ -232,6 +234,12 @@ namespace LegacyCodeTransformer.Egl.Generation
 
                 EglIntType =>
                     "int",
+
+                EglNumType numType when numType.Scale.HasValue =>
+                    $"num({numType.Precision},{numType.Scale.Value})",
+
+                EglNumType numType =>
+                    $"num({numType.Precision})",
 
                 _ => "unknown"
             };

@@ -387,4 +387,82 @@ public sealed class EglCodeGeneratorTests
         // Assert
         Assert.Equal("Count int;" + Environment.NewLine, result);
     }
+
+    /// <summary>
+    /// EGL num type üzerinde Scale null ise num(p) formatında çıktı üretildiğini
+    /// doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın scale içermeyen num modelini num(p) formatında yazdırdığını
+    /// doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglNumType(3, null)
+    ///
+    /// Beklenen çıktı:
+    /// - Param1 num(3);
+    /// </summary>
+    [Fact]
+    public void Generate_WithNumDeclarationWithoutScale_ShouldGenerateNumWithoutScale()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Param1",
+                new EglNumType(3, null, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Param1 num(3);" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL num type üzerinde Scale varsa num(p,s) formatında çıktı üretildiğini
+    /// doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Generator'ın implied decimal içeren numeric PIC mapping sonucu oluşan
+    /// num modelini num(p,s) formatında yazdırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// EglNumType(5, 2)
+    ///
+    /// Beklenen çıktı:
+    /// - Param2 num(5,2);
+    /// </summary>
+    [Fact]
+    public void Generate_WithNumDeclarationHavingScale_ShouldGenerateNumWithScale()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new[]
+            {
+            new EglVariableDeclaration(
+                "Param2",
+                new EglNumType(5, 2, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal("Param2 num(5,2);" + Environment.NewLine, result);
+    }
 }

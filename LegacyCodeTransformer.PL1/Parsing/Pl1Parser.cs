@@ -607,6 +607,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         /// - CHAR(n)
         /// - CHARACTER(n)
         /// - VARCHAR(n)
+        /// - PIC '999'
+        /// - PICTURE '999V99'
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -615,7 +617,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// PIC / PICTURE, BIT ve DIMENSION gibi yeni veri tipleri ve attribute'lar
+        /// DIMENSION, BIT ve daha gelişmiş PIC pattern parse davranışları
         /// desteklendikçe bu method genişletilecektir.
         /// </summary>
         private Pl1DataType? ParseDataType()
@@ -648,12 +650,395 @@ namespace LegacyCodeTransformer.Pl1.Parsing
                 return ParseVarcharType();
             }
 
+            if (Current.Kind == Pl1TokenKind.PicKeyword ||
+                Current.Kind == Pl1TokenKind.PictureKeyword)
+            {
+                return ParsePictureType();
+            }
+
             _diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
                 $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
                 Current.Location));
 
             return null;
+        }
+
+        /// <summary>
+        /// PL/I PIC / PICTURE veri tipini parse eder.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PIC / PICTURE ifadeleri PL/I tarafında numeric, signed, implied decimal
+        /// veya formatted alan tanımlamak için kullanılabilir.
+        ///
+        /// Örnek PL/I:
+        ///
+        /// DCL PARAM1 PIC '999';
+        /// DCL PARAM2 PIC '999V99';
+        /// DCL PARAM3 PIC 'S999';
+        /// DCL PARAM4 PIC '(13)9V99';
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// PIC keyword'ünden sonra gelen pattern string literal değerini okuyarak
+        /// Pl1PictureType modeline dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - PIC '999'
+        /// - PICTURE '999V99'
+        /// - PIC 'S999'
+        /// - PIC '(13)9V99'
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParseDataType methodu PicKeyword veya PictureKeyword gördüğünde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Numeric PIC pattern'lerinin EGL num(p,s) mapping işlemine ve formatted
+        /// PIC pattern'leri için diagnostic üretimine temel olur.
+        /// </summary>
+        private Pl1PictureType? ParsePictureType()
+        {
+            var pictureToken = Current;
+
+            if (Current.Kind == Pl1TokenKind.PicKeyword ||
+                Current.Kind == Pl1TokenKind.PictureKeyword)
+            {
+                Advance();
+            }
+            else
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"PIC veya PICTURE bekleniyordu. Gelen token: {Current.Text}",
+                    Current.Location));
+
+                return null;
+            }
+
+            var patternToken = Consume(
+                Pl1TokenKind.StringLiteral,
+                "PIC pattern string literal bekleniyordu.");
+
+            if (patternToken is null)
+            {
+                return null;
+            }
+
+            return CreatePictureTypeFromPattern(
+                patternToken.Text,
+                pictureToken.Location);
+        }
+
+        /// <summary>
+        /// PIC pattern değerinden Pl1PictureType modeli oluşturur.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PIC pattern yalnızca raw string olarak tutulmamalıdır.
+        /// Güvenli numeric pattern'ler için precision, scale, sign ve formatting
+        /// bilgisi çıkarılmalıdır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// İlk kapsamda numeric PIC pattern'lerinin temel metadata bilgisini hesaplar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 999 => Precision 3, Scale null
+        /// - 999V99 => Precision 5, Scale 2
+        /// - S999 => Precision 3, Scale null, IsSigned true
+        /// - (13)9V99 => Precision 15, Scale 2
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - ParsePictureType içerisinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Formatted PIC, alphanumeric PIC ve edit mask parse işlemlerinin
+        /// kontrollü şekilde genişletilmesine temel olur.
+        /// </summary>
+        private static Pl1PictureType CreatePictureTypeFromPattern(
+            string rawPattern,
+            SourceLocation location)
+        {
+            var pattern = rawPattern.Trim();
+            var isSigned = pattern.StartsWith("S", StringComparison.OrdinalIgnoreCase);
+
+            if (isSigned)
+            {
+                pattern = pattern.Substring(1);
+            }
+
+            var isFormatted = ContainsFormattedPictureCharacters(pattern);
+            var isNumeric = IsNumericPicturePattern(pattern);
+
+            int? precision = null;
+            int? scale = null;
+
+            if (isNumeric)
+            {
+                precision = CalculatePicturePrecision(pattern);
+                scale = CalculatePictureScale(pattern);
+            }
+
+            return new Pl1PictureType(
+                rawPattern,
+                precision,
+                scale,
+                isSigned,
+                isNumeric,
+                isFormatted,
+                location);
+        }
+
+        /// <summary>
+        /// PIC pattern içinde ilk kapsamda unsupported format/edit karakteri olup
+        /// olmadığını belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PIC pattern'leri numeric digit layout dışında format/edit mask bilgisi de
+        /// taşıyabilir.
+        ///
+        /// Örnek:
+        ///
+        /// ZZ9
+        /// 9,999
+        /// -ZZ9
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// İlk kapsamda güvenli numeric PIC pattern'leri ile formatted pattern'leri
+        /// ayırır.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 999 => false
+        /// - 999V99 => false
+        /// - ZZ9 => true
+        /// - 9,999 => true
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CreatePictureTypeFromPattern içerisinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Formatted PIC diagnostic ve özel mapping kurallarına temel olur.
+        /// </summary>
+        private static bool ContainsFormattedPictureCharacters(string pattern)
+        {
+            return pattern.Any(x =>
+                x == 'Z' ||
+                x == 'z' ||
+                x == ',' ||
+                x == '.' ||
+                x == '+' ||
+                x == '-' ||
+                x == '/' ||
+                x == '$');
+        }
+
+        /// <summary>
+        /// PIC pattern'in ilk kapsamda desteklenen numeric pattern olup olmadığını
+        /// belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PIC pattern'lerinin tamamı numeric storage anlamına gelmez.
+        ///
+        /// İlk kapsamda yalnızca 9, V ve repeat count içeren numeric pattern'ler
+        /// desteklenir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Güvenli numeric pattern'leri belirler.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 9
+        /// - 999
+        /// - (5)9
+        /// - 999V99
+        /// - (13)9V99
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CreatePictureTypeFromPattern içerisinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Alphanumeric ve formatted PIC ayrımının genişletilmesine temel olur.
+        /// </summary>
+        private static bool IsNumericPicturePattern(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return false;
+            }
+
+            if (ContainsFormattedPictureCharacters(pattern))
+            {
+                return false;
+            }
+
+            var index = 0;
+
+            while (index < pattern.Length)
+            {
+                var current = pattern[index];
+
+                if (current == '9' ||
+                    current == 'V' ||
+                    current == 'v')
+                {
+                    index++;
+                    continue;
+                }
+
+                if (current == '(')
+                {
+                    var closeIndex = pattern.IndexOf(')', index + 1);
+
+                    if (closeIndex <= index + 1)
+                    {
+                        return false;
+                    }
+
+                    var repeatText = pattern.Substring(
+                        index + 1,
+                        closeIndex - index - 1);
+
+                    if (!int.TryParse(repeatText, out _))
+                    {
+                        return false;
+                    }
+
+                    index = closeIndex + 1;
+
+                    if (index >= pattern.Length ||
+                        pattern[index] != '9')
+                    {
+                        return false;
+                    }
+
+                    index++;
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Numeric PIC pattern için toplam digit precision değerini hesaplar.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// EGL num(p,s) üretimi için toplam numeric digit sayısı bilinmelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// 9 karakterlerini ve (n)9 tekrar söz dizimini precision değerine çevirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 999 => 3
+        /// - 999V99 => 5
+        /// - (13)9V99 => 15
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CreatePictureTypeFromPattern içerisinde
+        /// </summary>
+        private static int CalculatePicturePrecision(string pattern)
+        {
+            var precision = 0;
+            var index = 0;
+
+            while (index < pattern.Length)
+            {
+                var current = pattern[index];
+
+                if (current == '9')
+                {
+                    precision++;
+                    index++;
+                    continue;
+                }
+
+                if (current == 'V' ||
+                    current == 'v')
+                {
+                    index++;
+                    continue;
+                }
+
+                if (current == '(')
+                {
+                    var closeIndex = pattern.IndexOf(')', index + 1);
+                    var repeatText = pattern.Substring(
+                        index + 1,
+                        closeIndex - index - 1);
+
+                    precision += int.Parse(repeatText);
+
+                    index = closeIndex + 2;
+
+                    continue;
+                }
+
+                index++;
+            }
+
+            return precision;
+        }
+
+        /// <summary>
+        /// Numeric PIC pattern için implied decimal scale değerini hesaplar.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PIC pattern içinde V karakteri implied decimal point bilgisidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// V sonrasında gelen numeric digit sayısını scale değerine çevirir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - 999 => null
+        /// - 999V99 => 2
+        /// - (13)9V99 => 2
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - CreatePictureTypeFromPattern içerisinde
+        /// </summary>
+        private static int? CalculatePictureScale(string pattern)
+        {
+            var vIndex = pattern.IndexOf('V');
+
+            if (vIndex < 0)
+            {
+                vIndex = pattern.IndexOf('v');
+            }
+
+            if (vIndex < 0)
+            {
+                return null;
+            }
+
+            var scalePattern = pattern.Substring(vIndex + 1);
+
+            return CalculatePicturePrecision(scalePattern);
         }
 
         /// <summary>

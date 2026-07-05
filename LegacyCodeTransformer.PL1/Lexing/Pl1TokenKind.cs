@@ -18,7 +18,8 @@
     /// - DCL PARAM CHAR(08) INIT(' ');
     /// - DCL AMOUNT FIXED DEC(17,2);
     /// - DCL COUNT FIXED BIN(15);
-    /// - DCL COUNT BIN FIXED(31);
+    /// - DCL PARAM1 PIC '999';
+    /// - DCL PARAM2 PICTURE '999V99';
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -48,6 +49,8 @@
         CharKeyword,
         CharacterKeyword,
         VarcharKeyword,
+        PicKeyword,
+        PictureKeyword,
         InitKeyword,
         InitialKeyword,
 

@@ -1335,4 +1335,246 @@ public sealed class Pl1ParserTests
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
     }
+
+    /// <summary>
+    /// PL/I PIC '999' numeric pattern bilgisinin Pl1PictureType olarak parse
+    /// edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Parser'ın PIC keyword'ünü tanıdığını ve numeric picture pattern için
+    /// precision bilgisini hesapladığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// DCL PARAM1 PIC '999';
+    ///
+    /// Beklenen temel model:
+    /// - RawPattern: 999
+    /// - Precision: 3
+    /// - Scale: null
+    /// - IsNumeric: true
+    /// - IsFormatted: false
+    /// </summary>
+    [Fact]
+    public void Parse_WithNumericPicDeclaration_ShouldCreatePictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM1 PIC '999';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM1", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("999", dataType.RawPattern);
+        Assert.Equal(3, dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.False(dataType.IsSigned);
+        Assert.True(dataType.IsNumeric);
+        Assert.False(dataType.IsFormatted);
+    }
+
+    /// <summary>
+    /// PL/I PIC '999V99' numeric implied decimal pattern bilgisinin scale ile
+    /// parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Parser'ın V karakterini implied decimal point olarak yorumladığını ve
+    /// V sonrasındaki digit sayısını scale olarak hesapladığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// DCL PARAM2 PIC '999V99';
+    ///
+    /// Beklenen temel model:
+    /// - RawPattern: 999V99
+    /// - Precision: 5
+    /// - Scale: 2
+    /// - IsNumeric: true
+    /// </summary>
+    [Fact]
+    public void Parse_WithNumericPicHavingImpliedDecimal_ShouldCreatePictureTypeWithScale()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM2 PIC '999V99';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM2", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("999V99", dataType.RawPattern);
+        Assert.Equal(5, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+        Assert.False(dataType.IsSigned);
+        Assert.True(dataType.IsNumeric);
+        Assert.False(dataType.IsFormatted);
+    }
+
+    /// <summary>
+    /// PL/I PIC 'S999' signed numeric pattern bilgisinin IsSigned ile parse
+    /// edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Parser'ın S prefix bilgisini sign metadata olarak koruduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// DCL PARAM3 PIC 'S999';
+    ///
+    /// Beklenen temel model:
+    /// - RawPattern: S999
+    /// - Precision: 3
+    /// - IsSigned: true
+    /// </summary>
+    [Fact]
+    public void Parse_WithSignedNumericPicDeclaration_ShouldCreateSignedPictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM3 PIC 'S999';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM3", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("S999", dataType.RawPattern);
+        Assert.Equal(3, dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.True(dataType.IsSigned);
+        Assert.True(dataType.IsNumeric);
+        Assert.False(dataType.IsFormatted);
+    }
+
+    /// <summary>
+    /// PL/I PIC '(13)9V99' repeat count ve implied decimal içeren pattern
+    /// bilgisinin doğru parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Parser'ın `(n)9` tekrar söz dizimini precision hesabına dahil ettiğini
+    /// ve V sonrasındaki digit sayısını scale olarak hesapladığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// DCL PARAM4 PIC '(13)9V99';
+    ///
+    /// Beklenen temel model:
+    /// - RawPattern: (13)9V99
+    /// - Precision: 15
+    /// - Scale: 2
+    /// </summary>
+    [Fact]
+    public void Parse_WithRepeatedNumericPicHavingImpliedDecimal_ShouldCreatePictureTypeWithPrecisionAndScale()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM4 PIC '(13)9V99';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM4", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("(13)9V99", dataType.RawPattern);
+        Assert.Equal(15, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+        Assert.False(dataType.IsSigned);
+        Assert.True(dataType.IsNumeric);
+        Assert.False(dataType.IsFormatted);
+    }
+
+    /// <summary>
+    /// PL/I PIC 'ZZ9' formatted pattern bilgisinin numeric olmayan formatted
+    /// picture olarak işaretlendiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Parser'ın Z edit mask içeren picture pattern'i güvenli numeric pattern
+    /// olarak kabul etmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// DCL PARAM5 PIC 'ZZ9';
+    ///
+    /// Beklenen temel model:
+    /// - RawPattern: ZZ9
+    /// - IsNumeric: false
+    /// - IsFormatted: true
+    /// </summary>
+    [Fact]
+    public void Parse_WithFormattedPicDeclaration_ShouldCreateFormattedPictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM5 PIC 'ZZ9';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM5", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("ZZ9", dataType.RawPattern);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.False(dataType.IsSigned);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsFormatted);
+    }
 }

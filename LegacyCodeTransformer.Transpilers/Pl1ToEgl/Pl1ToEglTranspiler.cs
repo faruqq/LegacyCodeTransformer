@@ -276,6 +276,58 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
+        /// PL/I PIC / PICTURE veri tipini EGL num veri tipine dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Numeric PIC pattern'leri digit layout ve optional implied decimal bilgisi
+        /// taşır.
+        ///
+        /// Bu bilgiler EGL tarafında num(p) veya num(p,s) olarak üretilecektir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Güvenli numeric PIC pattern'lerini EglNumType modeline dönüştürür.
+        ///
+        /// Formatted veya numeric olmayan PIC pattern'leri için diagnostic üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - PIC '999' => num(3)
+        /// - PIC '999V99' => num(5,2)
+        /// - PIC '(13)9V99' => num(15,2)
+        /// - PIC 'S999' => num(3)
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileDataType içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Formatted PIC, alphanumeric PIC ve signed numeric metadata mapping
+        /// kararları için genişletilecektir.
+        /// </summary>
+        private EglDataType? TranspilePictureType(
+            Pl1PictureType pictureType)
+        {
+            if (!pictureType.IsNumeric ||
+                pictureType.Precision is null)
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Desteklenmeyen PIC pattern: {pictureType.RawPattern}",
+                    pictureType.Location));
+
+                return null;
+            }
+
+            return new EglNumType(
+                pictureType.Precision.Value,
+                pictureType.Scale,
+                pictureType.Location);
+        }
+
+        /// <summary>
         /// PL/I structure declaration modelini EGL record declaration modeline dönüştürür.
         ///
         /// Neden var?
@@ -591,6 +643,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - FIXED DECIMAL(9,4) => 9
         /// - FIXED BIN(15) => 2
         /// - FIXED BIN(31) => 4
+        /// - PIC '999' => 3
+        /// - PIC '999V99' => 5
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -600,8 +654,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// PL/I NUM, PIC, BIT ve farklı storage type hesapları geldikçe bu method
-        /// genişletilecektir.
+        /// BIT ve farklı storage type hesapları geldikçe bu method genişletilecektir.
         /// </summary>
         private static int? CalculateDataTypeLength(Pl1DataType dataType)
         {
@@ -614,6 +667,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 Pl1FixedBinaryType { Precision: 15, Scale: 0 } => 2,
                 Pl1FixedBinaryType { Precision: 31, Scale: null } => 4,
                 Pl1FixedBinaryType { Precision: 31, Scale: 0 } => 4,
+                Pl1PictureType { IsNumeric: true, Precision: not null } pictureType =>
+                    pictureType.Precision.Value,
                 _ => null
             };
         }
@@ -786,6 +841,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - VARCHAR(50) => char(50)
         /// - FIXED BIN(15) => smallint
         /// - FIXED BIN(31) => int
+        /// - PIC '999' => num(3)
+        /// - PIC '999V99' => num(5,2)
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -795,7 +852,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT, PIC / PICTURE ve sqlRecord özel tip mapping kuralları eklendikçe
+        /// BIT, formatted PIC ve sqlRecord özel tip mapping kuralları eklendikçe
         /// bu method genişletilecektir.
         /// </summary>
         private EglDataType? TranspileDataType(Pl1DataType dataType)
@@ -820,6 +877,9 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     new EglCharacterType(
                         varcharType.Length,
                         varcharType.Location),
+
+                Pl1PictureType pictureType =>
+                    TranspilePictureType(pictureType),
 
                 _ => null
             };

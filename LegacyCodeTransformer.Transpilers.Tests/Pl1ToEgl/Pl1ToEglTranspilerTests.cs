@@ -1373,4 +1373,174 @@ public sealed class Pl1ToEglTranspilerTests
         Assert.NotNull(result.SyntaxTree);
         Assert.Empty(result.SyntaxTree!.Declarations);
     }
+
+    /// <summary>
+    /// PL/I numeric PIC pattern'inin EGL num(p) veri tipine dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Transpiler'ın Pl1PictureType numeric pattern bilgisini EglNumType modeline
+    /// dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// PIC '999'
+    ///
+    /// Beklenen temel EGL model:
+    /// - Name: Param1
+    /// - DataType: EglNumType
+    /// - Precision: 3
+    /// - Scale: null
+    /// </summary>
+    [Fact]
+    public void Transpile_WithNumericPictureDeclaration_ShouldCreateEglNumDeclaration()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM1",
+                new Pl1PictureType(
+                    "999",
+                    3,
+                    null,
+                    false,
+                    true,
+                    false,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param1", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglNumType>(variableDeclaration.DataType);
+
+        Assert.Equal(3, dataType.Precision);
+        Assert.Null(dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I implied decimal içeren numeric PIC pattern'inin EGL num(p,s)
+    /// veri tipine dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Transpiler'ın Pl1PictureType scale bilgisini EglNumType.Scale alanına
+    /// taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// PIC '999V99'
+    ///
+    /// Beklenen temel EGL model:
+    /// - DataType: EglNumType
+    /// - Precision: 5
+    /// - Scale: 2
+    /// </summary>
+    [Fact]
+    public void Transpile_WithNumericPictureHavingScale_ShouldCreateEglNumDeclarationWithScale()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM2",
+                new Pl1PictureType(
+                    "999V99",
+                    5,
+                    2,
+                    false,
+                    true,
+                    false,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param2", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<EglNumType>(variableDeclaration.DataType);
+
+        Assert.Equal(5, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+    }
+
+    /// <summary>
+    /// Formatted PIC pattern'lerinin ilk kapsamda diagnostic ürettiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ----------------------
+    /// Transpiler'ın formatted/edit mask içeren PIC pattern'lerini sessizce yanlış
+    /// bir EGL type'a çevirmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// ----------------------
+    /// PIC 'ZZ9'
+    ///
+    /// Beklenen temel sonuç:
+    /// - Result.Success false
+    /// - Diagnostic var
+    /// - SyntaxTree declaration listesi boş
+    /// </summary>
+    [Fact]
+    public void Transpile_WithFormattedPictureDeclaration_ShouldReturnDiagnostic()
+    {
+        // Arrange
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM5",
+                new Pl1PictureType(
+                    "ZZ9",
+                    null,
+                    null,
+                    false,
+                    false,
+                    true,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+    }
 }

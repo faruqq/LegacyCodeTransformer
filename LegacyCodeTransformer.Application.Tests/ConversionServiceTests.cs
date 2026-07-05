@@ -888,5 +888,111 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Equal(expected, result.Output);
             Assert.Empty(result.Diagnostics);
         }
+
+        /// <summary>
+        /// PL/I PIC '999' kullanımının uçtan uca EGL num(3) çıktısına dönüştüğünü
+        /// doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// ----------------------
+        /// Parser + Transpiler + Generator pipeline'ının numeric PIC pattern'i
+        /// num(p) olarak ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// ----------------------
+        /// DCL PARAM1 PIC '999';
+        ///
+        /// Beklenen temel çıktı:
+        /// - Param1 num(3);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithNumericPicDeclaration_ShouldGenerateNumDeclaration()
+        {
+            // Arrange
+            var service = new ConversionService();
+
+            var source = "DCL PARAM1 PIC '999';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param1 num(3);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I PIC '999V99' kullanımının uçtan uca EGL num(5,2) çıktısına
+        /// dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// ----------------------
+        /// Parser'ın V implied decimal bilgisini scale olarak hesapladığını ve
+        /// generator'ın num(p,s) çıktısı ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM2 PIC '999V99';
+        ///
+        /// Beklenen temel çıktı:
+        /// - Param2 num(5,2);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithNumericPicHavingScale_ShouldGenerateNumDeclarationWithScale()
+        {
+            // Arrange
+            var service = new ConversionService();
+
+            var source = "DCL PARAM2 PIC '999V99';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param2 num(5,2);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I PIC '(13)9V99' kullanımının repeat count ve implied decimal bilgisiyle
+        /// EGL num(15,2) çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// ----------------------
+        /// Parser'ın `(n)9` repeat count bilgisini precision hesabına dahil ettiğini
+        /// ve V sonrasındaki digit sayısını scale olarak taşıdığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM3 PIC '(13)9V99';
+        ///
+        /// Beklenen temel çıktı:
+        /// - Param3 num(15,2);
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithRepeatedNumericPicHavingScale_ShouldGenerateNumDeclarationWithScale()
+        {
+            // Arrange
+            var service = new ConversionService();
+
+            var source = "DCL PARAM3 PIC '(13)9V99';";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param3 num(15,2);" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
     }
 }
