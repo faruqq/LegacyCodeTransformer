@@ -171,11 +171,14 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodunda DCL / DECLARE ile başlayan ve seviye numarası içermeyen ifadeler tekil değişken tanımı oluşturur.
+    /// ParseDeclaration methodu DCL sonrasında Identifier gördüğünde variable declaration
+    /// parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Değişken adını, optional name-based array bilgisini, veri tipini, optional DIM / DIMENSION bilgisini ve optional INIT / INITIAL değerini parse eder.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DCL, identifier,
+    /// array size, data type, DIM / DIMENSION ve INIT / INITIAL parsing sorumluluğunu
+    /// VariableDeclarationParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -187,48 +190,25 @@ public sealed class Pl1Parser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDeclaration dispatch methodunda
-    /// - Tekil PL/I variable declaration üretiminde
+    /// - ParseDeclaration dispatch methodu içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Çok boyutlu DIMENSION ve farklı array declaration varyasyonları bu method üzerinden genişletilecektir.
+    /// Pl1Parser variable declaration detaylarıyla büyümeden VariableDeclarationParser
+    /// içinde geliştirilebilir.
     /// </summary>
     private Pl1VariableDeclaration? ParseVariableDeclaration()
     {
-        var dclToken = Consume(
-            Pl1TokenKind.DclKeyword,
-            "DCL bekleniyordu.");
+        var parser = new VariableDeclarationParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        var identifierToken = Consume(
-            Pl1TokenKind.Identifier,
-            "Değişken adı bekleniyordu.");
+        var result = parser.ParseVariableDeclaration();
 
-        var nameArraySize = ParseOptionalArraySize();
-        var dataType = ParseDataType();
-        var dimensionArraySize = ParseOptionalDimensionSize();
-        var arraySize = ResolveArraySize(
-            nameArraySize,
-            dimensionArraySize,
-            identifierToken?.Location ?? SourceLocation.Unknown);
+        _position = result.Position;
 
-        var initialValue = ParseOptionalInitialValue();
-
-        Consume(
-            Pl1TokenKind.Semicolon,
-            "';' bekleniyordu.");
-
-        if (dclToken is null || identifierToken is null || dataType is null)
-        {
-            return null;
-        }
-
-        return new Pl1VariableDeclaration(
-            identifierToken.Text,
-            dataType,
-            dclToken.Location,
-            initialValue,
-            arraySize);
+        return result.Declaration;
     }
 
     /// <summary>
@@ -271,220 +251,6 @@ public sealed class Pl1Parser
         _position = result.Position;
 
         return result.Declaration;
-    }
-
-    /// <summary>
-    /// PL/I declaration adından sonra gelen opsiyonel array dimension bilgisini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Declaration adı sonrasında parantez içinde array size verilebilir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat name-based array size
-    /// parsing sorumluluğunu DimensionParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL PARAM(2) CHAR(10);
-    /// - DCL 1 DIZI(6), ...
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseVariableDeclaration içinde
-    /// - ParseStructureDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Çok boyutlu array syntax Pl1Parser büyütülmeden DimensionParser içinde geliştirilebilir.
-    /// </summary>
-    private int? ParseOptionalArraySize()
-    {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseOptionalArraySize();
-
-        _position = result.Position;
-
-        return result.ArraySize;
-    }
-
-   
-
-    /// <summary>
-    /// PL/I DIM / DIMENSION attribute bilgisini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Veri tipi sonrasında DIM veya DIMENSION attribute ile array size verilebilir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DIM / DIMENSION parsing
-    /// sorumluluğunu DimensionParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DIM(2)
-    /// - DIMENSION(2)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseVariableDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// DIMENSION range ve çok boyutlu syntax Pl1Parser büyütülmeden DimensionParser içinde geliştirilebilir.
-    /// </summary>
-    private int? ParseOptionalDimensionSize()
-    {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseOptionalDimensionSize();
-
-        _position = result.Position;
-
-        return result.ArraySize;
-    }
-
-    /// <summary>
-    /// Name-based array size ile DIM / DIMENSION attribute size bilgisini tek değere indirger.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseVariableDeclaration ve ParseStructureMember iki farklı array size kaynağı okuyabilir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Array size conflict çözümleme sorumluluğunu DimensionParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - PARAM(2) CHAR(10)
-    /// - PARAM CHAR(10) DIM(2)
-    /// - PARAM(2) CHAR(10) DIM(3)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseVariableDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Çok boyutlu array metadata merge davranışı DimensionParser içinde geliştirilebilir.
-    /// </summary>
-    private int? ResolveArraySize(
-        int? nameArraySize,
-        int? dimensionArraySize,
-        SourceLocation location)
-    {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        return parser.ResolveArraySize(
-            nameArraySize,
-            dimensionArraySize,
-            location);
-    }
-
-    /// <summary>
-    /// PL/I değişken tanımındaki veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseVariableDeclaration ve ParseStructureMember akışları değişken veya member
-    /// adından sonra veri tipi okuyabilmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat veri tipi dispatch
-    /// ve veri tipi helper parser çağırma sorumluluğunu DataTypeParser sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - FIXED DECIMAL(15)
-    /// - CHAR(08)
-    /// - VARCHAR(50)
-    /// - PIC '999'
-    /// - BIT(8)
-    /// - FLOAT BIN(53)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseVariableDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Pl1Parser data type detaylarıyla büyümeden yeni data type aileleri
-    /// DataTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1DataType? ParseDataType()
-    {
-        var parser = new DataTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.Parse();
-
-        _position = result.Position;
-
-        return result.DataType;
-    }
-
-    /// <summary>
-    /// PL/I declaration içindeki opsiyonel INIT / INITIAL başlangıç değerini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseVariableDeclaration ve ParseStructureMember akışları veri tipinden sonra
-    /// opsiyonel initialization bilgisi okuyabilmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat INIT / INITIAL syntax
-    /// çözümleme sorumluluğunu InitialValueParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - INIT(' ')
-    /// - INITIAL(';')
-    /// - INIT((08)' ')
-    /// - INIT((*)' ')
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseVariableDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Initialization parsing davranışı Pl1Parser büyütülmeden InitialValueParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1InitialValue? ParseOptionalInitialValue()
-    {
-        var parser = new InitialValueParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseOptionalInitialValue();
-
-        _position = result.Position;
-
-        return result.InitialValue;
     }
 
     /// <summary>
@@ -622,39 +388,4 @@ public sealed class Pl1Parser
     /// Bir önce tüketilen token'ı döndürür.
     /// </summary>
     private Pl1Token Previous => _tokens[_position - 1];
-
-    /// <summary>
-    /// INIT / INITIAL tekrar faktörü parse sonucunu taşır.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseOptionalInitialRepeatFactor methodunun iki ayrı bilgi döndürmesi
-    /// gerekir:
-    /// - Sayısal tekrar değeri
-    /// - (*) kullanımının varlığı
-    ///
-    /// Bu küçük taşıyıcı model, tuple kullanımına göre daha okunabilir ve
-    /// parser kodunun niyetini daha açık gösterir.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseOptionalInitialRepeatFactor dönüş değerinde
-    /// - ParseOptionalInitialValue içerisinde Pl1InitialValue oluştururken
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Repeat factor davranışı genişletilirse bu model yeni alanlarla
-    /// genişletilebilir.
-    /// </summary>
-    private sealed record InitialRepeatInfo(
-        int? RepeatCount,
-        bool AppliesToAllElements)
-    {
-        /// <summary>
-        /// Tekrar faktörü bulunmadığı durumu temsil eder.
-        /// </summary>
-        public static InitialRepeatInfo None { get; } = new(
-            null,
-            false);
-    }
 }

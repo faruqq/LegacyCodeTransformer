@@ -1576,3 +1576,34 @@ StructureParser helper sınıfı eklendi. Pl1Parser artık structure declaration
 
 ## Sonraki Adım
 Bir sonraki refactor adımı VariableDeclarationParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R8 VariableDeclarationParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde top-level variable declaration parsing sorumluluğu Pl1Parser içinden çıkarıldı.
+
+VariableDeclarationParser helper sınıfı eklendi. Pl1Parser artık variable declaration için yalnızca VariableDeclarationParser çağırır ve token position bilgisini günceller.
+
+## Yapılanlar
+- VariableDeclarationParser helper sınıfı eklendi.
+- VariableDeclarationParseResult modeli eklendi.
+- Pl1Parser.ParseVariableDeclaration methodu sadeleştirildi.
+- Pl1Parser içindeki dimension, data type ve initial value wrapper methodları kaldırıldı.
+- Pl1Parser içindeki gereksiz InitialRepeatInfo nested record kaldırıldı.
+- VariableDeclarationParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- Declaration dispatch parser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı declaration dispatch davranışını sadeleştirmek ve ardından P05 statement parser hazırlığına geçmektir.
