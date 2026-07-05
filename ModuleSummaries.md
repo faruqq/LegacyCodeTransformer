@@ -1269,3 +1269,73 @@ FLOAT DECIMAL ve FLOAT DECIMAL(p) tipleri decimal floating semantic taşıyabile
 
 ## Sonraki Adım
 P04 kapanış değerlendirmesi yapılacak, ardından parser internal refactor ile P05 hazırlığına geçilecektir.
+
+---
+# 2026-07-05 — P04 PL/I Veri Tiplerini Genişletme Faz Kapanışı
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P04 kapsamında PL/I veri tipi, declaration, structure, array, nested structure, PIC / PICTURE, BIT, FLOAT / REAL / DOUBLE, sqlRecord strategy ve INIT / INITIAL default value desteği önemli ölçüde genişletildi.
+
+Bu faz sonunda proje, yalnızca basit scalar declaration dönüştüren bir POC olmaktan çıkarak gerçek PL/I veri tanımlarını modelleyebilen, semantic bilgiyi koruyan ve EGL output standardına uygun kod üretebilen bir yapıya ulaştı.
+
+## Tamamlanan Ana Başlıklar
+- CHAR / CHARACTER
+- VARCHAR
+- FIXED DECIMAL
+- FIXED BINARY / BIN
+- PIC / PICTURE numeric subset
+- PIC / PICTURE alphanumeric subset
+- PIC / PICTURE signed classification
+- Formatted PIC diagnostic davranışı
+- BIT(n) parser foundation
+- FLOAT / REAL / DOUBLE parser foundation
+- FLOAT / REAL / DOUBLE güvenli EGL mapping subset
+- INIT / INITIAL parser desteği
+- INIT / INITIAL güvenli scalar EGL default value üretimi
+- Structure declaration
+- Structure array
+- Structure member array
+- DIM / DIMENSION
+- Nested structure
+- Recursive nested structure mapping
+- basicRecord / sqlRecord record type strategy
+- EGL casing ve indentation standardı
+
+## Önemli Mimari Kazanımlar
+- Parser, kaynak dil semantic bilgisini güçlü tipli AST modelleriyle koruyacak hale geldi.
+- Transpiler, PL/I modelinden EGL modeline doğrudan string üretmeden dönüşüm yapmaya devam etti.
+- Generator yalnızca EGL syntax tree modelinden output üreten katman olarak kaldı.
+- PIC pattern semantic classification parser dışına taşınarak PicturePatternAnalyzer modeliyle merkezi hale getirildi.
+- Record type üretimi basicRecord default davranışını bozmadan sqlRecord strategy ile genişletildi.
+- Unsupported veya semantic riskli dönüşümler için diagnostic üretme standardı korundu.
+
+## Kapsam Dışı Bırakılanlar
+- PL/I statement parse desteği
+- Assignment / IF / DO / CALL / SELECT / WHEN
+- Procedure parse desteği
+- Embedded SQL
+- CICS çağrıları
+- INCLUDE ve compiler directive desteği
+- Gelişmiş sqlRecord table / column metadata üretimi
+- BIT için kesin EGL mapping
+- FLOAT DECIMAL için kesin EGL mapping
+
+## İlgili Kararlar
+- Decision 043 - Identifier naming strategy
+- Decision 045 - PL/I structure array → EGL parent array field
+- Decision 046 - EGL output casing ve indentation standardı
+- Decision 048 - Structure member array → EGL field array
+- Decision 049 - Nested structure mapping
+- Decision 050 - VARCHAR → EGL char
+- Decision 051 - Numeric type mapping semantic korumalı ve aşamalı yapılacaktır.
+- Decision 052 - PIC / PICTURE ayrı modelle parse edilecektir.
+- Decision 053 - Picture pattern semantic classification parser aşamasında yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 055 - sqlRecord opt-in record type strategy ile yönetilecektir.
+- Decision 056 - FLOAT / REAL / DOUBLE EGL mapping semantic korumalı yapılacaktır.
+
+## Sonraki Adım
+P05’e geçmeden önce Pl1Parser internal refactor yapılacaktır. Amaç parser dosyasının büyümesini kontrol altına almak, veri tipi parser davranışlarını ayrı helper sınıflara ayırmak ve statement parser geliştirmesine daha temiz bir zemin hazırlamaktır.

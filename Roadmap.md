@@ -194,7 +194,7 @@ P04 — PL/I Veri Tiplerini Genişletme
 # P04 — PL/I Veri Tiplerini Genişletme
 
 ## Durum
-Aktif Olarak Geliştiriliyor
+✅ Tamamlandı
 
 ## Amaç
 PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanılabilecek seviyeye çıkarmak.
@@ -203,11 +203,13 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ CHAR / CHARACTER veri tipi desteği
 - ✅ VARCHAR → EGL char dönüşümü
 - ✅ INIT / INITIAL parse desteği
+- ✅ INIT / INITIAL güvenli scalar subset → EGL default value dönüşümü
 - ✅ Identifier naming strategy desteği
 - ✅ PL/I basic structure declaration parse desteği
 - ✅ PL/I structure declaration → EGL record dönüşümü
-- ✅ PL/I structure array → EGL basicRecord parent array field dönüşümü
+- ✅ PL/I structure array → EGL parent array field dönüşümü
 - ✅ PL/I structure member array → EGL field array dönüşümü
+- ✅ DIM / DIMENSION syntax desteği
 - ✅ PL/I nested structure → EGL parent group field dönüşümü
 - ✅ Recursive nested structure mapping desteği
 - ✅ EGL output casing ve indentation standardı
@@ -220,17 +222,25 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ Alphanumeric PIC subset → EGL char mapping desteği
 - ✅ Signed PIC classification desteği
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
+- ✅ BIT(n) parser desteği ve EGL diagnostic davranışı
+- ✅ sqlRecord opt-in record type strategy desteği
+- ✅ FLOAT / REAL / DOUBLE parser foundation
+- ✅ FLOAT / REAL / DOUBLE güvenli EGL mapping subset desteği
 
-## Aktif Alt Hedef
-- FLOAT / REAL / DOUBLE semantic mapping değerlendirmesi
-
-## Sıradaki Alt Hedefler
-- P04 kapanış değerlendirmesi
-- Parser internal refactor
-- P05 — PL/I Statement Desteği hazırlığı
+## Kapsam Dışı Bırakılanlar
+- FLOAT DECIMAL için kesin EGL mapping
+- BIT için kesin EGL mapping
+- Formatted PIC için display metadata üretimi
+- Repeat factor INIT expansion
+- Structure member default value output
+- Çok boyutlu DIMENSION desteği
+- Table / column metadata içeren gelişmiş sqlRecord üretimi
 
 ## Başarı Kriteri
-Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini ve declaration yapılarını uçtan uca desteklemesi.
+Parser, Transpiler ve Generator katmanları PL/I veri tipi ve declaration yapılarını uçtan uca destekleyecek seviyeye getirilmiştir.
+
+## Sonraki Teknik Hazırlık
+P05’e geçmeden önce parser internal refactor yapılacaktır.
 
 ## Sonraki Faz
 P05 — PL/I Statement Desteği
