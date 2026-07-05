@@ -9,12 +9,13 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Neden var?
 /// ----------------------
-/// Pl1Parser içinde karakter veri tipi parsing sorumluluğu büyüdükçe ana parser sınıfı gereksiz detay taşımaya başladı.
+/// Pl1Parser içinde karakter veri tipi parsing sorumluluğu büyüdükçe ana parser sınıfı
+/// gereksiz detay taşımaya başladı.
 ///
 /// Ne çözüyor?
 /// ----------------------
 /// CHAR, CHARACTER ve VARCHAR parsing davranışını Pl1Parser dışına taşır.
-/// Böylece Pl1Parser yalnızca veri tipi dispatch akışını yönetir.
+/// Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -24,27 +25,29 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseCharacterType içinde
-/// - Pl1Parser.ParseVarcharType içinde
+/// - DataTypeParser içinde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// CHAR VARYING, GRAPHIC, WIDECHAR veya farklı character-family tipler eklendiğinde bu helper genişletilebilir.
+/// CHAR VARYING, GRAPHIC, WIDECHAR veya farklı character-family tipler eklendiğinde
+/// bu helper genişletilebilir.
 /// </summary>
-internal sealed class CharacterTypeParser
+internal sealed class CharacterTypeParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public CharacterTypeParser(ParseContext context)
+        : base(context)
+    {
+    }
 
     public CharacterTypeParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -65,7 +68,7 @@ internal sealed class CharacterTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseCharacterType içinde
+    /// - DataTypeParser içinde character branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
@@ -96,14 +99,14 @@ internal sealed class CharacterTypeParser
         {
             return new CharacterTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         return new CharacterTypeParseResult(
             new Pl1CharacterType(
                 length.Value,
                 typeToken.Location),
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -111,7 +114,8 @@ internal sealed class CharacterTypeParser
     ///
     /// Neden var?
     /// ----------------------
-    /// VARCHAR değişken uzunluklu karakter alanı temsil eder ve CHAR ile aynı parser içinde karıştırılmadan modellenmelidir.
+    /// VARCHAR değişken uzunluklu karakter alanı temsil eder ve CHAR ile aynı parser
+    /// içinde karıştırılmadan modellenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
@@ -123,11 +127,12 @@ internal sealed class CharacterTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseVarcharType içinde
+    /// - DataTypeParser içinde varchar branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// VARCHAR mapping, sqlRecord column metadata ve length validation davranışları bu method üzerinde genişletilebilir.
+    /// VARCHAR mapping, sqlRecord column metadata ve length validation davranışları
+    /// bu method üzerinde genişletilebilir.
     /// </summary>
     public CharacterTypeParseResult ParseVarcharType()
     {
@@ -143,14 +148,14 @@ internal sealed class CharacterTypeParser
         {
             return new CharacterTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         return new CharacterTypeParseResult(
             new Pl1VarcharType(
                 length.Value,
                 varcharToken.Location),
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -176,7 +181,8 @@ internal sealed class CharacterTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Length validation veya maximum length kuralları gerektiğinde merkezi helper olarak genişletilir.
+    /// Length validation veya maximum length kuralları gerektiğinde merkezi helper olarak
+    /// genişletilir.
     /// </summary>
     private int? ParseRequiredLength(
         string missingNumberMessage,
@@ -204,60 +210,13 @@ internal sealed class CharacterTypeParser
             return length;
         }
 
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"{invalidNumberMessagePrefix}: {lengthToken.Text}",
-            lengthToken.Location));
+        Diagnostics.Add(
+            ParserDiagnosticFactory.InvalidNumber(
+                invalidNumberMessagePrefix,
+                lengthToken));
 
         return null;
     }
-
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
 internal sealed class CharacterTypeParseResult

@@ -9,11 +9,13 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Neden var?
 /// ----------------------
-/// BIT parsing davranışı Pl1Parser içinde kaldığında ana parser veri tipi detaylarıyla büyümeye devam eder.
+/// BIT parsing davranışı Pl1Parser içinde kaldığında ana parser veri tipi detaylarıyla
+/// büyümeye devam eder.
 ///
 /// Ne çözüyor?
 /// ----------------------
 /// BIT keyword ve length parse sorumluluğunu Pl1Parser dışına taşır.
+/// Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -22,26 +24,29 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseBitType içinde
+/// - DataTypeParser içinde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// BIT literal INIT, BIT(1) boolean mapping veya BIT(n) preserving mapping kararları bu helper üzerinde geliştirilebilir.
+/// BIT literal INIT, BIT(1) boolean mapping veya BIT(n) preserving mapping kararları
+/// bu helper üzerinde geliştirilebilir.
 /// </summary>
-internal sealed class BitTypeParser
+internal sealed class BitTypeParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public BitTypeParser(ParseContext context)
+        : base(context)
+    {
+    }
 
     public BitTypeParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -62,7 +67,7 @@ internal sealed class BitTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseBitType içinde
+    /// - DataTypeParser içinde bit branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
@@ -90,74 +95,27 @@ internal sealed class BitTypeParser
         {
             return new BitTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         if (!int.TryParse(lengthToken.Text, out var length))
         {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"BIT uzunluk değeri sayısal olmalıdır: {lengthToken.Text}",
-                lengthToken.Location));
+            Diagnostics.Add(
+                ParserDiagnosticFactory.InvalidNumber(
+                    "BIT uzunluk değeri sayısal olmalıdır",
+                    lengthToken));
 
             return new BitTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         return new BitTypeParseResult(
             new Pl1BitType(
                 length,
                 bitToken.Location),
-            _position);
+            Position);
     }
-
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
 internal sealed class BitTypeParseResult

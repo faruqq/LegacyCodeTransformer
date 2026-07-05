@@ -2250,3 +2250,35 @@ Parser sorumluluklarını ayırmak:
 
 ### Durum
 Accepted
+
+## Decision 058 - Parser Infrastructure Components
+
+### Karar
+Parser helper sınıflarında ortak token state, token tüketme ve diagnostic üretme davranışları tekrar edilmeyecektir.
+
+Parser altyapısı aşağıdaki bileşenlerle standartlaştırılacaktır:
+- ParseContext
+- ParserBase
+- ParserDiagnosticFactory
+- Ortak parse result modeli
+
+İlk aşamada ParseContext, ParserBase ve ParserDiagnosticFactory eklenecek; helper parser sınıfları kademeli olarak bu altyapıya taşınacaktır.
+
+### Gerekçe
+P04 refactor sürecinde çok sayıda helper parser sınıfı oluşmuştur. Bu sınıflarda Current, Advance, Consume, IsAtEnd ve diagnostic üretme davranışları tekrar etmektedir.
+
+Ortak parser altyapısı:
+- Kod tekrarını azaltır.
+- Parser davranışını standartlaştırır.
+- Yeni statement parser geliştirmelerini kolaylaştırır.
+- SOLID prensiplerinden Single Responsibility ve Open/Closed prensiplerini destekler.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.PL1.Parsing
+- LegacyCodeTransformer.PL1.Parsing.Helpers
+- Parser helper testleri
+- ModuleSummaries.md
+
+### Durum
+Accepted
