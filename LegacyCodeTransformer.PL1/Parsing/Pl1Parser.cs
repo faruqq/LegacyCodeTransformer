@@ -646,436 +646,45 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// DCL ifadesinde değişken adı veya structure member adı okunduktan sonra gelen
-    /// bölüm veri tipini temsil eder.
+    /// ParseVariableDeclaration ve ParseStructureMember akışları değişken veya member
+    /// adından sonra veri tipi okuyabilmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Desteklenen PL/I veri tipi keyword'lerini ilgili güçlü tipli model sınıflarına
-    /// yönlendirir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - FIXED DECIMAL(p,s)
-    /// - FIXED DEC(p,s)
-    /// - DECIMAL FIXED(p,s)
-    /// - DEC FIXED(p,s)
-    /// - FIXED BINARY(p)
-    /// - FIXED BIN(p)
-    /// - BINARY FIXED(p)
-    /// - BIN FIXED(p)
-    /// - CHAR(n)
-    /// - CHARACTER(n)
-    /// - VARCHAR(n)
-    /// - PIC '999'
-    /// - PICTURE '999V99'
-    /// - BIT(n)
-    /// - FLOAT
-    /// - FLOAT DECIMAL(16)
-    /// - FLOAT BIN(53)
-    /// - REAL
-    /// - DOUBLE
-    /// - DOUBLE PRECISION
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - Tekil DCL declaration parse edilirken
-    /// - Structure member parse edilirken
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// DIMENSION, floating type mapping ve daha gelişmiş numeric declaration
-    /// davranışları desteklendikçe bu method genişletilecektir.
-    /// </summary>
-    private Pl1DataType? ParseDataType()
-    {
-        if (Current.Kind == Pl1TokenKind.FixedKeyword)
-        {
-            return ParseFixedBasedType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
-            Current.Kind == Pl1TokenKind.DecKeyword)
-        {
-            return ParseDecimalBasedType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
-            Current.Kind == Pl1TokenKind.BinKeyword)
-        {
-            return ParseBinaryBasedType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.CharKeyword ||
-            Current.Kind == Pl1TokenKind.CharacterKeyword)
-        {
-            return ParseCharacterType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.VarcharKeyword)
-        {
-            return ParseVarcharType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.PicKeyword ||
-            Current.Kind == Pl1TokenKind.PictureKeyword)
-        {
-            return ParsePictureType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.BitKeyword)
-        {
-            return ParseBitType();
-        }
-
-        if (Current.Kind == Pl1TokenKind.FloatKeyword ||
-            Current.Kind == Pl1TokenKind.RealKeyword ||
-            Current.Kind == Pl1TokenKind.DoubleKeyword)
-        {
-            return ParseFloatingType();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// PL/I FLOAT / REAL / DOUBLE veri tiplerini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu FLOAT / REAL / DOUBLE keyword gördüğünde floating type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat FLOAT / REAL / DOUBLE syntax çözümleme sorumluluğunu FloatingTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL RATE FLOAT;
-    /// - DCL RATE FLOAT DECIMAL(16);
-    /// - DCL RATE FLOAT BIN(53);
-    /// - DCL RATE REAL;
-    /// - DCL RATE DOUBLE PRECISION;
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu FloatKeyword, RealKeyword veya DoubleKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// P05 öncesi parser sorumluluk ayrımı yaklaşımını sürdürür. Floating type davranışı Pl1Parser büyütülmeden FloatingTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1FloatingType? ParseFloatingType()
-    {
-        var parser = new FloatingTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.Parse();
-
-        _position = result.Position;
-
-        return result.DataType;
-    }
-
-    /// <summary>
-    /// PL/I BIT(n) veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu BIT keyword gördüğünde bit type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat BIT(n) syntax çözümleme sorumluluğunu BitTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL FLAG BIT(1);
-    /// - DCL MASK BIT(8);
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu BitKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// BIT parsing davranışı Pl1Parser büyütülmeden BitTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1BitType? ParseBitType()
-    {
-        var parser = new BitTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.Parse();
-
-        _position = result.Position;
-
-        return result.DataType;
-    }
-
-    /// <summary>
-    /// PL/I PIC / PICTURE veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// PIC / PICTURE ifadeleri PL/I tarafında numeric, signed, implied decimal,
-    /// alphanumeric veya formatted alan tanımlamak için kullanılabilir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// PIC / PICTURE keyword'ünden sonra gelen pattern string literal değerini okur.
-    /// Pattern değerinden Pl1PictureType oluşturma sorumluluğunu PictureTypeParser
-    /// sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL PARAM1 PIC '999';
-    /// - DCL PARAM2 PICTURE '999V99';
-    /// - DCL PARAM3 PIC 'S999';
-    /// - DCL PARAM4 PIC '(13)9V99';
-    /// - DCL PARAM5 PIC 'XXX';
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu PicKeyword veya PictureKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// PIC / PICTURE token okuma davranışı Pl1Parser içinde kalırken, semantic model
-    /// üretimi PictureTypeParser içinde genişletilebilir.
-    /// </summary>
-    private Pl1PictureType? ParsePictureType()
-    {
-        var pictureToken = Current;
-
-        if (Current.Kind == Pl1TokenKind.PicKeyword ||
-            Current.Kind == Pl1TokenKind.PictureKeyword)
-        {
-            Advance();
-        }
-        else
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"PIC veya PICTURE bekleniyordu. Gelen token: {Current.Text}",
-                Current.Location));
-
-            return null;
-        }
-
-        var patternToken = Consume(
-            Pl1TokenKind.StringLiteral,
-            "PIC pattern string literal bekleniyordu.");
-
-        if (patternToken is null)
-        {
-            return null;
-        }
-
-        return PictureTypeParser.Parse(
-            patternToken.Text,
-            pictureToken.Location);
-    }
-
-    /// <summary>
-    /// FIXED keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu FIXED keyword gördüğünde numeric type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat FIXED DECIMAL / FIXED BINARY syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat veri tipi dispatch
+    /// ve veri tipi helper parser çağırma sorumluluğunu DataTypeParser sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - FIXED DECIMAL(15)
-    /// - FIXED DEC(17,2)
-    /// - FIXED BINARY(15)
-    /// - FIXED BIN(31)
+    /// - CHAR(08)
+    /// - VARCHAR(50)
+    /// - PIC '999'
+    /// - BIT(8)
+    /// - FLOAT BIN(53)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDataType methodu FixedKeyword gördüğünde
+    /// - ParseVariableDeclaration içinde
+    /// - ParseStructureMember içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Numeric parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
+    /// Pl1Parser data type detaylarıyla büyümeden yeni data type aileleri
+    /// DataTypeParser içinde geliştirilebilir.
     /// </summary>
-    private Pl1DataType? ParseFixedBasedType()
+    private Pl1DataType? ParseDataType()
     {
-        var parser = new NumericTypeParser(
+        var parser = new DataTypeParser(
             _tokens,
             _position,
             _diagnostics);
 
-        var result = parser.ParseFixedBasedType();
+        var result = parser.Parse();
 
         _position = result.Position;
 
         return result.DataType;
-    }
-
-    /// <summary>
-    /// DECIMAL / DEC keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu DECIMAL veya DEC keyword gördüğünde numeric type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DECIMAL FIXED / DEC FIXED syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DECIMAL FIXED(15)
-    /// - DEC FIXED(17,2)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu DecimalKeyword veya DecKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Decimal-family parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1DataType? ParseDecimalBasedType()
-    {
-        var parser = new NumericTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseDecimalBasedType();
-
-        _position = result.Position;
-
-        return result.DataType;
-    }
-
-    /// <summary>
-    /// BINARY / BIN keyword'ü ile başlayan PL/I numeric veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu BINARY veya BIN keyword gördüğünde numeric type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat BINARY FIXED / BIN FIXED syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - BINARY FIXED(15)
-    /// - BIN FIXED(31)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu BinaryKeyword veya BinKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Binary-family parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1DataType? ParseBinaryBasedType()
-    {
-        var parser = new NumericTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseBinaryBasedType();
-
-        _position = result.Position;
-
-        return result.DataType;
-    }
-
-    /// <summary>
-    /// PL/I CHAR(n) veya CHARACTER(n) veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu CHAR veya CHARACTER keyword gördüğünde character type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat CHAR / CHARACTER syntax çözümleme sorumluluğunu CharacterTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL PARAM CHAR(08);
-    /// - DCL CUSTOMER_NAME CHARACTER(25);
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu CharKeyword veya CharacterKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Character-family parsing davranışı Pl1Parser büyütülmeden CharacterTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1CharacterType? ParseCharacterType()
-    {
-        var parser = new CharacterTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseCharacterType();
-
-        _position = result.Position;
-
-        return result.DataType as Pl1CharacterType;
-    }
-
-    /// <summary>
-    /// PL/I VARCHAR(n) veri tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDataType methodu VARCHAR keyword gördüğünde varchar type parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat VARCHAR syntax çözümleme sorumluluğunu CharacterTypeParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL CUSTOMER_NAME VARCHAR(50);
-    /// - 5 CUSTOMER_NAME VARCHAR(50);
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDataType methodu VarcharKeyword gördüğünde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// VARCHAR parsing davranışı Pl1Parser büyütülmeden CharacterTypeParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1VarcharType? ParseVarcharType()
-    {
-        var parser = new CharacterTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseVarcharType();
-
-        _position = result.Position;
-
-        return result.DataType as Pl1VarcharType;
     }
 
     /// <summary>

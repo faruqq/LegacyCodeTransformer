@@ -1516,3 +1516,33 @@ InitialValueParser ve DimensionParser helper sınıfları eklendi. Pl1Parser art
 
 ## Sonraki Adım
 Bir sonraki refactor adımı StructureParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R6 DataTypeParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde veri tipi dispatch sorumluluğu Pl1Parser içinden çıkarıldı.
+
+DataTypeParser helper sınıfı eklendi. Pl1Parser artık veri tipi parsing için yalnızca DataTypeParser çağırır ve token position bilgisini günceller. DataTypeParser ise CharacterTypeParser, NumericTypeParser, BitTypeParser, FloatingTypeParser ve PictureTypeParser helper'larını orkestre eder.
+
+## Yapılanlar
+- DataTypeParser helper sınıfı eklendi.
+- DataTypeParseResult modeli eklendi.
+- Pl1Parser.ParseDataType methodu sadeleştirildi.
+- Pl1Parser içindeki data type specific wrapper methodlar kaldırıldı.
+- DataTypeParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı StructureParser extraction olacaktır.
