@@ -755,3 +755,59 @@ Binary fixed tarafında yaygın integer precision değerleri EGL integer tipleri
 ## Sonraki Adım
 
 Bir sonraki geliştirme hedefi PIC / PICTURE desteğidir.
+
+---
+# 2026-07-05 — P04-I PL/I PIC / PICTURE Numeric Mapping Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I PIC / PICTURE veri tipi ayrı bir model olarak parse edilmeye başlandı. Bu geliştirme ile PIC / PICTURE declaration ifadeleri generic numeric veya character type içine sıkıştırılmadan Pl1PictureType modeliyle temsil edilmektedir.
+
+İlk kapsamda yalnızca güvenli numeric PIC subset EGL num tipine dönüştürülmektedir. Formatted numeric PIC örnekleri semantic kayıp riski taşıdığı için otomatik dönüştürülmez; diagnostic üretilir.
+
+## Desteklenen PL/I Kodları
+
+    DCL SAYI PIC '999';
+    DCL TUTAR PIC '999V99';
+    DCL TUTAR PIC '(13)9V99';
+    DCL SAYI PICTURE '999';
+
+## Beklenen EGL Çıktıları
+
+    Sayi num(3);
+    Tutar num(5,2);
+    Tutar num(15,2);
+    Sayi num(3);
+
+## Diagnostic Üreten Örnekler
+
+    DCL SAYI PIC 'ZZ9';
+    DCL TUTAR PIC 'Z,ZZ9V.99';
+    DCL TUTAR PIC 'S999';
+
+## Yapılanlar
+- Pl1TokenKind içine PIC / PICTURE keyword desteği eklendi.
+- Lexer tarafında PIC ve PICTURE keyword olarak tanınır hale getirildi.
+- Pl1PictureType modeli eklendi.
+- Parser tarafında PIC / PICTURE declaration parse desteği eklendi.
+- Numeric PIC precision / scale hesabı eklendi.
+- Güvenli numeric PIC subset için EGL num mapping eklendi.
+- Formatted PIC örnekleri için diagnostic üretimi eklendi.
+- Parser, Transpiler, Generator ve Application testleri P04-I davranışını doğrulayacak şekilde eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- Alphanumeric PIC mapping
+- Formatted PIC için semantic dönüşüm
+- Sign handling
+- Thousands separator handling
+- Display format metadata üretimi
+- PIC tabanlı char mapping
+
+## İlgili Kararlar
+- Decision 046 - EGL output casing ve indentation kuralları korunacaktır.
+- Decision 052 - PIC / PICTURE ayrı modelle parse edilip güvenli numeric alt küme EGL num tipine dönüştürülecektir.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi formatted PIC / alphanumeric PIC ayrımının genişletilmesidir.

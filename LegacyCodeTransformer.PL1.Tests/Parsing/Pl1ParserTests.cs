@@ -1577,4 +1577,188 @@ public sealed class Pl1ParserTests
         Assert.False(dataType.IsNumeric);
         Assert.True(dataType.IsFormatted);
     }
+
+    /// <summary>
+    /// PL/I PIC 'XXX' alphanumeric pattern bilgisinin Pl1PictureType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın X karakterlerinden oluşan PIC pattern'ı alphanumeric olarak sınıflandırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM6 PIC 'XXX';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// RawPattern XXX, Category Alphanumeric, Length 3, IsAlphanumeric true.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM6 PIC 'XXX';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM6", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("XXX", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(3, dataType.Length);
+        Assert.False(dataType.IsSigned);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PIC '(20)X' alphanumeric repeat pattern bilgisinin length olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın (n)X tekrar söz dizimini alphanumeric length hesabına dahil ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM7 PIC '(20)X';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// RawPattern (20)X, Category Alphanumeric, Length 20, IsAlphanumeric true.
+    /// </summary>
+    [Fact]
+    public void Parse_WithRepeatedAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureTypeWithLength()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM7 PIC '(20)X';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM7", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("(20)X", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(20, dataType.Length);
+        Assert.False(dataType.IsSigned);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PIC 'AAA' alphabetic pattern bilgisinin alphanumeric picture olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın A karakterlerinden oluşan PIC pattern'ı karakter tabanlı alan olarak sınıflandırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM8 PIC 'AAA';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// RawPattern AAA, Category Alphanumeric, Length 3, IsAlphanumeric true.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAlphabeticPicDeclaration_ShouldCreateAlphanumericPictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM8 PIC 'AAA';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM8", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("AAA", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(3, dataType.Length);
+        Assert.False(dataType.IsSigned);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PIC 'AXXAA' mixed alphanumeric pattern bilgisinin toplam length ile parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın A ve X karakterlerinden oluşan mixed alphanumeric PIC pattern'ı tek karakter alanı olarak sınıflandırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM9 PIC 'AXXAA';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// RawPattern AXXAA, Category Alphanumeric, Length 5, IsAlphanumeric true.
+    /// </summary>
+    [Fact]
+    public void Parse_WithMixedAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL PARAM9 PIC 'AXXAA';").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM9", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("AXXAA", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(5, dataType.Length);
+        Assert.False(dataType.IsSigned);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
 }

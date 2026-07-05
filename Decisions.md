@@ -2085,3 +2085,44 @@ Bu yaklaşım yanlış EGL output üretimini engeller ve PIC desteğini kontroll
 ### Durum
 
 ✅ Aktif
+
+## Decision 053 - Picture Pattern Semantic Classification
+
+### Karar
+PIC / PICTURE pattern bilgisi parser aşamasında tek sefer analiz edilecek ve semantic özellikleri Pl1PictureType modeli üzerinde saklanacaktır.
+
+Pl1PictureType yalnızca raw pattern bilgisini taşıyan basit bir model olmayacaktır. Pattern analizinden çıkan kategori, uzunluk, precision, scale, sign ve format bilgileri de aynı model üzerinde tutulacaktır.
+
+### Gerekçe
+PIC / PICTURE syntax'ı PL/I tarafında hem numeric hem alphanumeric hem de formatted değerleri temsil edebilir.
+
+Örnekler:
+
+    PIC '999'
+    PIC '999V99'
+    PIC '(13)9V99'
+    PIC 'XXX'
+    PIC '(20)X'
+    PIC 'ZZ9'
+    PIC 'Z,ZZ9V.99'
+    PIC 'S999'
+
+Bu pattern'ların hepsini generator katmanında tekrar tekrar yorumlamak doğru değildir. Parser bu semantic analizi bir kez yapmalı, generator ise hazır semantic model üzerinden karar vermelidir.
+
+Bu yaklaşım:
+- EGL generator içinde tekrar regex/pattern çözümleme ihtiyacını azaltır.
+- Gelecekte COBOL veya C# generator eklenirse aynı semantic modelin yeniden kullanılmasını sağlar.
+- Diagnostic üretimini daha tutarlı hale getirir.
+- Safe numeric, alphanumeric, signed numeric ve formatted PIC ayrımını merkezi hale getirir.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.PL1.Types
+- LegacyCodeTransformer.PL1.Parsing
+- LegacyCodeTransformer.Transpilers
+- LegacyCodeTransformer.EGL
+- LegacyCodeTransformer.Application
+- Test projeleri
+
+### Durum
+Accepted

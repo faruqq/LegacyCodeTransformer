@@ -276,55 +276,68 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
-        /// PL/I PIC / PICTURE veri tipini EGL num veri tipine dönüştürür.
+        /// PL/I PIC / PICTURE veri tipini uygun EGL veri tipine dönüştürür.
         ///
         /// Neden var?
         /// ----------------------
-        /// Numeric PIC pattern'leri digit layout ve optional implied decimal bilgisi
-        /// taşır.
-        ///
-        /// Bu bilgiler EGL tarafında num(p) veya num(p,s) olarak üretilecektir.
+        /// PL/I PIC / PICTURE syntax'ı tek bir veri tipini temsil etmez.
+        /// Aynı syntax numeric, alphanumeric, signed veya formatted alanları
+        /// ifade edebilir.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Güvenli numeric PIC pattern'lerini EglNumType modeline dönüştürür.
+        /// Parser tarafından sınıflandırılmış Pl1PictureType modelini kullanarak
+        /// güvenli PIC pattern'larını EGL veri tipine dönüştürür.
         ///
-        /// Formatted veya numeric olmayan PIC pattern'leri için diagnostic üretir.
+        /// Numeric PIC pattern'lar EGL num(p) veya num(p,s) olur.
+        /// Alphanumeric PIC pattern'lar EGL char(n) olur.
+        /// Formatted veya henüz desteklenmeyen PIC pattern'lar diagnostic üretir.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// - PIC '999' => num(3)
-        /// - PIC '999V99' => num(5,2)
+        /// - PIC '999'      => num(3)
+        /// - PIC '999V99'   => num(5,2)
         /// - PIC '(13)9V99' => num(15,2)
-        /// - PIC 'S999' => num(3)
+        /// - PIC 'XXX'      => char(3)
+        /// - PIC '(20)X'    => char(20)
+        /// - PIC 'AAA'      => char(3)
+        /// - PIC 'AXXAA'    => char(5)
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - TranspileDataType içinde
+        /// TranspileDataType içinde Pl1PictureType yakalandığında çağrılır.
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Formatted PIC, alphanumeric PIC ve signed numeric metadata mapping
-        /// kararları için genişletilecektir.
+        /// Signed numeric PIC, formatted PIC metadata ve display-format preserving
+        /// mapping kararları için merkezi dönüşüm noktasıdır.
         /// </summary>
         private EglDataType? TranspilePictureType(
             Pl1PictureType pictureType)
         {
-            if (!pictureType.IsNumeric ||
-                pictureType.Precision is null)
+            if (pictureType.IsNumeric &&
+                pictureType.Precision.HasValue)
             {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Desteklenmeyen PIC pattern: {pictureType.RawPattern}",
-                    pictureType.Location));
-
-                return null;
+                return new EglNumType(
+                    pictureType.Precision.Value,
+                    pictureType.Scale,
+                    pictureType.Location);
             }
 
-            return new EglNumType(
-                pictureType.Precision.Value,
-                pictureType.Scale,
-                pictureType.Location);
+            if (pictureType.IsAlphanumeric &&
+                pictureType.Length.HasValue)
+            {
+                return new EglCharacterType(
+                    pictureType.Length.Value,
+                    pictureType.Location);
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Desteklenmeyen PIC pattern: {pictureType.RawPattern}",
+                pictureType.Location));
+
+            return null;
         }
 
         /// <summary>
@@ -645,6 +658,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - FIXED BIN(31) => 4
         /// - PIC '999' => 3
         /// - PIC '999V99' => 5
+        /// - PIC 'XXX' => 3
+        /// - PIC '(20)X' => 20
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -654,7 +669,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT ve farklı storage type hesapları geldikçe bu method genişletilecektir.
+        /// BIT, formatted PIC ve farklı storage type hesapları geldikçe
+        /// bu method genişletilecektir.
         /// </summary>
         private static int? CalculateDataTypeLength(Pl1DataType dataType)
         {
@@ -669,6 +685,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 Pl1FixedBinaryType { Precision: 31, Scale: 0 } => 4,
                 Pl1PictureType { IsNumeric: true, Precision: not null } pictureType =>
                     pictureType.Precision.Value,
+                Pl1PictureType { IsAlphanumeric: true, Length: not null } pictureType =>
+                    pictureType.Length.Value,
                 _ => null
             };
         }
