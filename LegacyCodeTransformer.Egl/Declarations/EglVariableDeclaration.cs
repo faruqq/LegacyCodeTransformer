@@ -1,4 +1,5 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
+using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Types;
 
 namespace LegacyCodeTransformer.Egl.Declarations;
@@ -12,13 +13,14 @@ namespace LegacyCodeTransformer.Egl.Declarations;
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// Scalar ve array EGL variable declaration ifadelerini tek modelde temsil eder.
+/// Scalar, array ve başlangıç değeri taşıyan EGL variable declaration ifadelerini tek modelde temsil eder.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - MustNo decimal(8);
 /// - Param char(10);
 /// - Param char(10)[2];
+/// - Param char(4) = "ABCD";
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -37,6 +39,8 @@ public sealed class EglVariableDeclaration : EglDeclaration
 
     public int? ArraySize { get; }
 
+    public EglInitialValue? InitialValue { get; }
+
     /// <summary>
     /// EGL değişken declaration modelini oluşturur.
     ///
@@ -46,12 +50,13 @@ public sealed class EglVariableDeclaration : EglDeclaration
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Değişken adı, EGL veri tipi ve optional array size bilgisini tek modelde tutar.
+    /// Değişken adı, EGL veri tipi, optional array size ve optional başlangıç değeri bilgisini tek modelde tutar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - Param char(10);
     /// - Param char(10)[2];
+    /// - Param char(4) = "ABCD";
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -60,17 +65,19 @@ public sealed class EglVariableDeclaration : EglDeclaration
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Top-level array, default value ve annotation üretimi gibi davranışlara temel olur.
+    /// Top-level array initialization, default value ve annotation üretimi gibi davranışlara temel olur.
     /// </summary>
     public EglVariableDeclaration(
         string name,
         EglDataType dataType,
         SourceLocation location,
-        int? arraySize = null)
+        int? arraySize = null,
+        EglInitialValue? initialValue = null)
         : base(location)
     {
         Name = name;
         DataType = dataType;
         ArraySize = arraySize;
+        InitialValue = initialValue;
     }
 }

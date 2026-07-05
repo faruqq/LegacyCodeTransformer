@@ -5,6 +5,7 @@ using LegacyCodeTransformer.Egl.Generation;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 using LegacyCodeTransformer.Pl1.Declarations;
+using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
@@ -1872,5 +1873,144 @@ public sealed class Pl1ToEglTranspilerTests
 
         Assert.Equal("CustomerInfo", recordDeclaration.Name);
         Assert.Equal("sqlRecord", recordDeclaration.RecordType);
+    }
+
+    /// <summary>
+    /// PL/I scalar INIT değerinin EglVariableDeclaration.InitialValue alanına taşındığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın repeat factor içermeyen Pl1InitialValue bilgisini EglInitialValue modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(4) INIT('ABCD');
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglVariableDeclaration.InitialValue.Value ABCD olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithScalarInitialValue_ShouldCreateEglInitialValue()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(4, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                new Pl1InitialValue(
+                    "ABCD",
+                    null,
+                    false,
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param", variableDeclaration.Name);
+        Assert.NotNull(variableDeclaration.InitialValue);
+        Assert.Equal("ABCD", variableDeclaration.InitialValue!.Value);
+    }
+
+    /// <summary>
+    /// INIT repeat factor kullanımında diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın INIT((08)' ') gibi repeat factor içeren initialization bilgisini şimdilik EGL default value olarak üretmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1InitialValue Value boşluk, RepeatCount 8.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Transpilation başarısız olmalı ve repeat factor diagnostic mesajı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithRepeatedInitialValue_ShouldReturnDiagnostic()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                new Pl1InitialValue(
+                    " ",
+                    8,
+                    false,
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Single(result.Diagnostics);
+        Assert.Contains(
+            "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+            result.Diagnostics[0].Message);
+    }
+
+    /// <summary>
+    /// INIT all-elements kullanımında diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler'ın INIT((*)' ') bilgisini scalar default value olarak üretmediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Pl1InitialValue Value boşluk, AppliesToAllElements true.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Transpilation başarısız olmalı ve all-elements diagnostic mesajı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithAllElementsInitialValue_ShouldReturnDiagnostic()
+    {
+        // Arrange
+        var syntaxTree = new Pl1SyntaxTree(
+            new Pl1Declaration[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                new Pl1InitialValue(
+                    " ",
+                    null,
+                    true,
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        // Act
+        var result = transpiler.Transpile(syntaxTree);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Single(result.Diagnostics);
+        Assert.Contains(
+            "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+            result.Diagnostics[0].Message);
     }
 }

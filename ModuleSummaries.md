@@ -1103,3 +1103,54 @@ PL/I structure declaration ifadeleri varsayılan olarak basicRecord üretmeye de
 
 ## Sonraki Adım
 Bir sonraki geliştirme hedefi INIT değerlerinin EGL default value olarak üretilmesidir.
+
+---
+# 2026-07-05 — P04-M INIT / INITIAL EGL Default Value Desteği
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I INIT / INITIAL başlangıç değerlerinin güvenli scalar subset için EGL default value olarak üretilmesi desteklendi.
+
+İlk kapsamda yalnızca repeat factor veya all-elements syntax içermeyen scalar character initialization değerleri output'a taşınmaktadır.
+
+## Desteklenen PL/I Kodları
+
+    DCL PARAM CHAR(4) INIT('ABCD');
+    DCL PARAM CHARACTER(1) INITIAL(';');
+    DCL PARAM CHAR(3) INIT('A"B');
+
+## Beklenen EGL Çıktıları
+
+    Param char(4) = "ABCD";
+    Param char(1) = ";";
+    Param char(3) = "A\"B";
+
+## Diagnostic Üreten PL/I Kodları
+
+    DCL PARAM CHAR(8) INIT((08)' ');
+    DCL PARAM CHAR(8) INIT((*)' ');
+
+## Yapılanlar
+- EglInitialValue modeli eklendi.
+- EglVariableDeclaration modeli InitialValue taşıyacak şekilde genişletildi.
+- Transpiler tarafında güvenli scalar INIT / INITIAL mapping desteği eklendi.
+- Repeat factor ve all-elements initialization için diagnostic üretildi.
+- Generator tarafında EGL default value output üretimi eklendi.
+- String literal escape desteği eklendi.
+- Transpiler, Generator ve Application testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- Structure member default value üretimi
+- Numeric default value ayrımı
+- Repeat factor expansion
+- Array element initialization
+- INIT((*)...) all-elements expansion
+
+## İlgili Kararlar
+- Decision 046 - EGL output casing ve indentation kuralları korunacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+P04 kapanış değerlendirmesi yapılacak ve ardından P05 — PL/I Statement Desteği hazırlığına geçilecektir.

@@ -222,11 +222,11 @@ PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanıl
 - ✅ Formatted PIC örnekleri için diagnostic üretimi
 
 ## Aktif Alt Hedef
-- sqlRecord mapping desteği
+- INIT değerlerinin EGL default value olarak üretilmesi
 
 ## Sıradaki Alt Hedefler
-- sqlRecord mapping desteği
-- INIT değerlerinin EGL default value olarak üretilmesi
+- P04 kapanış değerlendirmesi
+- P05 — PL/I Statement Desteği hazırlığı
 
 ## Başarı Kriteri
 Parser, Transpiler ve Generator katmanlarının yeni veri tiplerini ve declaration yapılarını uçtan uca desteklemesi.

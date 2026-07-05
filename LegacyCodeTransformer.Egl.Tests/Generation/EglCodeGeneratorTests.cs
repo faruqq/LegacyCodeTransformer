@@ -1,6 +1,7 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
 using LegacyCodeTransformer.Egl.Generation;
+using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 
@@ -534,5 +535,128 @@ public sealed class EglCodeGeneratorTests
 
         // Assert
         Assert.Equal("Param7 char(20);" + Environment.NewLine, result);
+    }
+
+    /// <summary>
+    /// EGL variable declaration üzerindeki initial value bilgisinin kaynak koda yazıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator'ın EglInitialValue modelini = "value" syntax'ı ile ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// EglVariableDeclaration adı Param, tipi char(4), initial value ABCD.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(4) = "ABCD"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithInitialValue_ShouldGenerateDefaultValue()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new EglDeclaration[]
+            {
+            new EglVariableDeclaration(
+                "Param",
+                new EglCharacterType(4, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                null,
+                new EglInitialValue(
+                    "ABCD",
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal(
+            "Param char(4) = \"ABCD\";" + Environment.NewLine,
+            result);
+    }
+
+    /// <summary>
+    /// EGL initial value içindeki çift tırnak karakterinin escape edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator'ın string literal içindeki çift tırnak karakterini output üretirken escape ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Initial value A"B.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(3) = "A\"B"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithInitialValueHavingQuote_ShouldEscapeQuote()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new EglDeclaration[]
+            {
+            new EglVariableDeclaration(
+                "Param",
+                new EglCharacterType(3, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                null,
+                new EglInitialValue(
+                    "A\"B",
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal(
+            "Param char(3) = \"A\\\"B\";" + Environment.NewLine,
+            result);
+    }
+
+    /// <summary>
+    /// EGL initial value içindeki backslash karakterinin escape edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator'ın string literal içindeki backslash karakterini output üretirken escape ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// Initial value A\B.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(3) = "A\\B"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithInitialValueHavingBackslash_ShouldEscapeBackslash()
+    {
+        // Arrange
+        var syntaxTree = new EglSyntaxTree(
+            new EglDeclaration[]
+            {
+            new EglVariableDeclaration(
+                "Param",
+                new EglCharacterType(3, SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                null,
+                new EglInitialValue(
+                    "A\\B",
+                    SourceLocation.Unknown))
+            },
+            SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        // Act
+        var result = generator.Generate(syntaxTree);
+
+        // Assert
+        Assert.Equal(
+            "Param char(3) = \"A\\\\B\";" + Environment.NewLine,
+            result);
     }
 }

@@ -1677,5 +1677,160 @@ namespace LegacyCodeTransformer.Application.Tests
             Assert.Equal(expected, result.Output);
             Assert.Empty(result.Diagnostics);
         }
+
+        /// <summary>
+        /// PL/I CHAR INIT değerinin EGL default value çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ının INIT('ABCD') bilgisini EGL variable default value olarak ürettiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(4) INIT('ABCD');
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(4) = "ABCD"; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithCharInitialValue_ShouldGenerateDefaultValue()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(4) INIT('ABCD');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param char(4) = \"ABCD\";" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// PL/I CHARACTER INITIAL değerinin EGL default value çıktısına dönüştüğünü doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// INITIAL keyword synonym bilgisinin INIT ile aynı şekilde EGL default value olarak üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHARACTER(1) INITIAL(';');
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(1) = ";"; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithCharacterInitialValue_ShouldGenerateDefaultValue()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHARACTER(1) INITIAL(';');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param char(1) = \";\";" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// INIT içindeki çift tırnak değerinin EGL string literal içinde escape edildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// PL/I INIT değerindeki çift tırnak karakterinin generator tarafından güvenli EGL string literal olarak üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(3) INIT('A"B');
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(3) = "A\"B"; çıktısı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithInitialValueHavingQuote_ShouldEscapeQuote()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(3) INIT('A\"B');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            var expected =
+                "Param char(3) = \"A\\\"B\";" + Environment.NewLine;
+
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
+        }
+
+        /// <summary>
+        /// INIT repeat factor kullanımında conversion diagnostic üretildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// INIT((08)' ') bilgisinin parser tarafından okunduğunu fakat EGL default value olarak henüz üretilmediğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(8) INIT((08)' ');
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve repeat factor diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithRepeatedInitialValue_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(8) INIT((08)' ');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// INIT all-elements kullanımında conversion diagnostic üretildiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// INIT((*)' ') bilgisinin parser tarafından okunduğunu fakat EGL default value olarak henüz üretilmediğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL PARAM CHAR(8) INIT((*)' ');
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve all-elements diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithAllElementsInitialValue_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL PARAM CHAR(8) INIT((*)' ');";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+                result.Diagnostics[0].Message);
+        }
     }
 }

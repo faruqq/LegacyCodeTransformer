@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
-using LegacyCodeTransformer.Core.Diagnostics;
+﻿using LegacyCodeTransformer.Core.Diagnostics;
+using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
+using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 using LegacyCodeTransformer.Pl1.Declarations;
+using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
@@ -263,13 +265,14 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// PL/I scalar ve array variable declaration bilgisini EGL variable declaration modeline taşır.
+        /// PL/I scalar, array ve güvenli başlangıç değeri taşıyan variable declaration bilgisini EGL variable declaration modeline taşır.
         /// Veri tipi dönüşümü başarısız olursa diagnostic tekrarını engeller.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         /// - DCL MUST_NO FIXED DECIMAL(8); => MustNo decimal(8);
         /// - DCL PARAM CHAR(10) DIM(2); => Param char(10)[2];
+        /// - DCL PARAM CHAR(4) INIT('ABCD'); => Param char(4) = "ABCD";
         /// - DCL FLAG BIT(1); => tek BIT diagnostic üretir.
         ///
         /// Nerede kullanılır?
@@ -279,7 +282,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Yeni unsupported veri tipleri eklendiğinde duplicate diagnostic üretmeden merkezi hata yönetimi sağlar.
+        /// Numeric default value, array initialization ve record field default value mapping kuralları eklendiğinde bu method genişletilecektir.
         /// </summary>
         private EglVariableDeclaration? TranspileVariableDeclaration(
             Pl1VariableDeclaration declaration)
@@ -300,13 +303,75 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 return null;
             }
 
+            var initialValue = TranspileInitialValue(
+                declaration.InitialValue,
+                declaration.Location);
+
             return new EglVariableDeclaration(
                 IdentifierNameTransformer.Transform(
                     declaration.Name,
                     _options.NamingOptions.Style),
                 dataType,
                 declaration.Location,
-                declaration.ArraySize);
+                declaration.ArraySize,
+                initialValue);
+        }
+
+        /// <summary>
+        /// PL/I INIT / INITIAL bilgisini EGL initial value modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I parser başlangıç değerini Pl1InitialValue modeli üzerinde korur.
+        /// EGL output üretilebilmesi için bu bilginin hedef dil modeli olan EglInitialValue
+        /// modeline çevrilmesi gerekir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Güvenli scalar başlangıç değerlerini EGL syntax tree'ye taşır.
+        /// RepeatCount veya AppliesToAllElements içeren initialization ifadelerini şimdilik output'a çevirmeden diagnostic üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// Desteklenen:
+        /// - INIT('ABCD')
+        /// - INITIAL(';')
+        ///
+        /// Şimdilik diagnostic:
+        /// - INIT((08)' ')
+        /// - INIT((*)' ')
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileVariableDeclaration içinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Array initialization, repeat factor expansion, record field default value ve numeric initialization mapping davranışlarına temel olur.
+        /// </summary>
+        private EglInitialValue? TranspileInitialValue(
+            Pl1InitialValue? initialValue,
+            SourceLocation location)
+        {
+            if (initialValue is null)
+            {
+                return null;
+            }
+
+            if (initialValue.RepeatCount.HasValue ||
+                initialValue.AppliesToAllElements)
+            {
+                _diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+                    location));
+
+                return null;
+            }
+
+            return new EglInitialValue(
+                initialValue.Value,
+                initialValue.Location);
         }
 
         /// <summary>
