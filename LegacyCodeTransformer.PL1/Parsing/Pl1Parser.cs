@@ -1,56 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using LegacyCodeTransformer.Core.Diagnostics;
+﻿using LegacyCodeTransformer.Core.Diagnostics;
 using LegacyCodeTransformer.Core.Results;
 using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Pl1.Declarations;
-using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Syntax;
-using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Pl1.Parsing.Helpers;
+using LegacyCodeTransformer.Pl1.Syntax;
 
 namespace LegacyCodeTransformer.Pl1.Parsing;
 
 /// <summary>
-/// PL/I token listesini Pl1SyntaxTree modeline dönüştürür.
+/// PL/I token listesini Pl1SyntaxTree modeline dönüştüren ana parser sınıfıdır.
 ///
 /// Neden var?
 /// ----------------------
-/// Lexer yalnızca kaynak kodu token'lara ayırır.
-/// Ancak token listesi henüz anlamlı bir program modeli değildir.
+/// Lexer yalnızca kaynak PL/I metnini token listesine ayırır. Bu token listesinin
+/// declaration, structure ve ileride statement modellerine dönüştürülmesi gerekir.
 ///
-/// Parser, token listesini okuyarak PL/I diline ait declaration
-/// modellerini oluşturur.
+/// Ne çözüyor?
+/// ----------------------
+/// Parser ana orchestration katmanı olarak çalışır. Declaration detaylarını kendisi
+/// parse etmez; DeclarationParser ve onun altındaki helper parser sınıflarına yönlendirir.
 ///
-/// Örnek PL/I:
-///
-/// DCL MUST_NO FIXED DECIMAL(8);
-/// DCL PARAM CHAR(08) INIT(' ');
-/// DCL 1 PARAME_LIST,
-///     5 PARAM CHAR(08) INIT(' '),
-///     5 PARAM2 CHAR(01) INIT(';');
-///
-/// Bu parser ilgili ifadeleri:
-/// - Pl1VariableDeclaration
-/// - Pl1StructureDeclaration
-/// - Pl1FixedDecimalType
-/// - Pl1CharacterType
-/// - Pl1InitialValue
-///
-/// modellerine dönüştürür.
+/// Hangi örneği destekliyor?
+/// ----------------------
+/// - DCL MUST_NO FIXED DECIMAL(8);
+/// - DCL PARAM CHAR(08) INIT(' ');
+/// - DCL 1 REC, 5 PARAM CHAR(08);
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Application pipeline içerisinde
-/// - PL/I kaynak kodunu SyntaxTree'ye dönüştürmek için
+/// - ConversionService pipeline içinde
+/// - Parser unit testlerinde
 /// - Normalizer ve Transpiler aşamalarından önce
 ///
-/// Gelecekte ne işe yarayacak?
+/// Gelecekte neye temel olur?
 /// ----------------------
-/// PL/I desteği genişledikçe IF, CALL, DO/END, PROCEDURE, assignment,
-/// embedded SQL, array declaration ve nested structure gibi yapılar
-/// bu parser üzerinden SyntaxTree'ye çevrilecektir.
+/// P05 ile statement parser eklendiğinde Pl1Parser ana orchestration sınıfı olarak
+/// kalacak; IF, DO, CALL, assignment gibi syntax aileleri ayrı helper parser sınıflarına
+/// yönlendirilecektir.
 /// </summary>
 public sealed class Pl1Parser
 {
@@ -63,15 +50,26 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// Parser, lexer tarafından üretilen token listesini sırayla okuyarak
-    /// syntax tree üretir.
+    /// Parser'ın lexer tarafından üretilen token listesini sırayla okuyabilmesi gerekir.
     ///
-    /// Token listesi null gelirse boş liste olarak ele alınır.
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Token listesini parser state'i olarak saklar. Null token listesi gelirse güvenli
+    /// şekilde boş listeye düşer.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// new Pl1Parser(tokens)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Application conversion pipeline içerisinde
+    /// - ConversionService içinde
     /// - Parser unit testlerinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Statement parser ve procedure parser eklendiğinde aynı token stream orchestration
+    /// bu sınıf üzerinden devam eder.
     /// </summary>
     public Pl1Parser(IReadOnlyList<Pl1Token> tokens)
     {
@@ -83,23 +81,30 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodundan gelen token listesi, dönüşüm pipeline'ında
-    /// kullanılabilecek güçlü tipli syntax tree modeline çevrilmelidir.
+    /// PL/I kaynak kodundan gelen token listesi dönüşüm pipeline'ında kullanılabilecek
+    /// güçlü tipli syntax tree modeline çevrilmelidir.
     ///
-    /// Bu method şu anda declaration odaklı çalışır:
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Şu anda declaration odaklı parse yapar. DCL / DECLARE gördüğünde declaration
+    /// parser'a yönlendirir; desteklenmeyen token gördüğünde diagnostic üretir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
     /// - Tekil variable declaration
-    /// - Basit structure declaration
+    /// - Structure declaration
+    /// - Nested structure declaration
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ConversionService içerisinde
+    /// - ConversionService içinde
     /// - Parser unit testlerinde
     /// - Normalizer ve Transpiler öncesinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// PL/I program yapısı genişledikçe declaration dışındaki statement
-    /// türleri de bu ana parse akışı üzerinden yönlendirilecektir.
+    /// PL/I program yapısı genişledikçe declaration dışındaki statement türleri de bu
+    /// ana parse akışı üzerinden ilgili helper parser sınıflarına yönlendirilecektir.
     /// </summary>
     public ParseResult<Pl1SyntaxTree> Parse()
     {
@@ -110,6 +115,7 @@ public sealed class Pl1Parser
             if (Current.Kind == Pl1TokenKind.DclKeyword)
             {
                 var declaration = ParseDeclaration();
+
                 if (declaration is not null)
                 {
                     declarations.Add(declaration);
@@ -177,52 +183,29 @@ public sealed class Pl1Parser
     }
 
     /// <summary>
-    /// Beklenen token türünü tüketir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Parser grammar ilerletirken belirli noktalarda belirli token
-    /// türlerini bekler.
-    ///
-    /// Beklenen token gelirse token tüketilir.
-    /// Beklenen token gelmezse diagnostic üretilir ve null döner.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - Tüm parse methodlarında
-    /// - Grammar doğrulamasında
-    /// - Diagnostic üretiminde
-    /// </summary>
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
     /// Beklenmeyen token için diagnostic üretir.
     ///
     /// Neden var?
     /// ----------------------
-    /// Parser desteklenmeyen veya grammar dışı bir token gördüğünde
-    /// kullanıcıya anlamlı hata bilgisi üretmelidir.
+    /// Parser desteklenmeyen veya grammar dışı bir token gördüğünde kullanıcıya anlamlı
+    /// hata bilgisi üretmelidir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Hatalı token metniyle beklenen syntax bilgisini diagnostic listesine ekler.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// DCL dışındaki token ile başlayan kaynaklarda beklenen token bilgisini üretir.
     ///
     /// Nerede kullanılır?
     /// ----------------------
     /// - Parse ana akışında
-    /// - Structure member ayracı beklenirken
-    /// - Gelecekte statement parse hatalarında
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Statement parser eklendiğinde top-level unsupported syntax diagnostic davranışı
+    /// aynı standartta korunur.
     /// </summary>
     private void AddUnexpectedTokenDiagnostic(
         Pl1Token token,
@@ -235,56 +218,62 @@ public sealed class Pl1Parser
     }
 
     /// <summary>
-    /// Mevcut pozisyona göre ileri bakış token'ını döndürür.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// DCL sonrasında gelen token'a bakarak declaration tipini seçmemiz
-    /// gerekir.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDeclaration içerisinde
-    /// - Gelecekte lookahead gerektiren grammar ayrımlarında
-    /// </summary>
-    private Pl1Token Peek(int offset)
-    {
-        var index = _position + offset;
-
-        if (index >= _tokens.Count)
-        {
-            return _tokens[^1];
-        }
-
-        return _tokens[index];
-    }
-
-    /// <summary>
     /// Mevcut token'ı tüketip bir sonraki token'a ilerler.
     ///
     /// Neden var?
     /// ----------------------
     /// Parser token listesinde sırayla ilerlemelidir.
-    /// Bu method Current token'ı tüketir ve tüketilen token'ı döndürür.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Hata toparlama sırasında desteklenmeyen token'ı atlayarak parser'ın sonsuz
+    /// döngüye girmesini engeller.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// DCL dışındaki beklenmeyen token görüldüğünde bir sonraki token'a geçilir.
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Consume methodunda
-    /// - Hata toparlama sırasında
-    /// - Ayracı manuel geçmek gerektiğinde
+    /// - Parse ana akışındaki hata toparlama branch'inde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Statement parser eklendiğinde top-level recovery davranışı bu method üzerinden
+    /// korunabilir.
     /// </summary>
-    private Pl1Token Advance()
+    private void Advance()
     {
         if (!IsAtEnd())
         {
             _position++;
         }
-
-        return Previous;
     }
 
     /// <summary>
     /// Parser'ın kaynak sonu token'ına gelip gelmediğini belirtir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Parse ana döngüsünün token stream sonunda durması gerekir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// EndOfFile token görüldüğünde parse işleminin tamamlandığını belirtir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// Tüm declaration'lar okunduktan sonra EOF token üzerinde parse döngüsünü bitirir.
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - Parse ana döngüsünde
+    /// - Advance içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Statement parser eklendiğinde aynı EOF kontrolü ana orchestration seviyesinde
+    /// kullanılmaya devam eder.
     /// </summary>
     private bool IsAtEnd()
     {
@@ -293,6 +282,29 @@ public sealed class Pl1Parser
 
     /// <summary>
     /// Mevcut parser pozisyonundaki token'ı döndürür.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Parser'ın karar verebilmesi için mevcut token'a güvenli şekilde erişmesi gerekir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Position token listesinin dışına taşarsa son token'ı döndürerek out-of-range
+    /// hatasını engeller.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// EOF sonrası güvenli Current erişimi sağlar.
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - Parse ana akışında
+    /// - IsAtEnd içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Top-level parser orchestration aynı Current erişimiyle statement dispatch
+    /// davranışını da yönetebilir.
     /// </summary>
     private Pl1Token Current
     {
@@ -306,9 +318,4 @@ public sealed class Pl1Parser
             return _tokens[_position];
         }
     }
-
-    /// <summary>
-    /// Bir önce tüketilen token'ı döndürür.
-    /// </summary>
-    private Pl1Token Previous => _tokens[_position - 1];
 }

@@ -1638,3 +1638,25 @@ DeclarationParser helper sınıfı eklendi. Pl1Parser artık declaration parse e
 
 ## Sonraki Adım
 Pl1Parser sadeleştirme tamamlandıktan sonra P05 statement parser hazırlığına geçilecektir.
+
+---
+# 2026-07-05 — P04-R10 Pl1Parser Final Cleanup
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+Parser internal refactor sonrası Pl1Parser üzerinde kalan eski helper methodlar temizlendi.
+
+Pl1Parser artık yalnızca top-level parse orchestration, declaration dispatch çağrısı ve hata toparlama sorumluluklarını taşır. Declaration, variable declaration, structure, data type, dimension ve initial value detayları helper parser sınıflarına taşınmıştır.
+
+## Yapılanlar
+- Pl1Parser içindeki kullanılmayan Consume helper methodu kaldırıldı.
+- Pl1Parser içindeki kullanılmayan Peek helper methodu kaldırıldı.
+- Pl1Parser içindeki Previous property kaldırıldı.
+- Advance methodu sadece hata toparlama için sadeleştirildi.
+- Kullanılmayan using ifadeleri temizlendi.
+- Davranış değişikliği yapılmadı.
+
+## Sonraki Adım
+Parser refactor kapanış değerlendirmesi yapılacak ve ardından P05 statement parser hazırlığına geçilecektir.
