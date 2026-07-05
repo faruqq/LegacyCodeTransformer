@@ -1607,3 +1607,34 @@ VariableDeclarationParser helper sınıfı eklendi. Pl1Parser artık variable de
 
 ## Sonraki Adım
 Bir sonraki refactor adımı declaration dispatch davranışını sadeleştirmek ve ardından P05 statement parser hazırlığına geçmektir.
+
+---
+# 2026-07-05 — P04-R9 DeclarationParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde DCL declaration dispatch sorumluluğu Pl1Parser içinden çıkarıldı.
+
+DeclarationParser helper sınıfı eklendi. Pl1Parser artık declaration parse etmek için yalnızca DeclarationParser çağırır ve token position bilgisini günceller. DeclarationParser ise DCL sonrasındaki token'a göre VariableDeclarationParser veya StructureParser helper sınıfına yönlendirir.
+
+## Yapılanlar
+- DeclarationParser helper sınıfı eklendi.
+- DeclarationParseResult modeli eklendi.
+- Pl1Parser.ParseDeclaration methodu sadeleştirildi.
+- Pl1Parser içindeki ParseVariableDeclaration ve ParseStructureDeclaration wrapper methodları kaldırıldı.
+- DeclarationParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- P05 statement parser geliştirmeleri
+- Procedure parser
+- Expression parser
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Pl1Parser sadeleştirme tamamlandıktan sonra P05 statement parser hazırlığına geçilecektir.

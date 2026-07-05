@@ -135,118 +135,41 @@ public sealed class Pl1Parser
     }
 
     /// <summary>
-    /// PL/I declaration ifadesinin tekil değişken mi yoksa structure mı olduğunu belirler.
+    /// PL/I declaration ifadesini parse eder.
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I tarafında DCL / DECLARE ifadesi hem tekil değişken hem de
-    /// seviye numaralı structure declaration için kullanılabilir.
+    /// Parse ana döngüsü DCL / DECLARE token gördüğünde declaration parse davranışına
+    /// yönlenmelidir.
     ///
-    /// DCL sonrasında Identifier gelirse tekil değişken, Number gelirse
-    /// structure declaration parse edilir.
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DCL sonrası variable /
+    /// structure declaration seçimi ve detay parsing sorumluluğunu DeclarationParser helper
+    /// sınıfına devreder.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL PARAM CHAR(08);
+    /// - DCL 1 REC, 5 PARAM CHAR(08);
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Parse ana akışı DclKeyword gördüğünde
-    /// - PL/I SyntaxTree declaration listesi oluşturulurken
+    /// - Parse ana döngüsü içinde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// File declaration, based declaration, factored declaration ve farklı
-    /// DCL varyasyonları eklendiğinde declaration dispatch sorumluluğu
-    /// bu method üzerinde genişletilecektir.
+    /// P05 statement parser eklendiğinde Pl1Parser ana orchestration sınıfı olarak kalır;
+    /// declaration detayları DeclarationParser içinde büyür.
     /// </summary>
     private Pl1Declaration? ParseDeclaration()
     {
-        if (Peek(1).Kind == Pl1TokenKind.Number)
-        {
-            return ParseStructureDeclaration();
-        }
-
-        return ParseVariableDeclaration();
-    }
-
-    /// <summary>
-    /// PL/I değişken declaration ifadesini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDeclaration methodu DCL sonrasında Identifier gördüğünde variable declaration
-    /// parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DCL, identifier,
-    /// array size, data type, DIM / DIMENSION ve INIT / INITIAL parsing sorumluluğunu
-    /// VariableDeclarationParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL MUST_NO FIXED DECIMAL(8);
-    /// - DCL PARAM CHAR(08) INIT(' ');
-    /// - DCL PARAM(2) CHAR(10);
-    /// - DCL PARAM CHAR(10) DIM(2);
-    /// - DCL PARAM CHAR(10) DIMENSION(2);
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDeclaration dispatch methodu içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Pl1Parser variable declaration detaylarıyla büyümeden VariableDeclarationParser
-    /// içinde geliştirilebilir.
-    /// </summary>
-    private Pl1VariableDeclaration? ParseVariableDeclaration()
-    {
-        var parser = new VariableDeclarationParser(
+        var parser = new DeclarationParser(
             _tokens,
             _position,
             _diagnostics);
 
-        var result = parser.ParseVariableDeclaration();
-
-        _position = result.Position;
-
-        return result.Declaration;
-    }
-
-    /// <summary>
-    /// PL/I seviye numaralı structure declaration ifadesini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// ParseDeclaration methodu DCL sonrasında Number gördüğünde structure declaration
-    /// parse davranışına yönlenmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat structure declaration,
-    /// member, nested member, member data type, member INIT ve member dimension parsing
-    /// sorumluluğunu StructureParser helper sınıfına devreder.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - DCL 1 REC, 5 PARAM CHAR(08);
-    /// - DCL 1 DIZI(6), 3 KOD CHAR(01);
-    /// - DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseDeclaration dispatch methodu içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Pl1Parser structure detaylarıyla büyümeden StructureParser içinde geliştirilebilir.
-    /// </summary>
-    private Pl1StructureDeclaration? ParseStructureDeclaration()
-    {
-        var parser = new StructureParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
-        var result = parser.ParseStructureDeclaration();
+        var result = parser.ParseDeclaration();
 
         _position = result.Position;
 
