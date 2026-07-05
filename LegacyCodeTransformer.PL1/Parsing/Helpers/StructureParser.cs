@@ -1,4 +1,5 @@
 ﻿using LegacyCodeTransformer.Core.Diagnostics;
+using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Lexing;
@@ -19,6 +20,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// DCL 1 ... ile başlayan structure declaration parsing davranışını Pl1Parser dışına taşır.
 /// Root structure, structure array, member listesi, nested group, member array, DIM / DIMENSION
 /// ve INIT / INITIAL parsing akışlarını tek structure parser içinde koordine eder.
+/// Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -29,27 +31,29 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseStructureDeclaration içinde
+/// - DeclarationParser içinde structure declaration branch'inde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
 /// P05 öncesi parser sadeleşmesini tamamlar. İleride based structure, include tabanlı
 /// structure veya DCLGEN benzeri veri tanımları bu sınıfta geliştirilebilir.
 /// </summary>
-internal sealed class StructureParser
+internal sealed class StructureParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public StructureParser(ParseContext context)
+        : base(context)
+    {
+    }
 
     public StructureParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -73,7 +77,7 @@ internal sealed class StructureParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseStructureDeclaration içinde
+    /// - DeclarationParser içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
@@ -103,19 +107,19 @@ internal sealed class StructureParser
         {
             return new StructureParseResult(
                 null,
-                _position);
+                Position);
         }
 
         if (!int.TryParse(levelToken.Text, out var level))
         {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Structure seviye numarası sayısal olmalıdır: {levelToken.Text}",
-                levelToken.Location));
+            Diagnostics.Add(
+                ParserDiagnosticFactory.InvalidNumber(
+                    "Structure seviye numarası sayısal olmalıdır",
+                    levelToken));
 
             return new StructureParseResult(
                 null,
-                _position);
+                Position);
         }
 
         var members = ParseStructureMembers(level);
@@ -131,7 +135,7 @@ internal sealed class StructureParser
                 members,
                 dclToken.Location,
                 arraySize),
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -169,9 +173,10 @@ internal sealed class StructureParser
         {
             if (Current.Kind != Pl1TokenKind.Number)
             {
-                AddUnexpectedTokenDiagnostic(
-                    Current,
-                    "Structure member seviye numarası");
+                Diagnostics.Add(
+                    ParserDiagnosticFactory.UnexpectedToken(
+                        Current,
+                        "Structure member seviye numarası"));
 
                 Advance();
                 continue;
@@ -179,10 +184,10 @@ internal sealed class StructureParser
 
             if (!int.TryParse(Current.Text, out var currentLevel))
             {
-                _diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
-                    $"Structure member seviye numarası sayısal olmalıdır: {Current.Text}",
-                    Current.Location));
+                Diagnostics.Add(
+                    ParserDiagnosticFactory.InvalidNumber(
+                        "Structure member seviye numarası sayısal olmalıdır",
+                        Current));
 
                 Advance();
                 continue;
@@ -194,6 +199,7 @@ internal sealed class StructureParser
             }
 
             var member = ParseStructureMember();
+
             if (member is not null)
             {
                 members.Add(member);
@@ -257,10 +263,10 @@ internal sealed class StructureParser
 
         if (!int.TryParse(levelToken.Text, out var level))
         {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Structure member seviye numarası sayısal olmalıdır: {levelToken.Text}",
-                levelToken.Location));
+            Diagnostics.Add(
+                ParserDiagnosticFactory.InvalidNumber(
+                    "Structure member seviye numarası sayısal olmalıdır",
+                    levelToken));
 
             return null;
         }
@@ -294,6 +300,7 @@ internal sealed class StructureParser
 
         var dataType = ParseDataType();
         var dimensionArraySize = ParseOptionalDimensionSize();
+
         var arraySize = ResolveArraySize(
             nameArraySize,
             dimensionArraySize,
@@ -325,8 +332,7 @@ internal sealed class StructureParser
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// StructureParser token state'ini DataTypeParser'a aktarır ve parse sonrası
-    /// position değerini geri alır.
+    /// Data type parsing davranışını DataTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -347,14 +353,8 @@ internal sealed class StructureParser
     /// </summary>
     private Pl1DataType? ParseDataType()
     {
-        var parser = new DataTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new DataTypeParser(Context);
         var result = parser.Parse();
-
-        _position = result.Position;
 
         return result.DataType;
     }
@@ -386,14 +386,8 @@ internal sealed class StructureParser
     /// </summary>
     private int? ParseOptionalArraySize()
     {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalArraySize();
-
-        _position = result.Position;
 
         return result.ArraySize;
     }
@@ -424,14 +418,8 @@ internal sealed class StructureParser
     /// </summary>
     private int? ParseOptionalDimensionSize()
     {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalDimensionSize();
-
-        _position = result.Position;
 
         return result.ArraySize;
     }
@@ -464,12 +452,9 @@ internal sealed class StructureParser
     private int? ResolveArraySize(
         int? nameArraySize,
         int? dimensionArraySize,
-        Core.Syntax.SourceLocation location)
+        SourceLocation location)
     {
-        var parser = new DimensionParser(
-            _tokens,
-            _position,
-            _diagnostics);
+        var parser = new DimensionParser(Context);
 
         return parser.ResolveArraySize(
             nameArraySize,
@@ -506,143 +491,13 @@ internal sealed class StructureParser
     /// </summary>
     private Pl1InitialValue? ParseOptionalInitialValue()
     {
-        var parser = new InitialValueParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new InitialValueParser(Context);
         var result = parser.ParseOptionalInitialValue();
-
-        _position = result.Position;
 
         return result.InitialValue;
     }
-
-    /// <summary>
-    /// Beklenen token türünü tüketir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Structure grammar belirli noktalarda DCL, seviye numarası, identifier,
-    /// comma veya semicolon bekler.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Beklenen token gelirse token'ı tüketir; gelmezse diagnostic üretir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// DCL 1 REC, 5 PARAM CHAR(08); akışındaki zorunlu token'ları doğrular.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseStructureDeclaration içinde
-    /// - ParseStructureMember içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Structure parser içindeki token okuma standardını merkezi tutar.
-    /// </summary>
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// Beklenmeyen token için diagnostic üretir.
-    /// </summary>
-    private void AddUnexpectedTokenDiagnostic(
-        Pl1Token token,
-        string expectedText)
-    {
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"Beklenmeyen token: {token.Text}. Beklenen: {expectedText}.",
-            token.Location));
-    }
-
-    /// <summary>
-    /// Mevcut token'ı tüketip bir sonraki token'a ilerler.
-    /// </summary>
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    /// <summary>
-    /// Helper parser'ın kaynak sonu token'ına gelip gelmediğini belirtir.
-    /// </summary>
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    /// <summary>
-    /// Mevcut helper parser pozisyonundaki token'ı döndürür.
-    /// </summary>
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    /// <summary>
-    /// Bir önce tüketilen token'ı döndürür.
-    /// </summary>
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
-/// <summary>
-/// Structure parse sonucunu ve parse sonrası token pozisyonunu taşır.
-///
-/// Neden var?
-/// ----------------------
-/// StructureParser ayrı token position state'i ile çalışır. Parse tamamlandığında
-/// Pl1Parser'ın kendi pozisyonunu güncellemesi gerekir.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// Parse edilen Pl1StructureDeclaration modeli ile parse sonrası position değerini
-/// birlikte döndürür.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// DCL 1 REC, 5 PARAM CHAR(08); parse edildiğinde structure modeli ve semicolon sonrası
-/// position birlikte taşınır.
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - StructureParser.ParseStructureDeclaration dönüş değerinde
-/// - Pl1Parser.ParseStructureDeclaration içinde
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// Procedure-level declaration parser extraction sırasında aynı result pattern korunabilir.
-/// </summary>
 internal sealed class StructureParseResult
 {
     public Pl1StructureDeclaration? Declaration { get; }

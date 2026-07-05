@@ -14,8 +14,9 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// DCL sonrasında Number görülürse structure declaration parser'a, Identifier görülürse
-/// variable declaration parser'a yönlendirir.
+/// DCL sonrasında Number görülürse StructureParser'a, Identifier görülürse
+/// VariableDeclarationParser'a yönlendirir. Ortak token okuma davranışını
+/// ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -31,20 +32,22 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// Multiple declaration, factored declaration, procedure declaration ve statement parser
 /// dispatch davranışlarına temiz zemin hazırlar.
 /// </summary>
-internal sealed class DeclarationParser
+internal sealed class DeclarationParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public DeclarationParser(ParseContext context)
+        : base(context)
+    {
+    }
 
     public DeclarationParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -77,114 +80,49 @@ internal sealed class DeclarationParser
     {
         if (Current.Kind != Pl1TokenKind.DclKeyword)
         {
-            _diagnostics.Add(new Diagnostic(
+            Diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
                 $"DCL bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
 
             return new DeclarationParseResult(
                 null,
-                _position);
+                Position);
         }
 
         var nextToken = Peek(1);
 
         if (nextToken.Kind == Pl1TokenKind.Number)
         {
-            var parser = new StructureParser(
-                _tokens,
-                _position,
-                _diagnostics);
-
+            var parser = new StructureParser(Context);
             var result = parser.ParseStructureDeclaration();
 
             return new DeclarationParseResult(
                 result.Declaration,
-                result.Position);
+                Position);
         }
 
         if (nextToken.Kind == Pl1TokenKind.Identifier)
         {
-            var parser = new VariableDeclarationParser(
-                _tokens,
-                _position,
-                _diagnostics);
-
+            var parser = new VariableDeclarationParser(Context);
             var result = parser.ParseVariableDeclaration();
 
             return new DeclarationParseResult(
                 result.Declaration,
-                result.Position);
+                Position);
         }
 
-        _diagnostics.Add(new Diagnostic(
+        Diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"DCL sonrasında değişken adı veya structure seviye numarası bekleniyordu. Gelen token: {nextToken.Text}",
             nextToken.Location));
 
         return new DeclarationParseResult(
             null,
-            _position);
-    }
-
-    /// <summary>
-    /// Mevcut pozisyona göre ileri offset'teki token'ı döndürür.
-    /// </summary>
-    private Pl1Token Peek(int offset)
-    {
-        var index = _position + offset;
-
-        if (index >= _tokens.Count)
-        {
-            return _tokens[^1];
-        }
-
-        return _tokens[index];
-    }
-
-    /// <summary>
-    /// Mevcut helper parser pozisyonundaki token'ı döndürür.
-    /// </summary>
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
+            Position);
     }
 }
 
-/// <summary>
-/// Declaration parse sonucunu ve parse sonrası token pozisyonunu taşır.
-///
-/// Neden var?
-/// ----------------------
-/// DeclarationParser ayrı token position state'i ile çalışır. Parse tamamlandığında
-/// Pl1Parser'ın kendi pozisyonunu güncellemesi gerekir.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// Parse edilen Pl1Declaration modeli ile parse sonrası position değerini birlikte döndürür.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// DCL PARAM CHAR(08); parse edildiğinde variable declaration modeli ve semicolon sonrası
-/// position birlikte taşınır.
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - DeclarationParser.ParseDeclaration dönüş değerinde
-/// - Pl1Parser.ParseDeclaration içinde
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// P05 ile statement / declaration dispatch ayrımı yapılırken aynı result pattern korunabilir.
-/// </summary>
 internal sealed class DeclarationParseResult
 {
     public Pl1Declaration? Declaration { get; }

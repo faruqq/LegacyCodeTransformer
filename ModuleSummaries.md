@@ -1737,3 +1737,69 @@ Bu refactor ile numeric ve floating parser sınıflarındaki tekrar eden token s
 
 ## Sonraki Adım
 DataTypeParser, InitialValueParser ve DimensionParser sınıfları ParseContext / ParserBase altyapısına taşınacaktır.
+
+---
+# 2026-07-05 — P04-R13 DataTypeParser, InitialValueParser ve DimensionParser Migration
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+DataTypeParser, InitialValueParser ve DimensionParser sınıfları ParseContext / ParserBase / ParserDiagnosticFactory altyapısına taşındı.
+
+Bu refactor ile data type dispatch, INIT / INITIAL parsing ve DIM / DIMENSION parsing sınıflarındaki tekrar eden token state, Current, Advance, Consume ve IsAtEnd davranışları kaldırılarak ortak ParserBase üzerinden kullanılmaya başlandı.
+
+## Yapılanlar
+- DataTypeParser ParserBase kullanacak şekilde güncellendi.
+- InitialValueParser ParserBase kullanacak şekilde güncellendi.
+- DimensionParser ParserBase kullanacak şekilde güncellendi.
+- Bu parserların constructor yapıları ParseContext destekleyecek şekilde genişletildi.
+- DataTypeParser alt parser çağrılarında ortak ParseContext kullanımına geçirildi.
+- Dimension numeric parse hatalarında ParserDiagnosticFactory.InvalidNumber kullanılmaya başlandı.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- StructureParser migration
+- VariableDeclarationParser migration
+- DeclarationParser migration
+- Generic parser result modeli
+- Parser test altyapısı sadeleştirme
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+- Decision 058 - Parser Infrastructure Components
+
+## Sonraki Adım
+StructureParser, VariableDeclarationParser ve DeclarationParser sınıfları ParseContext / ParserBase altyapısına taşınacaktır.
+
+---
+# 2026-07-05 — P04-R14 Declaration Parser Migration
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+DeclarationParser, VariableDeclarationParser ve StructureParser sınıfları ParseContext / ParserBase / ParserDiagnosticFactory altyapısına taşındı.
+
+Bu refactor ile declaration dispatch, top-level variable declaration ve structure declaration parser sınıflarındaki tekrar eden token state, Current, Advance, Consume, Peek ve IsAtEnd davranışları kaldırılarak ortak ParserBase üzerinden kullanılmaya başlandı.
+
+## Yapılanlar
+- DeclarationParser ParserBase kullanacak şekilde güncellendi.
+- VariableDeclarationParser ParserBase kullanacak şekilde güncellendi.
+- StructureParser ParserBase kullanacak şekilde güncellendi.
+- Alt parser çağrıları ortak ParseContext kullanımına geçirildi.
+- Structure parser unexpected token ve numeric parse diagnostic üretimleri ParserDiagnosticFactory üzerinden standartlaştırıldı.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- Generic parser result modeli
+- Parser test altyapısı sadeleştirme
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+- Decision 058 - Parser Infrastructure Components
+
+## Sonraki Adım
+Generic parser result modeli ile parser result sınıfları ortaklaştırılacaktır.

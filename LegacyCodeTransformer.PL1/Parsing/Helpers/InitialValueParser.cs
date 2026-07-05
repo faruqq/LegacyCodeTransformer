@@ -15,7 +15,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// Ne çözüyor?
 /// ----------------------
 /// INIT, INITIAL, repeat factor ve (*) all-elements initialization parsing sorumluluğunu
-/// Pl1Parser dışına taşır.
+/// Pl1Parser dışına taşır. Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -26,54 +26,30 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseOptionalInitialValue içinde
+/// - VariableDeclarationParser içinde
+/// - StructureParser içinde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
 /// Array initialization, repeat factor expansion ve record field default value mapping
 /// davranışları bu helper üzerinde geliştirilebilir.
 /// </summary>
-internal sealed class InitialValueParser
+internal sealed class InitialValueParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public InitialValueParser(ParseContext context)
+        : base(context)
+    {
+    }
 
-    /// <summary>
-    /// INIT / INITIAL helper parser instance'ını oluşturur.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Helper parser'ın mevcut token listesini, başlangıç pozisyonunu ve diagnostic bag
-    /// referansını bilmesi gerekir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Pl1Parser token state bilgisini helper'a aktarır. Helper parse tamamlandığında
-    /// yeni token pozisyonunu result modeliyle geri döndürür.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// Current token INIT veya INITIAL olduğunda aynı token akışından initialization
-    /// bilgisini parse eder.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - Pl1Parser.ParseOptionalInitialValue içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Diğer optional attribute parser helper'larıyla aynı token-position yaklaşımını
-    /// korur.
-    /// </summary>
     public InitialValueParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -98,7 +74,8 @@ internal sealed class InitialValueParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseOptionalInitialValue içinde
+    /// - VariableDeclarationParser içinde
+    /// - StructureParser içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
@@ -112,7 +89,7 @@ internal sealed class InitialValueParser
         {
             return new InitialValueParseResult(
                 null,
-                _position);
+                Position);
         }
 
         var initToken = Current;
@@ -148,7 +125,7 @@ internal sealed class InitialValueParser
         {
             return new InitialValueParseResult(
                 null,
-                _position);
+                Position);
         }
 
         return new InitialValueParseResult(
@@ -157,7 +134,7 @@ internal sealed class InitialValueParser
                 repeatInfo.RepeatCount,
                 repeatInfo.AppliesToAllElements,
                 initToken.Location),
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -176,7 +153,7 @@ internal sealed class InitialValueParser
     /// ----------------------
     /// - INIT((08)' ') => RepeatCount 8
     /// - INIT((*)' ') => AppliesToAllElements true
-    /// - INIT(' ') => RepeatInfo.None
+    /// - INIT(' ') => InitialRepeatInfo.None
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -223,7 +200,7 @@ internal sealed class InitialValueParser
         }
         else
         {
-            _diagnostics.Add(new Diagnostic(
+            Diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
                 $"INIT tekrar faktörü için sayı veya '*' bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
@@ -237,116 +214,8 @@ internal sealed class InitialValueParser
             repeatCount,
             appliesToAllElements);
     }
-
-    /// <summary>
-    /// Beklenen token türünü tüketir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// INIT / INITIAL grammar içinde belirli noktalarda belirli token türleri beklenir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Beklenen token gelirse token'ı tüketir; beklenen token gelmezse diagnostic üretir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// INIT((08)' ') içinde parantez, sayı ve string literal token'larını doğrular.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseOptionalInitialValue içinde
-    /// - ParseOptionalInitialRepeatFactor içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Helper parser token okuma standardının bu sınıf içinde tutarlı kalmasını sağlar.
-    /// </summary>
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// Mevcut token'ı tüketip bir sonraki token'a ilerler.
-    /// </summary>
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    /// <summary>
-    /// Helper parser'ın kaynak sonu token'ına gelip gelmediğini belirtir.
-    /// </summary>
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    /// <summary>
-    /// Mevcut helper parser pozisyonundaki token'ı döndürür.
-    /// </summary>
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    /// <summary>
-    /// Bir önce tüketilen token'ı döndürür.
-    /// </summary>
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
-/// <summary>
-/// INIT / INITIAL parse sonucunu ve parse sonrası token pozisyonunu taşır.
-///
-/// Neden var?
-/// ----------------------
-/// InitialValueParser ayrı token position state'i ile çalışır. Parse tamamlandığında
-/// Pl1Parser'ın kendi pozisyonunu güncellemesi gerekir.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// Parse edilen Pl1InitialValue modeli ile parse sonrası position değerini birlikte döndürür.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// INIT((08)' ') parse edildiğinde value, repeat count ve yeni pozisyon birlikte taşınır.
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - InitialValueParser.ParseOptionalInitialValue dönüş değerinde
-/// - Pl1Parser.ParseOptionalInitialValue içinde
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// Token-position state ile ayrıştırılan helper parser sınıfları için ortak pattern'i sürdürür.
-/// </summary>
 internal sealed class InitialValueParseResult
 {
     public Pl1InitialValue? InitialValue { get; }
@@ -362,31 +231,6 @@ internal sealed class InitialValueParseResult
     }
 }
 
-/// <summary>
-/// INIT / INITIAL repeat factor parse sonucunu taşır.
-///
-/// Neden var?
-/// ----------------------
-/// Repeat factor parse sonucu iki bilgi döndürür: sayısal tekrar değeri ve (*)
-/// all-elements kullanımının varlığı.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// Tuple yerine niyeti açık küçük bir taşıyıcı model kullanır.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// - (08) => RepeatCount 8
-/// - (*) => AppliesToAllElements true
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - InitialValueParser.ParseOptionalInitialRepeatFactor içinde
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// Repeat factor davranışı genişletilirse yeni metadata alanları bu modelde toplanabilir.
-/// </summary>
 internal sealed record InitialRepeatInfo(
     int? RepeatCount,
     bool AppliesToAllElements)

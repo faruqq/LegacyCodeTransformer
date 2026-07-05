@@ -16,6 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// CHAR, VARCHAR, FIXED DECIMAL, FIXED BIN, PIC, BIT, FLOAT, REAL ve DOUBLE
 /// gibi veri tipi ailelerini ilgili helper parser sınıflarına yönlendirir.
+/// Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -31,55 +32,30 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseDataType içinde
-/// - Sonraki adımda StructureParser içinde
+/// - VariableDeclarationParser içinde
+/// - StructureParser içinde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// P05 öncesinde StructureParser extraction için zemin hazırlar. Yeni data type
-/// aileleri eklendiğinde Pl1Parser büyümeden bu dispatch sınıfı genişletilir.
+/// P05 statement parser aşamasında typed declaration, parameter declaration veya
+/// procedure signature parsing gerektiğinde merkezi data type parser olarak kullanılabilir.
 /// </summary>
-internal sealed class DataTypeParser
+internal sealed class DataTypeParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public DataTypeParser(ParseContext context)
+        : base(context)
+    {
+    }
 
-    /// <summary>
-    /// Data type helper parser instance'ını oluşturur.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Helper parser'ın mevcut token listesini, başlangıç pozisyonunu ve diagnostic bag
-    /// referansını bilmesi gerekir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Pl1Parser token state bilgisini DataTypeParser'a aktarır. Parse tamamlandığında
-    /// yeni token pozisyonu result modeliyle geri döner.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// Current token veri tipi başlangıcı olduğunda aynı token akışından Pl1DataType
-    /// modeli üretir.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - Pl1Parser.ParseDataType içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// StructureParser extraction sonrasında structure member veri tipi parsing için de
-    /// aynı helper kullanılacaktır.
-    /// </summary>
     public DataTypeParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -113,12 +89,13 @@ internal sealed class DataTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseDataType içinde
+    /// - VariableDeclarationParser içinde
+    /// - StructureParser içinde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Statement parser aşamasında typed declaration, parameter declaration veya
-    /// procedure signature parsing gerektiğinde merkezi data type parser olarak kullanılabilir.
+    /// Yeni data type aileleri eklendiğinde Pl1Parser veya declaration parser sınıfları
+    /// büyümeden bu dispatch sınıfı genişletilir.
     /// </summary>
     public DataTypeParseResult Parse()
     {
@@ -158,44 +135,34 @@ internal sealed class DataTypeParser
 
         if (Current.Kind == Pl1TokenKind.BitKeyword)
         {
-            var parser = new BitTypeParser(
-                _tokens,
-                _position,
-                _diagnostics);
-
+            var parser = new BitTypeParser(Context);
             var result = parser.Parse();
-            _position = result.Position;
 
             return new DataTypeParseResult(
                 result.DataType,
-                _position);
+                Position);
         }
 
         if (Current.Kind == Pl1TokenKind.FloatKeyword ||
             Current.Kind == Pl1TokenKind.RealKeyword ||
             Current.Kind == Pl1TokenKind.DoubleKeyword)
         {
-            var parser = new FloatingTypeParser(
-                _tokens,
-                _position,
-                _diagnostics);
-
+            var parser = new FloatingTypeParser(Context);
             var result = parser.Parse();
-            _position = result.Position;
 
             return new DataTypeParseResult(
                 result.DataType,
-                _position);
+                Position);
         }
 
-        _diagnostics.Add(new Diagnostic(
+        Diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
             Current.Location));
 
         return new DataTypeParseResult(
             null,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -207,8 +174,8 @@ internal sealed class DataTypeParser
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// NumericTypeParser oluşturma, parse sonucunu alma ve position güncelleme tekrarını
-    /// tek helper methodda toplar.
+    /// NumericTypeParser oluşturma ve parse sonucunu data type result modeline çevirme
+    /// tekrarını tek helper methodda toplar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -227,17 +194,12 @@ internal sealed class DataTypeParser
     private DataTypeParseResult ParseWithNumericParser(
         Func<NumericTypeParser, NumericTypeParseResult> parse)
     {
-        var parser = new NumericTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new NumericTypeParser(Context);
         var result = parse(parser);
-        _position = result.Position;
 
         return new DataTypeParseResult(
             result.DataType,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -249,8 +211,8 @@ internal sealed class DataTypeParser
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// CharacterTypeParser oluşturma, parse sonucunu alma ve position güncelleme tekrarını
-    /// tek helper methodda toplar.
+    /// CharacterTypeParser oluşturma ve parse sonucunu data type result modeline çevirme
+    /// tekrarını tek helper methodda toplar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -269,17 +231,12 @@ internal sealed class DataTypeParser
     private DataTypeParseResult ParseWithCharacterParser(
         Func<CharacterTypeParser, CharacterTypeParseResult> parse)
     {
-        var parser = new CharacterTypeParser(
-            _tokens,
-            _position,
-            _diagnostics);
-
+        var parser = new CharacterTypeParser(Context);
         var result = parse(parser);
-        _position = result.Position;
 
         return new DataTypeParseResult(
             result.DataType,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -309,8 +266,8 @@ internal sealed class DataTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// PIC token okuma davranışı StructureParser tarafından da aynı şekilde yeniden
-    /// kullanılabilir.
+    /// PIC token okuma davranışı tüm declaration parser akışlarında aynı şekilde
+    /// yeniden kullanılabilir.
     /// </summary>
     private DataTypeParseResult ParsePictureType()
     {
@@ -323,14 +280,14 @@ internal sealed class DataTypeParser
         }
         else
         {
-            _diagnostics.Add(new Diagnostic(
+            Diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
                 $"PIC veya PICTURE bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
 
             return new DataTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         var patternToken = Consume(
@@ -341,126 +298,17 @@ internal sealed class DataTypeParser
         {
             return new DataTypeParseResult(
                 null,
-                _position);
+                Position);
         }
 
         return new DataTypeParseResult(
             PictureTypeParser.Parse(
                 patternToken.Text,
                 pictureToken.Location),
-            _position);
+            Position);
     }
-
-    /// <summary>
-    /// Beklenen token türünü tüketir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// DataTypeParser içindeki PIC / PICTURE syntax belirli token türleri bekler.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Beklenen token gelirse token'ı tüketir; beklenen token gelmezse diagnostic üretir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// PIC '999' içindeki string literal token'ını doğrular.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParsePictureType içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// DataTypeParser içinde ek token tüketimi gerektiren yeni veri tipi syntax'ları
-    /// geldiğinde ortak helper olarak kullanılır.
-    /// </summary>
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// Mevcut token'ı tüketip bir sonraki token'a ilerler.
-    /// </summary>
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    /// <summary>
-    /// Helper parser'ın kaynak sonu token'ına gelip gelmediğini belirtir.
-    /// </summary>
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    /// <summary>
-    /// Mevcut helper parser pozisyonundaki token'ı döndürür.
-    /// </summary>
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    /// <summary>
-    /// Bir önce tüketilen token'ı döndürür.
-    /// </summary>
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
-/// <summary>
-/// Data type parse sonucunu ve parse sonrası token pozisyonunu taşır.
-///
-/// Neden var?
-/// ----------------------
-/// DataTypeParser ayrı token position state'i ile çalışır. Parse tamamlandığında
-/// Pl1Parser'ın kendi pozisyonunu güncellemesi gerekir.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// Parse edilen Pl1DataType modeli ile parse sonrası position değerini birlikte döndürür.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// CHAR(08) parse edildiğinde Pl1CharacterType modeli ve yeni token pozisyonu birlikte taşınır.
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - DataTypeParser.Parse dönüş değerinde
-/// - Pl1Parser.ParseDataType içinde
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// StructureParser extraction sonrasında structure member data type parsing için de
-/// aynı result modeli kullanılabilir.
-/// </summary>
 internal sealed class DataTypeParseResult
 {
     public Pl1DataType? DataType { get; }
