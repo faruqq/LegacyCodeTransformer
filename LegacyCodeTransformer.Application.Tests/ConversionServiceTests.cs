@@ -180,35 +180,19 @@ namespace LegacyCodeTransformer.Application.Tests
         }
 
         /// <summary>
-        /// PL/I INIT başlangıç değeri parse edilse bile EGL çıktısına henüz
-        /// yazdırılmadığını doğrular.
+        /// PL/I INIT başlangıç değerinin EGL default value olarak üretildiğini doğrular.
         ///
-        /// Neden var?
-        /// ----------------------
-        /// Decision 042 kapsamında INIT / INITIAL bilgisinin ilk aşamada
-        /// Syntax Tree üzerinde korunması, fakat EGL default value standardı
-        /// netleşene kadar hedef kaynak koda yazdırılmaması kararlaştırılmıştır.
+        /// Bu test neyi doğrular?
+        /// Parser + Transpiler + Generator pipeline'ının scalar INIT(' ') bilgisini EGL variable default value olarak yazdırdığını doğrular.
         ///
-        /// Test edilen PL/I:
-        ///
+        /// Hangi input'u test eder?
         /// DCL PARAM CHAR(08) INIT(' ');
         ///
-        /// Beklenen EGL:
-        ///
-        /// Param char(8);
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - Application uçtan uca dönüşüm testlerinde
-        /// - INIT parse desteğinin pipeline'ı bozmadığını doğrulamada
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// EGL default value üretimi eklendiğinde bu test güncellenecek veya
-        /// yeni karar doğrultusunda ayrı testle değiştirilecektir.
+        /// Beklenen temel model/çıktı nedir?
+        /// Param char(8) = " "; çıktısı üretilmelidir.
         /// </summary>
         [Fact]
-        public void ConvertPl1ToEgl_WithCharInitValue_ShouldIgnoreInitInEglOutputForNow()
+        public void ConvertPl1ToEgl_WithCharInitValue_ShouldGenerateDefaultValue()
         {
             // Arrange
             var service = new ConversionService();
@@ -218,41 +202,28 @@ namespace LegacyCodeTransformer.Application.Tests
             var result = service.ConvertPl1ToEgl(source);
 
             // Assert
+            var expected =
+                "Param char(8) = \" \";" + Environment.NewLine;
+
             Assert.True(result.Success);
-            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
+            Assert.Equal(expected, result.Output);
             Assert.Empty(result.Diagnostics);
         }
 
         /// <summary>
-        /// PL/I repeat factor içeren INIT ifadesinin parse edilip EGL çıktısına
-        /// henüz yazdırılmadığını doğrular.
+        /// Repeat factor içeren PL/I INIT ifadesinin diagnostic ürettiğini doğrular.
         ///
-        /// Neden var?
-        /// ----------------------
-        /// INIT((08)' ') söz dizimi parser tarafından kabul edilmelidir.
-        /// Ancak EGL tarafındaki başlangıç değeri üretim standardı henüz
-        /// netleşmediği için çıktı sadece veri tipi dönüşümünü içermelidir.
+        /// Bu test neyi doğrular?
+        /// Parser'ın INIT((08)' ') söz dizimini okuyabildiğini, fakat Transpiler'ın repeat factor mapping henüz desteklenmediği için conversion sonucunu başarısız yaptığını doğrular.
         ///
-        /// Test edilen PL/I:
-        ///
+        /// Hangi input'u test eder?
         /// DCL PARAM CHAR(8) INIT((08)' ');
         ///
-        /// Beklenen EGL:
-        ///
-        /// Param char(8);
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - Application uçtan uca dönüşüm testlerinde
-        /// - Repeat factor içeren INIT parse desteğini doğrulamada
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// INIT repeat factor mapping kararı alındığında bu test yeni beklenen
-        /// EGL çıktısına göre revize edilecektir.
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve repeat factor diagnostic mesajı üretilmelidir.
         /// </summary>
         [Fact]
-        public void ConvertPl1ToEgl_WithRepeatedCharInitValue_ShouldIgnoreInitInEglOutputForNow()
+        public void ConvertPl1ToEgl_WithRepeatedCharInitValue_ShouldReturnDiagnostic()
         {
             // Arrange
             var service = new ConversionService();
@@ -262,9 +233,12 @@ namespace LegacyCodeTransformer.Application.Tests
             var result = service.ConvertPl1ToEgl(source);
 
             // Assert
-            Assert.True(result.Success);
-            Assert.Equal("Param char(8);" + Environment.NewLine, result.Output);
-            Assert.Empty(result.Diagnostics);
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
+                result.Diagnostics[0].Message);
         }
 
         /// <summary>
@@ -1834,19 +1808,19 @@ namespace LegacyCodeTransformer.Application.Tests
         }
 
         /// <summary>
-        /// FLOAT declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
+        /// PL/I FLOAT declaration bilgisinin EGL float çıktısına dönüştüğünü doğrular.
         ///
         /// Bu test neyi doğrular?
-        /// FLOAT veri tipinin parse edildiğini fakat henüz EGL mapping yapılmadığı için conversion sonucunun başarısız olduğunu doğrular.
+        /// Parser + Transpiler + Generator pipeline'ının FLOAT tipini güvenli floating subset kapsamında EGL float olarak ürettiğini doğrular.
         ///
         /// Hangi input'u test eder?
         /// DCL RATE FLOAT;
         ///
         /// Beklenen temel model/çıktı nedir?
-        /// Conversion başarısız olmalı, Output null olmalı ve FLOAT / REAL / DOUBLE mapping desteklenmiyor diagnostic mesajı üretilmelidir.
+        /// Rate float; çıktısı üretilmelidir.
         /// </summary>
         [Fact]
-        public void ConvertPl1ToEgl_WithFloatDeclaration_ShouldReturnDiagnostic()
+        public void ConvertPl1ToEgl_WithFloatDeclaration_ShouldGenerateFloat()
         {
             // Arrange
             var service = new ConversionService();
@@ -1856,136 +1830,12 @@ namespace LegacyCodeTransformer.Application.Tests
             var result = service.ConvertPl1ToEgl(source);
 
             // Assert
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
-            Assert.Single(result.Diagnostics);
-            Assert.Contains(
-                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Unspecified, Precision: null",
-                result.Diagnostics[0].Message);
-        }
+            var expected =
+                "Rate float;" + Environment.NewLine;
 
-        /// <summary>
-        /// FLOAT DECIMAL precision bilgisinin diagnostic mesajında korunduğunu doğrular.
-        ///
-        /// Bu test neyi doğrular?
-        /// FLOAT DECIMAL(16) bilgisinin parser modelinden transpiler diagnostic mesajına taşındığını doğrular.
-        ///
-        /// Hangi input'u test eder?
-        /// DCL RATE FLOAT DECIMAL(16);
-        ///
-        /// Beklenen temel model/çıktı nedir?
-        /// Diagnostic mesajında Kind Float, Base Decimal ve Precision 16 bilgileri bulunmalıdır.
-        /// </summary>
-        [Fact]
-        public void ConvertPl1ToEgl_WithFloatDecimalDeclaration_ShouldReturnDiagnostic()
-        {
-            // Arrange
-            var service = new ConversionService();
-            var source = "DCL RATE FLOAT DECIMAL(16);";
-
-            // Act
-            var result = service.ConvertPl1ToEgl(source);
-
-            // Assert
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
-            Assert.Single(result.Diagnostics);
-            Assert.Contains(
-                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Decimal, Precision: 16",
-                result.Diagnostics[0].Message);
-        }
-
-        /// <summary>
-        /// FLOAT BIN precision bilgisinin diagnostic mesajında korunduğunu doğrular.
-        ///
-        /// Bu test neyi doğrular?
-        /// FLOAT BIN(53) bilgisinin parser modelinden transpiler diagnostic mesajına taşındığını doğrular.
-        ///
-        /// Hangi input'u test eder?
-        /// DCL RATE FLOAT BIN(53);
-        ///
-        /// Beklenen temel model/çıktı nedir?
-        /// Diagnostic mesajında Kind Float, Base Binary ve Precision 53 bilgileri bulunmalıdır.
-        /// </summary>
-        [Fact]
-        public void ConvertPl1ToEgl_WithFloatBinaryDeclaration_ShouldReturnDiagnostic()
-        {
-            // Arrange
-            var service = new ConversionService();
-            var source = "DCL RATE FLOAT BIN(53);";
-
-            // Act
-            var result = service.ConvertPl1ToEgl(source);
-
-            // Assert
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
-            Assert.Single(result.Diagnostics);
-            Assert.Contains(
-                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Binary, Precision: 53",
-                result.Diagnostics[0].Message);
-        }
-
-        /// <summary>
-        /// REAL declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
-        ///
-        /// Bu test neyi doğrular?
-        /// REAL veri tipinin Pl1FloatingType olarak parse edildiğini fakat EGL mapping yapılmadığı için diagnostic üretildiğini doğrular.
-        ///
-        /// Hangi input'u test eder?
-        /// DCL RATE REAL;
-        ///
-        /// Beklenen temel model/çıktı nedir?
-        /// Diagnostic mesajında Kind Real bilgisi bulunmalıdır.
-        /// </summary>
-        [Fact]
-        public void ConvertPl1ToEgl_WithRealDeclaration_ShouldReturnDiagnostic()
-        {
-            // Arrange
-            var service = new ConversionService();
-            var source = "DCL RATE REAL;";
-
-            // Act
-            var result = service.ConvertPl1ToEgl(source);
-
-            // Assert
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
-            Assert.Single(result.Diagnostics);
-            Assert.Contains(
-                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Real, Base: Unspecified, Precision: null",
-                result.Diagnostics[0].Message);
-        }
-
-        /// <summary>
-        /// DOUBLE PRECISION declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
-        ///
-        /// Bu test neyi doğrular?
-        /// DOUBLE PRECISION veri tipinin Pl1FloatingType olarak parse edildiğini fakat EGL mapping yapılmadığı için diagnostic üretildiğini doğrular.
-        ///
-        /// Hangi input'u test eder?
-        /// DCL RATE DOUBLE PRECISION;
-        ///
-        /// Beklenen temel model/çıktı nedir?
-        /// Diagnostic mesajında Kind DoublePrecision bilgisi bulunmalıdır.
-        /// </summary>
-        [Fact]
-        public void ConvertPl1ToEgl_WithDoublePrecisionDeclaration_ShouldReturnDiagnostic()
-        {
-            // Arrange
-            var service = new ConversionService();
-            var source = "DCL RATE DOUBLE PRECISION;";
-
-            // Act
-            var result = service.ConvertPl1ToEgl(source);
-
-            // Assert
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
-            Assert.Single(result.Diagnostics);
-            Assert.Contains(
-                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: DoublePrecision, Base: Unspecified, Precision: null",
-                result.Diagnostics[0].Message);
+            Assert.True(result.Success);
+            Assert.Equal(expected, result.Output);
+            Assert.Empty(result.Diagnostics);
         }
 
         /// <summary>
