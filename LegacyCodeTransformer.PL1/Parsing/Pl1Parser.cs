@@ -822,67 +822,37 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodunda bit string alanları BIT keyword'ü ile tanımlanır.
-    /// BIT tipi CHAR veya numeric veri tipi değildir; ayrı modelle korunmalıdır.
+    /// ParseDataType methodu BIT keyword gördüğünde bit type parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// BIT keyword'ünden sonra gelen parantez içi uzunluk değerini okuyarak
-    /// Pl1BitType modeline dönüştürür.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat BIT(n) syntax çözümleme sorumluluğunu BitTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - DCL FLAG BIT(1);
     /// - DCL MASK BIT(8);
-    /// - 5 STATUS_FLAGS BIT(8);
     ///
     /// Nerede kullanılır?
     /// ----------------------
     /// - ParseDataType methodu BitKeyword gördüğünde
-    /// - Tekil variable declaration parse edilirken
-    /// - Structure member veri tipi parse edilirken
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// BIT literal INIT, BIT(1) boolean mapping veya bit string preserving
-    /// mapping kararları alındığında merkezi parser davranışı olarak kalır.
+    /// BIT parsing davranışı Pl1Parser büyütülmeden BitTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1BitType? ParseBitType()
     {
-        var bitToken = Consume(
-            Pl1TokenKind.BitKeyword,
-            "BIT bekleniyordu.");
+        var parser = new BitTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
+        var result = parser.Parse();
 
-        var lengthToken = Consume(
-            Pl1TokenKind.Number,
-            "BIT uzunluk değeri bekleniyordu.");
+        _position = result.Position;
 
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (bitToken is null || lengthToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(lengthToken.Text, out var length))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"BIT uzunluk değeri sayısal olmalıdır: {lengthToken.Text}",
-                lengthToken.Location));
-
-            return null;
-        }
-
-        return new Pl1BitType(
-            length,
-            bitToken.Location);
+        return result.DataType;
     }
 
     /// <summary>
@@ -954,56 +924,39 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I tarafında numeric tipler farklı keyword sıralamalarıyla
-    /// yazılabilir.
+    /// ParseDataType methodu FIXED keyword gördüğünde numeric type parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// FIXED ile başlayan numeric type söz dizimini ilgili semantic parser'a
-    /// yönlendirir.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat FIXED DECIMAL / FIXED BINARY syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - FIXED DECIMAL(p,s)
-    /// - FIXED DEC(p,s)
-    /// - FIXED BINARY(p)
-    /// - FIXED BIN(p)
+    /// - FIXED DECIMAL(15)
+    /// - FIXED DEC(17,2)
+    /// - FIXED BINARY(15)
+    /// - FIXED BIN(31)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDataType içerisinde Current token FixedKeyword olduğunda
+    /// - ParseDataType methodu FixedKeyword gördüğünde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// FIXED FLOAT gibi farklı numeric family desteği gerekirse bu method
-    /// genişletilecektir.
+    /// Numeric parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1DataType? ParseFixedBasedType()
     {
-        var fixedToken = Consume(
-            Pl1TokenKind.FixedKeyword,
-            "FIXED bekleniyordu.");
+        var parser = new NumericTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
-            Current.Kind == Pl1TokenKind.DecKeyword)
-        {
-            return ParseFixedDecimalTypeAfterPrefix(
-                fixedToken?.Location ?? SourceLocation.Unknown);
-        }
+        var result = parser.ParseFixedBasedType();
 
-        if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
-            Current.Kind == Pl1TokenKind.BinKeyword)
-        {
-            return ParseFixedBinaryTypeAfterPrefix(
-                fixedToken?.Location ?? SourceLocation.Unknown);
-        }
+        _position = result.Position;
 
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"FIXED sonrasında DECIMAL, DEC, BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
-            Current.Location));
-
-        return null;
+        return result.DataType;
     }
 
     /// <summary>
@@ -1011,44 +964,37 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I tarafında decimal fixed tipler ters keyword sırasıyla da
-    /// yazılabilir.
-    ///
-    /// Örnek:
-    ///
-    /// DECIMAL FIXED(17,2)
-    /// DEC FIXED(17,2)
+    /// ParseDataType methodu DECIMAL veya DEC keyword gördüğünde numeric type parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// DECIMAL veya DEC ile başlayan numeric type söz dizimini aynı
-    /// Pl1FixedDecimalType modeline dönüştürür.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat DECIMAL FIXED / DEC FIXED syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - DECIMAL FIXED(p,s)
-    /// - DEC FIXED(p,s)
+    /// - DECIMAL FIXED(15)
+    /// - DEC FIXED(17,2)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDataType içerisinde Current token DecimalKeyword veya DecKeyword olduğunda
+    /// - ParseDataType methodu DecimalKeyword veya DecKeyword gördüğünde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// DECIMAL FLOAT gibi farklı decimal tabanlı tipler desteklenirse bu method
-    /// genişletilecektir.
+    /// Decimal-family parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1DataType? ParseDecimalBasedType()
     {
-        var decimalToken = Current;
-        Advance();
+        var parser = new NumericTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        Consume(
-            Pl1TokenKind.FixedKeyword,
-            "FIXED bekleniyordu.");
+        var result = parser.ParseDecimalBasedType();
 
-        return ParseDecimalPrecisionAndScale(
-            decimalToken.Location);
+        _position = result.Position;
+
+        return result.DataType;
     }
 
     /// <summary>
@@ -1056,286 +1002,37 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I tarafında binary fixed tipler ters keyword sırasıyla da
-    /// yazılabilir.
+    /// ParseDataType methodu BINARY veya BIN keyword gördüğünde numeric type parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// BINARY veya BIN ile başlayan numeric type söz dizimini aynı
-    /// Pl1FixedBinaryType modeline dönüştürür.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat BINARY FIXED / BIN FIXED syntax çözümleme sorumluluğunu NumericTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - BINARY FIXED(p)
-    /// - BIN FIXED(p)
-    /// - BINARY FIXED(p,0)
-    /// - BIN FIXED(p,0)
+    /// - BINARY FIXED(15)
+    /// - BIN FIXED(31)
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDataType içerisinde Current token BinaryKeyword veya BinKeyword olduğunda
+    /// - ParseDataType methodu BinaryKeyword veya BinKeyword gördüğünde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Binary fractional mapping veya farklı binary numeric tipler desteklenirse
-    /// bu method genişletilecektir.
+    /// Binary-family parsing davranışı Pl1Parser büyütülmeden NumericTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1DataType? ParseBinaryBasedType()
     {
-        var binaryToken = Current;
-        Advance();
+        var parser = new NumericTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        Consume(
-            Pl1TokenKind.FixedKeyword,
-            "FIXED bekleniyordu.");
+        var result = parser.ParseBinaryBasedType();
 
-        return ParseBinaryPrecisionAndScale(
-            binaryToken.Location);
-    }
+        _position = result.Position;
 
-    /// <summary>
-    /// FIXED prefix'i okunduktan sonra gelen DECIMAL / DEC decimal tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// FIXED DECIMAL ve FIXED DEC aynı semantic decimal tipi ifade eder.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// FIXED sonrasındaki DECIMAL / DEC keyword'ünü tüketir ve ortak
-    /// precision / scale parser'ına yönlendirir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - FIXED DECIMAL(15)
-    /// - FIXED DEC(15,0)
-    /// - FIXED DEC(17,2)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseFixedBasedType içinde
-    /// </summary>
-    private Pl1FixedDecimalType? ParseFixedDecimalTypeAfterPrefix(
-        SourceLocation location)
-    {
-        if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
-            Current.Kind == Pl1TokenKind.DecKeyword)
-        {
-            Advance();
-
-            return ParseDecimalPrecisionAndScale(location);
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"DECIMAL veya DEC bekleniyordu. Gelen token: {Current.Text}",
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// FIXED prefix'i okunduktan sonra gelen BINARY / BIN tipini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// FIXED BINARY ve FIXED BIN aynı semantic binary fixed tipi ifade eder.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// FIXED sonrasındaki BINARY / BIN keyword'ünü tüketir ve ortak precision /
-    /// scale parser'ına yönlendirir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - FIXED BINARY(15)
-    /// - FIXED BIN(15)
-    /// - FIXED BIN(31)
-    /// - FIXED BIN(15,0)
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseFixedBasedType içinde
-    /// </summary>
-    private Pl1FixedBinaryType? ParseFixedBinaryTypeAfterPrefix(
-        SourceLocation location)
-    {
-        if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
-            Current.Kind == Pl1TokenKind.BinKeyword)
-        {
-            Advance();
-
-            return ParseBinaryPrecisionAndScale(location);
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            $"BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
-            Current.Location));
-
-        return null;
-    }
-
-    /// <summary>
-    /// Decimal numeric type için precision ve optional scale bilgisini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// FIXED DECIMAL, FIXED DEC, DECIMAL FIXED ve DEC FIXED aynı precision /
-    /// scale söz dizimini kullanır.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Ortak `(p)` ve `(p,s)` parse davranışını tek noktada toplar.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - (15) => Precision 15, Scale null
-    /// - (15,0) => Precision 15, Scale 0
-    /// - (17,2) => Precision 17, Scale 2
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseFixedDecimalTypeAfterPrefix içinde
-    /// - ParseDecimalBasedType içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Decimal precision/scale validasyonları ve farklı numeric synonym'ler
-    /// eklendiğinde merkezi parse noktasıdır.
-    /// </summary>
-    private Pl1FixedDecimalType? ParseDecimalPrecisionAndScale(
-        SourceLocation location)
-    {
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
-
-        var precisionToken = Consume(
-            Pl1TokenKind.Number,
-            "Precision değeri bekleniyordu.");
-
-        int? scale = null;
-
-        if (Current.Kind == Pl1TokenKind.Comma)
-        {
-            Advance();
-
-            var scaleToken = Consume(
-                Pl1TokenKind.Number,
-                "Scale değeri bekleniyordu.");
-
-            if (scaleToken is not null &&
-                int.TryParse(scaleToken.Text, out var parsedScale))
-            {
-                scale = parsedScale;
-            }
-        }
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (precisionToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(precisionToken.Text, out var precision))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Precision değeri sayısal olmalıdır: {precisionToken.Text}",
-                precisionToken.Location));
-
-            return null;
-        }
-
-        return new Pl1FixedDecimalType(
-            precision,
-            scale,
-            location);
-    }
-
-    /// <summary>
-    /// Binary fixed numeric type için precision ve optional scale bilgisini parse eder.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// FIXED BINARY, FIXED BIN, BINARY FIXED ve BIN FIXED aynı precision /
-    /// scale söz dizimini kullanır.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Ortak `(p)` ve `(p,s)` parse davranışını tek noktada toplar.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// - (15) => Precision 15, Scale null
-    /// - (15,0) => Precision 15, Scale 0
-    /// - (31) => Precision 31, Scale null
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ParseFixedBinaryTypeAfterPrefix içinde
-    /// - ParseBinaryBasedType içinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Binary precision/scale validasyonları ve unsupported diagnostic kuralları
-    /// eklendiğinde merkezi parse noktasıdır.
-    /// </summary>
-    private Pl1FixedBinaryType? ParseBinaryPrecisionAndScale(
-        SourceLocation location)
-    {
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
-
-        var precisionToken = Consume(
-            Pl1TokenKind.Number,
-            "Binary precision değeri bekleniyordu.");
-
-        int? scale = null;
-
-        if (Current.Kind == Pl1TokenKind.Comma)
-        {
-            Advance();
-
-            var scaleToken = Consume(
-                Pl1TokenKind.Number,
-                "Binary scale değeri bekleniyordu.");
-
-            if (scaleToken is not null &&
-                int.TryParse(scaleToken.Text, out var parsedScale))
-            {
-                scale = parsedScale;
-            }
-        }
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (precisionToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(precisionToken.Text, out var precision))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Binary precision değeri sayısal olmalıdır: {precisionToken.Text}",
-                precisionToken.Location));
-
-            return null;
-        }
-
-        return new Pl1FixedBinaryType(
-            precision,
-            scale,
-            location);
+        return result.DataType;
     }
 
     /// <summary>
@@ -1343,81 +1040,37 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodunda sabit uzunluklu karakter alanlar CHAR veya
-    /// CHARACTER keyword'ü ile tanımlanır.
+    /// ParseDataType methodu CHAR veya CHARACTER keyword gördüğünde character type parse davranışına yönlenmelidir.
     ///
-    /// Örnek PL/I:
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat CHAR / CHARACTER syntax çözümleme sorumluluğunu CharacterTypeParser helper sınıfına devreder.
     ///
-    /// DCL PARAM CHAR(08);
-    /// DCL CUSTOMER_NAME CHARACTER(25);
-    ///
-    /// Bu method ilgili veri tipini:
-    ///
-    /// Pl1CharacterType
-    /// - Length: 8
-    /// - Length: 25
-    ///
-    /// olarak syntax tree'ye taşır.
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL PARAM CHAR(08);
+    /// - DCL CUSTOMER_NAME CHARACTER(25);
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - ParseDataType methodu CHAR veya CHARACTER token gördüğünde
-    /// - Basit DCL declaration parse edilirken
-    /// - Structure member veri tipi parse edilirken
+    /// - ParseDataType methodu CharKeyword veya CharacterKeyword gördüğünde
     ///
-    /// Gelecekte ne işe yarayacak?
+    /// Gelecekte neye temel olur?
     /// ----------------------
-    /// CHAR(n) VARYING, INIT(' '), INITIAL((4)'*') gibi ek söz dizimleri
-    /// desteklendiğinde bu method veya bu methodun çağırdığı alt parser
-    /// yapıları genişletilecektir.
+    /// Character-family parsing davranışı Pl1Parser büyütülmeden CharacterTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1CharacterType? ParseCharacterType()
     {
-        var typeToken = Current;
+        var parser = new CharacterTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        if (Current.Kind == Pl1TokenKind.CharKeyword)
-        {
-            Consume(
-                Pl1TokenKind.CharKeyword,
-                "CHAR bekleniyordu.");
-        }
-        else
-        {
-            Consume(
-                Pl1TokenKind.CharacterKeyword,
-                "CHARACTER bekleniyordu.");
-        }
+        var result = parser.ParseCharacterType();
 
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
+        _position = result.Position;
 
-        var lengthToken = Consume(
-            Pl1TokenKind.Number,
-            "CHAR uzunluğu bekleniyordu.");
-
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (lengthToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(lengthToken.Text, out var length))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"CHAR uzunluğu sayısal olmalıdır: {lengthToken.Text}",
-                lengthToken.Location));
-
-            return null;
-        }
-
-        return new Pl1CharacterType(
-            length,
-            typeToken.Location);
+        return result.DataType as Pl1CharacterType;
     }
 
     /// <summary>
@@ -1425,17 +1078,11 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I kaynak kodunda değişken uzunluklu karakter alanlar VARCHAR keyword'ü
-    /// ile tanımlanabilir.
-    ///
-    /// Örnek PL/I:
-    ///
-    /// DCL CUSTOMER_NAME VARCHAR(50);
+    /// ParseDataType methodu VARCHAR keyword gördüğünde varchar type parse davranışına yönlenmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// VARCHAR keyword'ü ile parantez içindeki uzunluk bilgisini okuyarak
-    /// Pl1VarcharType modeline dönüştürür.
+    /// Token akışının ana state'ini Pl1Parser üzerinde korur, fakat VARCHAR syntax çözümleme sorumluluğunu CharacterTypeParser helper sınıfına devreder.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -1445,50 +1092,23 @@ public sealed class Pl1Parser
     /// Nerede kullanılır?
     /// ----------------------
     /// - ParseDataType methodu VarcharKeyword gördüğünde
-    /// - Tekil variable declaration parse edilirken
-    /// - Structure member veri tipi parse edilirken
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// VARCHAR alanların EGL char(n) mapping işlemine, structure length
-    /// hesabına ve ileride sqlRecord metadata üretimine temel olur.
+    /// VARCHAR parsing davranışı Pl1Parser büyütülmeden CharacterTypeParser içinde geliştirilebilir.
     /// </summary>
     private Pl1VarcharType? ParseVarcharType()
     {
-        var varcharToken = Consume(
-            Pl1TokenKind.VarcharKeyword,
-            "VARCHAR bekleniyordu.");
+        var parser = new CharacterTypeParser(
+            _tokens,
+            _position,
+            _diagnostics);
 
-        Consume(
-            Pl1TokenKind.OpenParenthesis,
-            "'(' bekleniyordu.");
+        var result = parser.ParseVarcharType();
 
-        var lengthToken = Consume(
-            Pl1TokenKind.Number,
-            "VARCHAR uzunluk değeri bekleniyordu.");
+        _position = result.Position;
 
-        Consume(
-            Pl1TokenKind.CloseParenthesis,
-            "')' bekleniyordu.");
-
-        if (varcharToken is null || lengthToken is null)
-        {
-            return null;
-        }
-
-        if (!int.TryParse(lengthToken.Text, out var length))
-        {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"VARCHAR uzunluk değeri sayısal olmalıdır: {lengthToken.Text}",
-                lengthToken.Location));
-
-            return null;
-        }
-
-        return new Pl1VarcharType(
-            length,
-            varcharToken.Location);
+        return result.DataType as Pl1VarcharType;
     }
 
     /// <summary>

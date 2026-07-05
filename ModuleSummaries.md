@@ -1409,3 +1409,74 @@ FloatingTypeParser helper sınıfı eklendi. Pl1Parser artık floating type pars
 
 ## Sonraki Adım
 Bir sonraki refactor adımı CharacterTypeParser ve NumericTypeParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R3 CharacterTypeParser ve BitTypeParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde CHAR / CHARACTER / VARCHAR ve BIT parsing sorumlulukları Pl1Parser içinden çıkarıldı.
+
+CharacterTypeParser ve BitTypeParser helper sınıfları eklendi. Pl1Parser artık bu veri tipleri için yalnızca helper parser'ı çağırır ve token position bilgisini günceller.
+
+## Yapılanlar
+- CharacterTypeParser helper sınıfı eklendi.
+- CharacterTypeParseResult modeli eklendi.
+- BitTypeParser helper sınıfı eklendi.
+- BitTypeParseResult modeli eklendi.
+- Pl1Parser.ParseCharacterType methodu sadeleştirildi.
+- Pl1Parser.ParseVarcharType methodu sadeleştirildi.
+- Pl1Parser.ParseBitType methodu sadeleştirildi.
+- CharacterTypeParser unit testleri eklendi.
+- BitTypeParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- NumericTypeParser extraction
+- InitialValueParser extraction
+- DimensionParser extraction
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı NumericTypeParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R4 NumericTypeParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinde FIXED DECIMAL / FIXED BINARY numeric parsing sorumlulukları Pl1Parser içinden çıkarıldı.
+
+NumericTypeParser helper sınıfı eklendi. Pl1Parser artık numeric type parsing için yalnızca helper parser'ı çağırır ve token position bilgisini günceller.
+
+## Yapılanlar
+- NumericTypeParser helper sınıfı eklendi.
+- NumericTypeParseResult modeli eklendi.
+- Pl1Parser.ParseFixedBasedType methodu sadeleştirildi.
+- Pl1Parser.ParseDecimalBasedType methodu sadeleştirildi.
+- Pl1Parser.ParseBinaryBasedType methodu sadeleştirildi.
+- Pl1Parser içindeki numeric precision / scale helper methodları kaldırıldı.
+- NumericTypeParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- InitialValueParser extraction
+- DimensionParser extraction
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı InitialValueParser ve DimensionParser extraction olacaktır.
