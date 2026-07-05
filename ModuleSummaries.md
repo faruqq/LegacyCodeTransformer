@@ -1700,3 +1700,40 @@ ParseContext, ParserBase ve ParserDiagnosticFactory oluşturuldu. İlk migration
 
 ## Sonraki Adım
 Bir sonraki refactor adımı NumericTypeParser ve FloatingTypeParser sınıflarını ParseContext / ParserBase altyapısına taşımaktır.
+
+---
+# 2026-07-05 — P04-R12 NumericTypeParser ve FloatingTypeParser Migration
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+NumericTypeParser ve FloatingTypeParser sınıfları ParseContext / ParserBase / ParserDiagnosticFactory altyapısına taşındı.
+
+Bu refactor ile numeric ve floating parser sınıflarındaki tekrar eden token state, Current, Advance, Consume ve IsAtEnd davranışları kaldırılarak ortak ParserBase üzerinden kullanılmaya başlandı.
+
+## Yapılanlar
+- NumericTypeParser ParserBase kullanacak şekilde güncellendi.
+- FloatingTypeParser ParserBase kullanacak şekilde güncellendi.
+- Numeric ve floating parser constructor yapıları ParseContext destekleyecek şekilde genişletildi.
+- Numeric parse hatalarında ParserDiagnosticFactory.InvalidNumber kullanılmaya başlandı.
+- Floating precision parse hatalarında ParserDiagnosticFactory.InvalidNumber kullanılmaya başlandı.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- DataTypeParser migration
+- InitialValueParser migration
+- DimensionParser migration
+- StructureParser migration
+- VariableDeclarationParser migration
+- DeclarationParser migration
+- Generic parser result modeli
+- Parser test altyapısı sadeleştirme
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+- Decision 058 - Parser Infrastructure Components
+
+## Sonraki Adım
+DataTypeParser, InitialValueParser ve DimensionParser sınıfları ParseContext / ParserBase altyapısına taşınacaktır.

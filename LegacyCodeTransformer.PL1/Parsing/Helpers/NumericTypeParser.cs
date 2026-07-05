@@ -17,6 +17,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// FIXED DECIMAL, FIXED DEC, DECIMAL FIXED, DEC FIXED, FIXED BINARY,
 /// FIXED BIN, BINARY FIXED ve BIN FIXED parsing davranışlarını Pl1Parser dışına taşır.
+/// Ortak token okuma davranışını ParserBase üzerinden kullanır.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -31,29 +32,29 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Nerede kullanılır?
 /// ----------------------
-/// - Pl1Parser.ParseFixedBasedType
-/// - Pl1Parser.ParseDecimalBasedType
-/// - Pl1Parser.ParseBinaryBasedType
+/// - DataTypeParser içinde numeric data type branch'lerinde
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
 /// Numeric precision / scale validation, unsupported binary scale diagnostic ve
 /// yeni numeric synonym destekleri bu helper üzerinde geliştirilebilir.
 /// </summary>
-internal sealed class NumericTypeParser
+internal sealed class NumericTypeParser : ParserBase
 {
-    private readonly IReadOnlyList<Pl1Token> _tokens;
-    private readonly DiagnosticBag _diagnostics;
-    private int _position;
+    public NumericTypeParser(ParseContext context)
+        : base(context)
+    {
+    }
 
     public NumericTypeParser(
         IReadOnlyList<Pl1Token> tokens,
         int position,
         DiagnosticBag diagnostics)
+        : this(new ParseContext(
+            tokens,
+            position,
+            diagnostics))
     {
-        _tokens = tokens ?? Array.Empty<Pl1Token>();
-        _position = position;
-        _diagnostics = diagnostics;
     }
 
     /// <summary>
@@ -61,8 +62,7 @@ internal sealed class NumericTypeParser
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I tarafında FIXED keyword'ünden sonra DECIMAL / DEC veya BINARY / BIN
-    /// gelebilir.
+    /// PL/I tarafında FIXED keyword'ünden sonra DECIMAL / DEC veya BINARY / BIN gelebilir.
     ///
     /// Ne çözüyor?
     /// ----------------------
@@ -77,12 +77,11 @@ internal sealed class NumericTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseFixedBasedType içinde
+    /// - DataTypeParser içinde FixedKeyword branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// FIXED FLOAT gibi farklı numeric family varyasyonları gerektiğinde bu dispatch
-    /// noktası genişletilebilir.
+    /// FIXED FLOAT gibi farklı numeric family varyasyonları gerektiğinde bu dispatch noktası genişletilebilir.
     /// </summary>
     public NumericTypeParseResult ParseFixedBasedType()
     {
@@ -98,7 +97,7 @@ internal sealed class NumericTypeParser
 
             return new NumericTypeParseResult(
                 dataType,
-                _position);
+                Position);
         }
 
         if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
@@ -109,17 +108,17 @@ internal sealed class NumericTypeParser
 
             return new NumericTypeParseResult(
                 dataType,
-                _position);
+                Position);
         }
 
-        _diagnostics.Add(new Diagnostic(
+        Diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"FIXED sonrasında DECIMAL, DEC, BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
             Current.Location));
 
         return new NumericTypeParseResult(
             null,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -140,12 +139,11 @@ internal sealed class NumericTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseDecimalBasedType içinde
+    /// - DataTypeParser içinde DecimalKeyword / DecKeyword branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// DECIMAL FLOAT gibi ileride desteklenebilecek decimal family tipler için
-    /// ayrı dispatch davranışına temel olur.
+    /// DECIMAL FLOAT gibi ileride desteklenebilecek decimal family tipler için ayrı dispatch davranışına temel olur.
     /// </summary>
     public NumericTypeParseResult ParseDecimalBasedType()
     {
@@ -161,7 +159,7 @@ internal sealed class NumericTypeParser
 
         return new NumericTypeParseResult(
             dataType,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -183,12 +181,11 @@ internal sealed class NumericTypeParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// - Pl1Parser.ParseBinaryBasedType içinde
+    /// - DataTypeParser içinde BinaryKeyword / BinKeyword branch'inde
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Binary precision / scale validation veya unsupported binary diagnostic kuralları
-    /// bu method üzerinde genişletilebilir.
+    /// Binary precision / scale validation veya unsupported binary diagnostic kuralları bu method üzerinde genişletilebilir.
     /// </summary>
     public NumericTypeParseResult ParseBinaryBasedType()
     {
@@ -204,7 +201,7 @@ internal sealed class NumericTypeParser
 
         return new NumericTypeParseResult(
             dataType,
-            _position);
+            Position);
     }
 
     /// <summary>
@@ -216,8 +213,7 @@ internal sealed class NumericTypeParser
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// FIXED sonrasındaki DECIMAL / DEC keyword'ünü tüketir ve ortak precision /
-    /// scale parser'ına yönlendirir.
+    /// FIXED sonrasındaki DECIMAL / DEC keyword'ünü tüketir ve ortak precision / scale parser'ına yönlendirir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -231,8 +227,7 @@ internal sealed class NumericTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Decimal fixed synonym desteği genişledikçe ortak prefix sonrası parser davranışı
-    /// burada korunur.
+    /// Decimal fixed synonym desteği genişledikçe ortak prefix sonrası parser davranışı burada korunur.
     /// </summary>
     private Pl1FixedDecimalType? ParseFixedDecimalTypeAfterPrefix(
         SourceLocation location)
@@ -245,7 +240,7 @@ internal sealed class NumericTypeParser
             return ParseDecimalPrecisionAndScale(location);
         }
 
-        _diagnostics.Add(new Diagnostic(
+        Diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"DECIMAL veya DEC bekleniyordu. Gelen token: {Current.Text}",
             Current.Location));
@@ -262,8 +257,7 @@ internal sealed class NumericTypeParser
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// FIXED sonrasındaki BINARY / BIN keyword'ünü tüketir ve ortak precision /
-    /// scale parser'ına yönlendirir.
+    /// FIXED sonrasındaki BINARY / BIN keyword'ünü tüketir ve ortak precision / scale parser'ına yönlendirir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -278,8 +272,7 @@ internal sealed class NumericTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Binary fixed synonym desteği genişledikçe ortak prefix sonrası parser davranışı
-    /// burada korunur.
+    /// Binary fixed synonym desteği genişledikçe ortak prefix sonrası parser davranışı burada korunur.
     /// </summary>
     private Pl1FixedBinaryType? ParseFixedBinaryTypeAfterPrefix(
         SourceLocation location)
@@ -292,7 +285,7 @@ internal sealed class NumericTypeParser
             return ParseBinaryPrecisionAndScale(location);
         }
 
-        _diagnostics.Add(new Diagnostic(
+        Diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
             Current.Location));
@@ -305,8 +298,7 @@ internal sealed class NumericTypeParser
     ///
     /// Neden var?
     /// ----------------------
-    /// FIXED DECIMAL, FIXED DEC, DECIMAL FIXED ve DEC FIXED aynı `(p)` veya
-    /// `(p,s)` söz dizimini kullanır.
+    /// FIXED DECIMAL, FIXED DEC, DECIMAL FIXED ve DEC FIXED aynı `(p)` veya `(p,s)` söz dizimini kullanır.
     ///
     /// Ne çözüyor?
     /// ----------------------
@@ -325,8 +317,7 @@ internal sealed class NumericTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Decimal precision / scale limit validation ve unsupported diagnostic kuralları
-    /// burada merkezi olarak geliştirilebilir.
+    /// Decimal precision / scale limit validation ve unsupported diagnostic kuralları burada merkezi olarak geliştirilebilir.
     /// </summary>
     private Pl1FixedDecimalType? ParseDecimalPrecisionAndScale(
         SourceLocation location)
@@ -367,10 +358,10 @@ internal sealed class NumericTypeParser
 
         if (!int.TryParse(precisionToken.Text, out var precision))
         {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Precision değeri sayısal olmalıdır: {precisionToken.Text}",
-                precisionToken.Location));
+            Diagnostics.Add(
+                ParserDiagnosticFactory.InvalidNumber(
+                    "Precision değeri sayısal olmalıdır",
+                    precisionToken));
 
             return null;
         }
@@ -386,8 +377,7 @@ internal sealed class NumericTypeParser
     ///
     /// Neden var?
     /// ----------------------
-    /// FIXED BINARY, FIXED BIN, BINARY FIXED ve BIN FIXED aynı `(p)` veya
-    /// `(p,s)` söz dizimini kullanır.
+    /// FIXED BINARY, FIXED BIN, BINARY FIXED ve BIN FIXED aynı `(p)` veya `(p,s)` söz dizimini kullanır.
     ///
     /// Ne çözüyor?
     /// ----------------------
@@ -406,8 +396,7 @@ internal sealed class NumericTypeParser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Binary precision / scale validation ve unsupported diagnostic kuralları
-    /// burada merkezi olarak geliştirilebilir.
+    /// Binary precision / scale validation ve unsupported diagnostic kuralları burada merkezi olarak geliştirilebilir.
     /// </summary>
     private Pl1FixedBinaryType? ParseBinaryPrecisionAndScale(
         SourceLocation location)
@@ -448,10 +437,10 @@ internal sealed class NumericTypeParser
 
         if (!int.TryParse(precisionToken.Text, out var precision))
         {
-            _diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                $"Binary precision değeri sayısal olmalıdır: {precisionToken.Text}",
-                precisionToken.Location));
+            Diagnostics.Add(
+                ParserDiagnosticFactory.InvalidNumber(
+                    "Binary precision değeri sayısal olmalıdır",
+                    precisionToken));
 
             return null;
         }
@@ -461,53 +450,6 @@ internal sealed class NumericTypeParser
             scale,
             location);
     }
-
-    private Pl1Token? Consume(
-        Pl1TokenKind expectedKind,
-        string errorMessage)
-    {
-        if (Current.Kind == expectedKind)
-        {
-            return Advance();
-        }
-
-        _diagnostics.Add(new Diagnostic(
-            DiagnosticSeverity.Error,
-            errorMessage,
-            Current.Location));
-
-        return null;
-    }
-
-    private Pl1Token Advance()
-    {
-        if (!IsAtEnd())
-        {
-            _position++;
-        }
-
-        return Previous;
-    }
-
-    private bool IsAtEnd()
-    {
-        return Current.Kind == Pl1TokenKind.EndOfFile;
-    }
-
-    private Pl1Token Current
-    {
-        get
-        {
-            if (_position >= _tokens.Count)
-            {
-                return _tokens[^1];
-            }
-
-            return _tokens[_position];
-        }
-    }
-
-    private Pl1Token Previous => _tokens[_position - 1];
 }
 
 internal sealed class NumericTypeParseResult
