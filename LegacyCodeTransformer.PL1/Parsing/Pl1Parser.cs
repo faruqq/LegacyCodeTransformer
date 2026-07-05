@@ -678,13 +678,13 @@ public sealed class Pl1Parser
     ///
     /// Neden var?
     /// ----------------------
-    /// DCL ifadesinde değişken adı veya structure member adı okunduktan
-    /// sonra gelen bölüm veri tipini temsil eder.
+    /// DCL ifadesinde değişken adı veya structure member adı okunduktan sonra gelen
+    /// bölüm veri tipini temsil eder.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Desteklenen PL/I veri tipi keyword'lerini ilgili güçlü tipli model
-    /// sınıflarına yönlendirir.
+    /// Desteklenen PL/I veri tipi keyword'lerini ilgili güçlü tipli model sınıflarına
+    /// yönlendirir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -702,6 +702,12 @@ public sealed class Pl1Parser
     /// - PIC '999'
     /// - PICTURE '999V99'
     /// - BIT(n)
+    /// - FLOAT
+    /// - FLOAT DECIMAL(16)
+    /// - FLOAT BIN(53)
+    /// - REAL
+    /// - DOUBLE
+    /// - DOUBLE PRECISION
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -710,8 +716,8 @@ public sealed class Pl1Parser
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// DIMENSION, BIT literal INIT ve daha gelişmiş BIT mapping davranışları
-    /// desteklendikçe bu method genişletilecektir.
+    /// DIMENSION, floating type mapping ve daha gelişmiş numeric declaration
+    /// davranışları desteklendikçe bu method genişletilecektir.
     /// </summary>
     private Pl1DataType? ParseDataType()
     {
@@ -754,10 +760,182 @@ public sealed class Pl1Parser
             return ParseBitType();
         }
 
+        if (Current.Kind == Pl1TokenKind.FloatKeyword ||
+            Current.Kind == Pl1TokenKind.RealKeyword ||
+            Current.Kind == Pl1TokenKind.DoubleKeyword)
+        {
+            return ParseFloatingType();
+        }
+
         _diagnostics.Add(new Diagnostic(
             DiagnosticSeverity.Error,
             $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
             Current.Location));
+
+        return null;
+    }
+
+    /// <summary>
+    /// PL/I FLOAT / REAL / DOUBLE veri tiplerini parse eder.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// PL/I numeric type ailesinde fixed decimal ve fixed binary dışında floating
+    /// point tipler de bulunur. Bu tipler parser tarafından ayrı semantic model
+    /// olarak korunmalıdır.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// FLOAT, FLOAT DECIMAL, FLOAT BINARY, REAL, DOUBLE ve DOUBLE PRECISION
+    /// söz dizimlerini Pl1FloatingType modeline dönüştürür.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - DCL RATE FLOAT;
+    /// - DCL RATE FLOAT DECIMAL;
+    /// - DCL RATE FLOAT DECIMAL(16);
+    /// - DCL RATE FLOAT BINARY;
+    /// - DCL RATE FLOAT BIN(53);
+    /// - DCL RATE REAL;
+    /// - DCL RATE DOUBLE;
+    /// - DCL RATE DOUBLE PRECISION;
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseDataType methodu FloatKeyword, RealKeyword veya DoubleKeyword gördüğünde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// FLOAT ailesi için EGL mapping, precision limit validation ve hedef dile özel
+    /// floating point dönüşüm kararlarına temel olur.
+    /// </summary>
+    private Pl1FloatingType? ParseFloatingType()
+    {
+        var typeToken = Current;
+
+        if (Current.Kind == Pl1TokenKind.RealKeyword)
+        {
+            Advance();
+
+            return new Pl1FloatingType(
+                Pl1FloatingTypeKind.Real,
+                Pl1FloatingBase.Unspecified,
+                null,
+                typeToken.Location);
+        }
+
+        if (Current.Kind == Pl1TokenKind.DoubleKeyword)
+        {
+            Advance();
+
+            if (Current.Kind == Pl1TokenKind.PrecisionKeyword)
+            {
+                Advance();
+            }
+
+            return new Pl1FloatingType(
+                Pl1FloatingTypeKind.DoublePrecision,
+                Pl1FloatingBase.Unspecified,
+                null,
+                typeToken.Location);
+        }
+
+        if (Current.Kind != Pl1TokenKind.FloatKeyword)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"FLOAT, REAL veya DOUBLE bekleniyordu. Gelen token: {Current.Text}",
+                Current.Location));
+
+            return null;
+        }
+
+        Advance();
+
+        var floatingBase = Pl1FloatingBase.Unspecified;
+
+        if (Current.Kind == Pl1TokenKind.DecimalKeyword ||
+            Current.Kind == Pl1TokenKind.DecKeyword)
+        {
+            floatingBase = Pl1FloatingBase.Decimal;
+            Advance();
+        }
+        else if (Current.Kind == Pl1TokenKind.BinaryKeyword ||
+                 Current.Kind == Pl1TokenKind.BinKeyword)
+        {
+            floatingBase = Pl1FloatingBase.Binary;
+            Advance();
+        }
+
+        var precision = ParseOptionalParenthesizedPrecision(
+            "FLOAT precision değeri bekleniyordu.");
+
+        return new Pl1FloatingType(
+            Pl1FloatingTypeKind.Float,
+            floatingBase,
+            precision,
+            typeToken.Location);
+    }
+
+    /// <summary>
+    /// Opsiyonel parantez içi precision değerini parse eder.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Bazı PL/I veri tiplerinde precision bilgisi keyword sonrasında opsiyonel
+    /// olarak parantez içinde verilebilir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// FLOAT DECIMAL(16), FLOAT BIN(53) gibi ifadelerdeki numeric precision değerini
+    /// ortak ve kontrollü şekilde okur.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// - FLOAT DECIMAL => null
+    /// - FLOAT DECIMAL(16) => 16
+    /// - FLOAT BIN(53) => 53
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// - ParseFloatingType içinde
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Floating type limit validation veya başka opsiyonel precision kullanan veri
+    /// tipleri gerektiğinde merkezi helper olarak kullanılabilir.
+    /// </summary>
+    private int? ParseOptionalParenthesizedPrecision(string expectedNumberMessage)
+    {
+        if (Current.Kind != Pl1TokenKind.OpenParenthesis)
+        {
+            return null;
+        }
+
+        Advance();
+
+        var precisionToken = Consume(
+            Pl1TokenKind.Number,
+            expectedNumberMessage);
+
+        Consume(
+            Pl1TokenKind.CloseParenthesis,
+            "')' bekleniyordu.");
+
+        if (precisionToken is null)
+        {
+            return null;
+        }
+
+        if (int.TryParse(precisionToken.Text, out var precision))
+        {
+            return precision;
+        }
+
+        _diagnostics.Add(new Diagnostic(
+            DiagnosticSeverity.Error,
+            $"Precision değeri sayısal olmalıdır: {precisionToken.Text}",
+            precisionToken.Location));
 
         return null;
     }

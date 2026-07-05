@@ -1154,3 +1154,58 @@ PL/I INIT / INITIAL başlangıç değerlerinin güvenli scalar subset için EGL 
 
 ## Sonraki Adım
 P04 kapanış değerlendirmesi yapılacak ve ardından P05 — PL/I Statement Desteği hazırlığına geçilecektir.
+
+---
+# 2026-07-05 — P04-NA FLOAT / REAL / DOUBLE Parser Foundation
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I FLOAT / REAL / DOUBLE veri tipi ailesi parser seviyesinde desteklenmeye başladı.
+
+Bu geliştirme ile floating point declaration bilgileri Pl1FloatingType modeli üzerinde korunmaktadır. FLOAT için decimal / binary base ve optional precision bilgisi parse edilir. REAL ve DOUBLE / DOUBLE PRECISION ayrı kind olarak modellenir.
+
+EGL mapping şimdilik yapılmamaktadır. Floating point tipler fixed decimal veya fixed binary ile aynı semantic anlama sahip olmadığı için doğrudan mapping yerine açık diagnostic üretilmektedir.
+
+## Desteklenen PL/I Kodları
+
+    DCL RATE FLOAT;
+    DCL RATE FLOAT DECIMAL;
+    DCL RATE FLOAT DECIMAL(16);
+    DCL RATE FLOAT BINARY;
+    DCL RATE FLOAT BIN(53);
+    DCL RATE REAL;
+    DCL RATE DOUBLE;
+    DCL RATE DOUBLE PRECISION;
+
+## Beklenen Davranış
+
+    Parser Pl1FloatingType modeli üretir.
+    Kind, Base ve Precision bilgileri korunur.
+    Transpiler EGL mapping için diagnostic üretir.
+
+## Yapılanlar
+- Pl1FloatingTypeKind enum modeli eklendi.
+- Pl1FloatingBase enum modeli eklendi.
+- Pl1FloatingType modeli eklendi.
+- Lexer tarafında FLOAT, REAL, DOUBLE ve PRECISION keyword mapping desteği eklendi.
+- Parser tarafında FLOAT / REAL / DOUBLE parse desteği eklendi.
+- FLOAT DECIMAL / FLOAT DEC / FLOAT BINARY / FLOAT BIN base ayrımı eklendi.
+- FLOAT precision parse desteği eklendi.
+- Transpiler tarafında floating type diagnostic üretildi.
+- Parser ve Application testleri eklendi.
+
+## Kapsam Dışı Bırakılanlar
+- FLOAT / REAL / DOUBLE için EGL output mapping
+- Floating precision limit validation
+- FLOAT DECIMAL için decimal mapping kararı
+- FLOAT BINARY için binary floating mapping kararı
+- Runtime behavior karşılaştırması
+
+## İlgili Kararlar
+- Decision 051 - Numeric type mapping semantic korumalı ve aşamalı yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+
+## Sonraki Adım
+Bir sonraki geliştirme hedefi FLOAT / REAL / DOUBLE semantic mapping değerlendirmesidir.

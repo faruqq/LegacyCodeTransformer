@@ -5,11 +5,13 @@
 ///
 /// Neden var?
 /// ----------------------
-/// Lexer kaynak PL/I metnini anlamlı parçalara ayırır. Parser ise bu parçaların türüne göre syntax model üretir.
+/// Lexer kaynak PL/I metnini anlamlı parçalara ayırır. Parser ise bu parçaların
+/// türüne göre syntax model üretir.
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// Keyword, identifier, sayı, string literal ve punctuation gibi PL/I kaynak parçalarını güçlü tipli enum değerleriyle temsil eder.
+/// Keyword, identifier, sayı, string literal ve punctuation gibi PL/I kaynak
+/// parçalarını güçlü tipli enum değerleriyle temsil eder.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -20,6 +22,10 @@
 /// - DCL FLAG BIT(1);
 /// - DCL PARAM CHAR(10) DIM(2);
 /// - DCL PARAM CHAR(10) DIMENSION(2);
+/// - DCL RATE FLOAT DECIMAL(16);
+/// - DCL RATE FLOAT BIN(53);
+/// - DCL RATE REAL;
+/// - DCL RATE DOUBLE PRECISION;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -28,7 +34,8 @@
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// Yeni PL/I keyword, operator ve declaration türleri eklendikçe lexer/parser sözleşmesinin merkezi enum modeli olarak genişletilir.
+/// Yeni PL/I keyword, operator ve declaration türleri eklendikçe lexer/parser
+/// sözleşmesinin merkezi enum modeli olarak genişletilir.
 /// </summary>
 public enum Pl1TokenKind
 {
@@ -54,6 +61,10 @@ public enum Pl1TokenKind
     BitKeyword,
     DimKeyword,
     DimensionKeyword,
+    FloatKeyword,
+    RealKeyword,
+    DoubleKeyword,
+    PrecisionKeyword,
 
     OpenParenthesis,
     CloseParenthesis,

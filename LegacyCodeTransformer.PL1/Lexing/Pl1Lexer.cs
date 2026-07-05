@@ -261,11 +261,13 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I kaynak kodunda keyword ve identifier söz dizimsel olarak benzer karakterlerden oluşur.
+        /// PL/I kaynak kodunda keyword ve identifier söz dizimsel olarak benzer
+        /// karakterlerden oluşur.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Lexer'ın identifier metnini parser'ın anlayacağı doğru token türüne dönüştürmesini sağlar.
+        /// Lexer'ın identifier metnini parser'ın anlayacağı doğru token türüne
+        /// dönüştürmesini sağlar.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
@@ -282,6 +284,10 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// - BIT
         /// - DIM
         /// - DIMENSION
+        /// - FLOAT
+        /// - REAL
+        /// - DOUBLE
+        /// - PRECISION
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -312,6 +318,10 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "BIT" => Pl1TokenKind.BitKeyword,
                 "DIM" => Pl1TokenKind.DimKeyword,
                 "DIMENSION" => Pl1TokenKind.DimensionKeyword,
+                "FLOAT" => Pl1TokenKind.FloatKeyword,
+                "REAL" => Pl1TokenKind.RealKeyword,
+                "DOUBLE" => Pl1TokenKind.DoubleKeyword,
+                "PRECISION" => Pl1TokenKind.PrecisionKeyword,
                 _ => Pl1TokenKind.Identifier
             };
         }
@@ -340,5 +350,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         {
             _position++;
         }
+
+        
     }
 }

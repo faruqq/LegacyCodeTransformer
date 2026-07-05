@@ -1832,5 +1832,160 @@ namespace LegacyCodeTransformer.Application.Tests
                 "INIT repeat factor veya (*) all-elements initialization için EGL default value mapping henüz desteklenmiyor.",
                 result.Diagnostics[0].Message);
         }
+
+        /// <summary>
+        /// FLOAT declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// FLOAT veri tipinin parse edildiğini fakat henüz EGL mapping yapılmadığı için conversion sonucunun başarısız olduğunu doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL RATE FLOAT;
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Conversion başarısız olmalı, Output null olmalı ve FLOAT / REAL / DOUBLE mapping desteklenmiyor diagnostic mesajı üretilmelidir.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithFloatDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL RATE FLOAT;";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Unspecified, Precision: null",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// FLOAT DECIMAL precision bilgisinin diagnostic mesajında korunduğunu doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// FLOAT DECIMAL(16) bilgisinin parser modelinden transpiler diagnostic mesajına taşındığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL RATE FLOAT DECIMAL(16);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Diagnostic mesajında Kind Float, Base Decimal ve Precision 16 bilgileri bulunmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithFloatDecimalDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL RATE FLOAT DECIMAL(16);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Decimal, Precision: 16",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// FLOAT BIN precision bilgisinin diagnostic mesajında korunduğunu doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// FLOAT BIN(53) bilgisinin parser modelinden transpiler diagnostic mesajına taşındığını doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL RATE FLOAT BIN(53);
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Diagnostic mesajında Kind Float, Base Binary ve Precision 53 bilgileri bulunmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithFloatBinaryDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL RATE FLOAT BIN(53);";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Binary, Precision: 53",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// REAL declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// REAL veri tipinin Pl1FloatingType olarak parse edildiğini fakat EGL mapping yapılmadığı için diagnostic üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL RATE REAL;
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Diagnostic mesajında Kind Real bilgisi bulunmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithRealDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL RATE REAL;";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: Real, Base: Unspecified, Precision: null",
+                result.Diagnostics[0].Message);
+        }
+
+        /// <summary>
+        /// DOUBLE PRECISION declaration bilgisinin parser tarafından okunup transpiler aşamasında diagnostic ürettiğini doğrular.
+        ///
+        /// Bu test neyi doğrular?
+        /// DOUBLE PRECISION veri tipinin Pl1FloatingType olarak parse edildiğini fakat EGL mapping yapılmadığı için diagnostic üretildiğini doğrular.
+        ///
+        /// Hangi input'u test eder?
+        /// DCL RATE DOUBLE PRECISION;
+        ///
+        /// Beklenen temel model/çıktı nedir?
+        /// Diagnostic mesajında Kind DoublePrecision bilgisi bulunmalıdır.
+        /// </summary>
+        [Fact]
+        public void ConvertPl1ToEgl_WithDoublePrecisionDeclaration_ShouldReturnDiagnostic()
+        {
+            // Arrange
+            var service = new ConversionService();
+            var source = "DCL RATE DOUBLE PRECISION;";
+
+            // Act
+            var result = service.ConvertPl1ToEgl(source);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Null(result.Output);
+            Assert.Single(result.Diagnostics);
+            Assert.Contains(
+                "FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: DoublePrecision, Base: Unspecified, Precision: null",
+                result.Diagnostics[0].Message);
+        }
     }
 }

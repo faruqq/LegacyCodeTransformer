@@ -777,6 +777,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - PIC 'XXX' => 3
         /// - PIC '(20)X' => 20
         /// - BIT(8) => null
+        /// - FLOAT DECIMAL(16) => null
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -786,8 +787,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT için storage-preserving mapping kararı alındığında bu method
-        /// Pl1BitType branch'i ile genişletilecektir.
+        /// BIT ve FLOAT ailesi için storage-preserving mapping kararı alındığında
+        /// ilgili branch'ler burada genişletilecektir.
         /// </summary>
         private static int? CalculateDataTypeLength(Pl1DataType dataType)
         {
@@ -805,6 +806,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 Pl1PictureType { IsAlphanumeric: true, Length: not null } pictureType =>
                     pictureType.Length.Value,
                 Pl1BitType => null,
+                Pl1FloatingType => null,
                 _ => null
             };
         }
@@ -966,7 +968,9 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// - PIC '999' => num(3)
         /// - PIC '999V99' => num(5,2)
         /// - BIT(1) => diagnostic
-        /// - BIT(8) => diagnostic
+        /// - FLOAT DECIMAL(16) => diagnostic
+        /// - REAL => diagnostic
+        /// - DOUBLE PRECISION => diagnostic
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -976,8 +980,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// BIT için EGL tarafında kesin mapping kararı alındığında bu method
-        /// Pl1BitType branch'i üzerinden genişletilecektir.
+        /// FLOAT ailesi için EGL tarafında kesin mapping kararı alındığında bu method
+        /// Pl1FloatingType branch'i üzerinden genişletilecektir.
         /// </summary>
         private EglDataType? TranspileDataType(Pl1DataType dataType)
         {
@@ -996,8 +1000,50 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     varcharType.Location),
                 Pl1PictureType pictureType => TranspilePictureType(pictureType),
                 Pl1BitType bitType => TranspileBitType(bitType),
+                Pl1FloatingType floatingType => TranspileFloatingType(floatingType),
                 _ => null
             };
+        }
+
+        /// <summary>
+        /// PL/I FLOAT / REAL / DOUBLE veri tipi için EGL mapping kararını yönetir.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Floating point tipler fixed decimal veya fixed binary ile aynı semantic anlama
+        /// sahip değildir. Doğrudan decimal veya int mapping yapmak precision ve runtime
+        /// davranış kaybına neden olabilir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// FLOAT ailesi parser tarafından desteklense bile şimdilik otomatik EGL mapping
+        /// yapılmasını engeller ve açık diagnostic üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// - DCL RATE FLOAT;
+        /// - DCL RATE FLOAT DECIMAL(16);
+        /// - DCL RATE FLOAT BIN(53);
+        /// - DCL RATE REAL;
+        /// - DCL RATE DOUBLE PRECISION;
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// - TranspileDataType içinde Pl1FloatingType yakalandığında
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// EGL tarafında float / decimal / custom numeric mapping kararı verildiğinde
+        /// merkezi floating type mapping noktası olarak genişletilecektir.
+        /// </summary>
+        private EglDataType? TranspileFloatingType(Pl1FloatingType floatingType)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"FLOAT / REAL / DOUBLE veri tipi için EGL mapping henüz desteklenmiyor. Kind: {floatingType.Kind}, Base: {floatingType.Base}, Precision: {floatingType.Precision?.ToString() ?? "null"}",
+                floatingType.Location));
+
+            return null;
         }
 
         /// <summary>

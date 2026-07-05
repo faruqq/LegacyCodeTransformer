@@ -1948,4 +1948,186 @@ public sealed class Pl1ParserTests
         var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
         Assert.Equal(10, dataType.Length);
     }
+
+    /// <summary>
+    /// FLOAT veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT keyword'ünü floating type ailesi içinde modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı RATE, veri tipi Pl1FloatingType, Kind Float, Base Unspecified ve Precision null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatDeclaration_ShouldCreateFloatingType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL RATE FLOAT;").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("RATE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
+
+    /// <summary>
+    /// FLOAT DECIMAL precision bilgisinin Pl1FloatingType üzerinde korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT DECIMAL(16) söz diziminde decimal base ve precision bilgisini parse ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT DECIMAL(16);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Float, Base Decimal ve Precision 16 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatDecimalDeclaration_ShouldCreateFloatingTypeWithDecimalBase()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL RATE FLOAT DECIMAL(16);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Decimal, dataType.Base);
+        Assert.Equal(16, dataType.Precision);
+    }
+
+    /// <summary>
+    /// FLOAT BIN precision bilgisinin Pl1FloatingType üzerinde korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT BIN(53) söz diziminde binary base ve precision bilgisini parse ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT BIN(53);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Float, Base Binary ve Precision 53 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatBinaryDeclaration_ShouldCreateFloatingTypeWithBinaryBase()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL RATE FLOAT BIN(53);").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
+        Assert.Equal(53, dataType.Precision);
+    }
+
+    /// <summary>
+    /// REAL veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın REAL keyword'ünü floating type ailesi içinde ayrı kind olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE REAL;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Real, Base Unspecified ve Precision null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithRealDeclaration_ShouldCreateFloatingType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL RATE REAL;").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.Real, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
+
+    /// <summary>
+    /// DOUBLE PRECISION veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DOUBLE PRECISION keyword ikilisini DoublePrecision kind olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE DOUBLE PRECISION;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind DoublePrecision, Base Unspecified ve Precision null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDoublePrecisionDeclaration_ShouldCreateFloatingType()
+    {
+        // Arrange
+        var tokens = new Pl1Lexer("DCL RATE DOUBLE PRECISION;").Tokenize();
+        var parser = new Pl1Parser(tokens);
+
+        // Act
+        var result = parser.Parse();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
 }
