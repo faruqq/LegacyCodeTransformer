@@ -2219,3 +2219,34 @@ FLOAT DECIMAL decimal floating semantic taşıyabileceğinden doğrudan EGL floa
 
 ### Durum
 Accepted
+
+## Decision 057 - Parser Responsibility Segregation
+
+### Karar
+PL/I parser davranışları tek sınıfta büyütülmeyecektir.
+
+Büyük syntax aileleri kendi internal parser / helper sınıfları altında geliştirilecektir. Pl1Parser ana akışı yöneten sınıf olarak kalacak; veri tipi, initialization, dimension, structure ve ileride statement parser davranışları ayrı sınıflara taşınacaktır.
+
+İlk refactor adımı PIC / PICTURE parsing sorumluluğunun PictureTypeParser sınıfına ayrılmasıdır.
+
+### Gerekçe
+P04 sonunda Pl1Parser declaration, data type, structure, dimension, init, picture, bit ve floating type parsing sorumluluklarını taşır hale gelmiştir.
+
+P05 ile birlikte IF, DO, CALL, SELECT, WHEN, assignment ve expression parsing eklenecektir. Bu davranışlar aynı sınıfta büyütülürse Pl1Parser bakımı zor, test edilmesi güç ve değişiklik riski yüksek bir sınıfa dönüşür.
+
+Parser sorumluluklarını ayırmak:
+- SOLID prensiplerinden Single Responsibility Principle ile uyumludur.
+- Yeni syntax ailelerinin izole geliştirilmesini sağlar.
+- Unit test kapsamını daha hedefli hale getirir.
+- P05 statement parser geliştirmesine temiz zemin hazırlar.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.PL1.Parsing
+- LegacyCodeTransformer.PL1.Parsing.Helpers
+- Test projeleri
+- Roadmap.md
+- ModuleSummaries.md
+
+### Durum
+Accepted

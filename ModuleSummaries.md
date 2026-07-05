@@ -1339,3 +1339,73 @@ Bu faz sonunda proje, yalnızca basit scalar declaration dönüştüren bir POC 
 
 ## Sonraki Adım
 P05’e geçmeden önce Pl1Parser internal refactor yapılacaktır. Amaç parser dosyasının büyümesini kontrol altına almak, veri tipi parser davranışlarını ayrı helper sınıflara ayırmak ve statement parser geliştirmesine daha temiz bir zemin hazırlamaktır.
+
+---
+# 2026-07-05 — P04-R1 PictureTypeParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinin ilk adımı olarak PIC / PICTURE model oluşturma sorumluluğu Pl1Parser içinden çıkarıldı.
+
+PictureTypeParser helper sınıfı eklendi. Pl1Parser artık PIC / PICTURE keyword ve string literal token okuma sorumluluğunu taşır; raw pattern bilgisinden Pl1PictureType üretme sorumluluğu PictureTypeParser sınıfına devredilmiştir.
+
+## Yapılanlar
+- Decision 057 - Parser Responsibility Segregation kararı eklendi.
+- Parsing/Helpers klasörü altında PictureTypeParser sınıfı eklendi.
+- Pl1Parser.ParsePictureType methodu PictureTypeParser kullanacak şekilde sadeleştirildi.
+- Pl1Parser içindeki CreatePictureTypeFromPattern helper methodu kaldırıldı.
+- PictureTypeParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- FloatingTypeParser extraction
+- NumericTypeParser extraction
+- CharacterTypeParser extraction
+- InitialValueParser extraction
+- DimensionParser extraction
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 053 - Picture pattern semantic classification parser aşamasında yapılacaktır.
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı FloatingTypeParser extraction olacaktır.
+
+---
+# 2026-07-05 — P04-R2 FloatingTypeParser Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+P05 öncesi parser internal refactor sürecinin ikinci adımı olarak FLOAT / REAL / DOUBLE parsing sorumluluğu Pl1Parser içinden çıkarıldı.
+
+FloatingTypeParser helper sınıfı eklendi. Pl1Parser artık floating type parsing için yalnızca helper parser'ı çağırır ve token position bilgisini günceller.
+
+## Yapılanlar
+- Parsing/Helpers klasörü altında FloatingTypeParser sınıfı eklendi.
+- FloatingTypeParseResult modeli eklendi.
+- Pl1Parser.ParseFloatingType methodu FloatingTypeParser kullanacak şekilde sadeleştirildi.
+- Pl1Parser içindeki ParseOptionalParenthesizedPrecision helper methodu kaldırıldı.
+- FloatingTypeParser unit testleri eklendi.
+- Davranış değişikliği yapılmadı.
+
+## Kapsam Dışı Bırakılanlar
+- NumericTypeParser extraction
+- CharacterTypeParser extraction
+- InitialValueParser extraction
+- DimensionParser extraction
+- StructureParser extraction
+- P05 statement parser geliştirmeleri
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 057 - Parser Responsibility Segregation
+
+## Sonraki Adım
+Bir sonraki refactor adımı CharacterTypeParser ve NumericTypeParser extraction olacaktır.
