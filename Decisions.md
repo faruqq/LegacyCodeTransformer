@@ -2339,3 +2339,212 @@ Bu yaklaşım:
 
 ### Durum
 Accepted
+
+## Decision 061 - P05 Statement Syntax Model Foundation
+
+### Karar
+
+P05 kapsamında PL/I executable statement modelleri declaration modellerinden ayrı bir syntax model hiyerarşisi altında başlatılacaktır.
+
+İlk statement model ailesi aşağıdaki sınıflarla kurulacaktır:
+
+- Pl1Statement
+- Pl1Expression
+- Pl1RawExpression
+- Pl1AssignmentStatement
+- Pl1CallStatement
+- Pl1IfStatement
+- Pl1DoStatement
+- Pl1DoStatementKind
+- Pl1BlockStatement
+
+Bu modeller ilk aşamada parser davranışını değiştirmeden syntax model foundation olarak eklenecektir.
+
+Pl1SyntaxTree geriye dönük uyum korunarak hem declaration hem statement listesi taşıyacak şekilde genişletilecektir.
+
+Pl1SyntaxVisitor ve Pl1SyntaxWalker statement ve expression node ailelerini dolaşacak şekilde genişletilecektir.
+
+### Gerekçe
+
+PL/I programları yalnızca declaration satırlarından oluşmaz. Assignment, CALL, IF, DO ve block yapıları executable statement seviyesinde modellenmelidir.
+
+Statement parser’a geçmeden önce semantic olarak ayrılmış, visitor/walker tarafından dolaşılabilen ve ileride EGL generator tarafından tüketilebilecek bir model hiyerarşisi gerekir.
+
+Expression parser henüz detaylandırılmadığı için ilk aşamada Pl1RawExpression güvenli ara model olarak kullanılacaktır. Bu sayede statement içindeki expression metni kaybolmadan syntax tree’ye taşınabilir.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Statements
+- LegacyCodeTransformer.PL1/Syntax/Pl1SyntaxTree
+- LegacyCodeTransformer.PL1/Syntax/Pl1SyntaxVisitor
+- LegacyCodeTransformer.PL1/Syntax/Pl1SyntaxWalker
+- LegacyCodeTransformer.PL1.Tests/Syntax/Pl1SyntaxWalkerTests
+
+### Durum
+
+Kabul edildi.
+
+## Decision 063 - Faz ve Milestone Tamamlanma Kriteri
+
+### Karar
+
+Bir roadmap fazı veya milestone'u aşağıdaki adımlar tamamlanmadan "Tamamlandı" olarak işaretlenmeyecektir.
+
+1. Production kodu tamamlanmış olmalıdır.
+2. Unit testleri tamamlanmış olmalıdır.
+3. Decisions.md güncellenmiş olmalıdır.
+4. ModuleSummaries.md güncellenmiş olmalıdır.
+5. Gerekliyse Roadmap.md güncellenmiş olmalıdır.
+6. Commit kullanıcı tarafından atılmış olmalıdır.
+
+Milestone kapatma sırası standart olarak aşağıdaki şekilde uygulanacaktır.
+
+    Production Code
+    Unit Tests
+    Decisions.md
+    ModuleSummaries.md
+    Roadmap.md
+    Commit
+
+Bir milestone tamamen kapanmadan sonraki milestone'a geçilmeyecektir.
+
+Örneğin P05.3 Assignment & CALL Parser tamamlanmadan P05.4 IF / DO Parser geliştirmesine başlanmayacaktır.
+
+### Gerekçe
+
+Kodun tamamlanması tek başına bir geliştirme adımının tamamlandığı anlamına gelmez.
+
+Testlerin ve dokümantasyonun eksik bırakılması teknik borç oluşturur, sonraki geliştirmeleri zorlaştırır ve yeni sohbetlerde context kaybına neden olur.
+
+Bu standart sayesinde her milestone tek seferde tamamen kapatılır.
+
+Ayrıca commit geçmişi, dokümantasyon ve test kapsamı aynı geliştirme sınırını temsil eder.
+
+Bu yaklaşım projeyi yıllar sonra tekrar açtığımızda hangi commit'te neyin tamamlandığını net biçimde göstermeyi sağlar.
+
+### Etkilediği Modüller
+
+- Documentation/Decisions.md
+- Documentation/ModuleSummaries.md
+- Documentation/Roadmap.md
+- Test projeleri
+- Geliştirme süreci
+- Commit standardı
+
+### Durum
+
+Kabul edildi.
+
+## Decision 064 - Test Delivery Standardı
+
+### Karar
+
+Unit test önerileri aşağıdaki standartlara göre sunulacaktır.
+
+Production kodundan farklı olarak test sınıflarında yalnızca değişiklik yapılan
+testler paylaşılacaktır.
+
+Standart aşağıdaki şekilde uygulanacaktır.
+
+#### Yeni test ekleniyorsa
+
+Mevcut test sınıfı değiştirilmeden yalnızca eklenecek yeni test methodları
+paylaşılır.
+
+Test methodları tam haliyle verilir.
+
+#### Mevcut test değiştiriliyorsa
+
+Sadece değişen test methodlarının tamamı paylaşılır.
+
+Test sınıfının tamamı yeniden verilmez.
+
+#### Yeni test sınıfı oluşturuluyorsa
+
+Test sınıfının tamamı paylaşılır.
+
+#### Production kodu değiştiriliyorsa
+
+Bu karar production kodunu kapsamaz.
+
+Production class, parser, transpiler, generator, helper veya model değişikliklerinde
+mevcut standart korunur ve ilgili class veya methodun tamamı paylaşılır.
+
+### Gerekçe
+
+Production kodunda tam method veya class paylaşılması bütünlüğü korurken,
+test sınıfları zaman içerisinde yüzlerce satıra ulaşabilmektedir.
+
+Her yeni testte bütün test sınıfının tekrar paylaşılması;
+
+- gereksiz tekrar oluşturur,
+- okunabilirliği azaltır,
+- cevap boyutunu gereksiz büyütür,
+- geliştirme hızını düşürür.
+
+Bunun yerine yalnızca eklenen veya değiştirilen test methodlarının paylaşılması
+aynı bütünlüğü korurken çok daha verimli bir çalışma sağlar.
+
+### Etkilediği Modüller
+
+- Tüm Test Projeleri
+- Assistant çıktı standardı
+- Geliştirme süreci
+
+### Durum
+
+Kabul edildi.
+
+## Decision 065 - Statement Parser Foundation Mevcut Parser Altyapısını Kullanacaktır
+
+### Karar
+
+P05 statement parser foundation için ayrı bir StatementParseContext veya StatementParserBase sınıfı oluşturulmayacaktır.
+
+Statement parser modülleri mevcut parser helper altyapısını kullanacaktır.
+
+Kullanılacak mevcut altyapı:
+
+- ParseContext
+- ParserBase
+- HelperParseResult<T>
+- ParserDiagnosticFactory
+
+Statement parsing orchestration için aşağıdaki sınıflar eklenecektir.
+
+- StatementDispatcher
+- StatementParser
+
+StatementDispatcher, mevcut token'ın hangi statement ailesine ait olduğunu belirlemekten sorumlu olacaktır.
+
+StatementParser, executable statement parse sürecinin orchestration sınıfı olacaktır.
+
+Concrete statement parser modülleri P05.3 ve P05.4 içinde eklenecektir.
+
+### Gerekçe
+
+P04 sonunda parser altyapısı zaten modüler helper parser mimarisine taşınmıştır.
+
+Yeni ve paralel bir StatementParseContext veya StatementParserBase oluşturmak gereksiz soyutlama üretir ve parser altyapısında iki farklı standart oluşmasına neden olur.
+
+Mevcut ParseContext ve ParserBase sınıfları declaration parser için yeterli olduğu gibi statement parser için de yeterlidir.
+
+Bu karar sayesinde parser altyapısı tek standartta kalır.
+
+StatementParser yalnızca orchestration yapar. Gerçek parse davranışları ileride aşağıdaki concrete parser sınıflarına ayrılacaktır.
+
+- AssignmentStatementParser
+- CallStatementParser
+- IfStatementParser
+- DoStatementParser
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Parsing/Helpers
+- LegacyCodeTransformer.PL1/Parsing/Pl1Parser
+- LegacyCodeTransformer.PL1.Tests/Parsing/Helpers
+- LegacyCodeTransformer.PL1.Tests/Parsing/Pl1ParserTests
+
+### Durum
+
+Kabul edildi.

@@ -1,9 +1,10 @@
-﻿using LegacyCodeTransformer.Pl1.Declarations;
+﻿using LegacyCodeTransformer.Core.Results;
+using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Parsing;
+using LegacyCodeTransformer.Pl1.Statements;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
-using LegacyCodeTransformer.Core.Results;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing;
 
@@ -1395,5 +1396,144 @@ public sealed class Pl1ParserTests
         Assert.Equal(5, dataType.Length);
         Assert.True(dataType.IsAlphanumeric);
         Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// Parser'ın desteklenmeyen token için declaration veya statement beklendiğini bildirdiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, statement başlangıcı olmayan unsupported token gördüğünde yeni top-level
+    /// beklenti mesajını üretmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// %
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Diagnostic içinde DCL veya executable statement bekleniyordu anlamına gelen mesaj bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithUnsupportedTopLevelToken_ShouldReturnDeclarationOrStatementDiagnostic()
+    {
+        var result = ParseSource(
+            "%");
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+        Assert.Empty(result.SyntaxTree.Statements);
+
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("DCL veya executable statement"));
+    }
+
+    /// <summary>
+    /// Parser'ın top-level assignment statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, Identifier ile başlayan assignment statement'ı StatementParser'a
+    /// yönlendirmeli ve üretilen Pl1AssignmentStatement modelini SyntaxTree.Statements
+    /// listesine eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// PARAM = 'ABC';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations boş, Statements tek elemanlı olmalı; target PARAM, value 'ABC'
+    /// olarak taşınmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAssignmentStatement_ShouldAddAssignmentStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "PARAM = 'ABC';");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var assignmentStatement = Assert.IsType<Pl1AssignmentStatement>(statement);
+
+        var target = Assert.Single(assignmentStatement.Targets);
+        var targetExpression = Assert.IsType<Pl1RawExpression>(target);
+        var valueExpression = Assert.IsType<Pl1RawExpression>(assignmentStatement.Value);
+
+        Assert.Equal("PARAM", targetExpression.Text);
+        Assert.Equal("'ABC'", valueExpression.Text);
+    }
+
+    /// <summary>
+    /// Parser'ın declaration ve assignment statement modellerini aynı syntax tree içinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, önce DCL declaration parse etmeli, ardından assignment statement'ı
+    /// StatementParser üzerinden parse edip aynı syntax tree'ye eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(08); PARAM = 'ABC';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations tek elemanlı, Statements tek elemanlı olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDeclarationFollowedByAssignmentStatement_ShouldAddBothModelsToSyntaxTree()
+    {
+        var result = ParseSource(
+            "DCL PARAM CHAR(08); PARAM = 'ABC';");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var assignmentStatement = Assert.IsType<Pl1AssignmentStatement>(statement);
+
+        var target = Assert.Single(assignmentStatement.Targets);
+        var targetExpression = Assert.IsType<Pl1RawExpression>(target);
+        var valueExpression = Assert.IsType<Pl1RawExpression>(assignmentStatement.Value);
+
+        Assert.Equal("PARAM", targetExpression.Text);
+        Assert.Equal("'ABC'", valueExpression.Text);
+    }
+
+    /// <summary>
+    /// Parser'ın qualified member assignment statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, structure member erişimi içeren assignment statement'ı raw target
+    /// expression olarak doğru formatta taşımalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DCLGLAU.BRM_KOD = 888;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Target DCLGLAU.BRM_KOD, value 888 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithQualifiedMemberAssignmentStatement_ShouldPreserveQualifiedTargetExpression()
+    {
+        var result = ParseSource(
+            "DCLGLAU.BRM_KOD = 888;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var assignmentStatement = Assert.IsType<Pl1AssignmentStatement>(statement);
+
+        var target = Assert.Single(assignmentStatement.Targets);
+        var targetExpression = Assert.IsType<Pl1RawExpression>(target);
+        var valueExpression = Assert.IsType<Pl1RawExpression>(assignmentStatement.Value);
+
+        Assert.Equal("DCLGLAU.BRM_KOD", targetExpression.Text);
+        Assert.Equal("888", valueExpression.Text);
     }
 }

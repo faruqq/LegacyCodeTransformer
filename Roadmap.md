@@ -1,6 +1,4 @@
-﻿# Roadmap.md
-
-# LegacyCodeTransformer Yol Haritası
+﻿# LegacyCodeTransformer Yol Haritası
 
 Bu doküman, projenin uzun vadeli geliştirme planını içerir.
 
@@ -302,6 +300,14 @@ PL/I veri tipi, declaration, structure ve parser altyapısını gerçek projeler
 * ✅ Parser test tekrarlarının kaldırılması
 * ✅ Pl1Parser sınıfının orchestration seviyesine indirgenmesi
 
+### Visitor / Walker Foundation
+
+* ✅ Pl1SyntaxVisitor
+* ✅ Pl1SyntaxWalker
+* ✅ Visitor / Walker test altyapısı
+* ✅ Non-invasive Visitor tasarımı
+* ✅ Accept() gerektirmeyen traversal yaklaşımı
+
 ## Mimari Sonuç
 
 P04 sonunda parser aşağıdaki sorumluluk dağılımına sahiptir.
@@ -317,6 +323,8 @@ P04 sonunda parser aşağıdaki sorumluluk dağılımına sahiptir.
                 DataTypeParser
                 DimensionParser
                 InitialValueParser
+
+        StatementParser (P05)
 
     DataTypeParser
         CharacterTypeParser
@@ -344,6 +352,8 @@ Parser, Transpiler ve Generator katmanları gerçek PL/I declaration yapıların
 
 Parser mimarisi helper parser yaklaşımı ile sadeleştirilmiş ve yeni parser modüllerinin eklenmesine uygun hale getirilmiştir.
 
+Visitor / Walker altyapısı parser ve transpiler katmanlarının gelecekte genişletilmesine uygun şekilde tamamlanmıştır.
+
 ## Sonraki Faz
 
 P05 — PL/I Statement Desteği
@@ -360,42 +370,278 @@ P05 — PL/I Statement Desteği
 
 PL/I declaration dışındaki executable statement modellerini oluşturmak, parser altyapısını statement desteği için genişletmek ve ilerleyen fazlarda transpiler katmanında kullanılacak semantic statement modelini hazırlamak.
 
-## Kapsam
+P05, parser mimarisinin declaration odaklı yapıdan gerçek PL/I programlarını temsil edebilecek executable statement mimarisine geçiş fazıdır.
 
-* Statement syntax modeli
-* Statement parser altyapısı
-* Statement dispatcher
-* Assignment parser
-* CALL parser
+---
+
+## P05.1 — Statement Model Foundation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+Statement modellerinin parser davranışından bağımsız olarak oluşturulması ve syntax modelinin executable statement desteğine hazırlanması.
+
+### Tamamlananlar
+
+#### Statement Modeli
+
+* ✅ Pl1Statement
+* ✅ Pl1Expression
+* ✅ Pl1RawExpression
+* ✅ Pl1AssignmentStatement
+* ✅ Pl1CallStatement
+* ✅ Pl1IfStatement
+* ✅ Pl1DoStatement
+* ✅ Pl1DoStatementKind
+* ✅ Pl1BlockStatement
+
+#### Syntax Tree
+
+* ✅ Pl1SyntaxTree statement listesi desteği
+
+#### Visitor / Walker
+
+* ✅ Statement visitor dispatch desteği
+* ✅ Statement walker recursive traversal desteği
+* ✅ Statement traversal testleri
+
+### Başarı Kriteri
+
+Parser henüz gerçek statement parse etmese bile syntax tree executable statement modellerini taşıyabilir duruma gelmiştir.
+
+---
+
+## P05.2 — Statement Parser Foundation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+Statement parser altyapısını declaration parser mimarisine benzer şekilde modüler hale getirmek.
+
+### Tamamlananlar
+
+* ✅ StatementDispatcher
+* ✅ StatementParser
+* ✅ Pl1Parser statement routing entegrasyonu
+* ✅ Statement başlangıç token tespiti
+* ✅ Statement family name mapping
+* ✅ Statement parser recovery davranışı
+* ✅ Unsupported concrete parser diagnostic davranışı
+* ✅ StatementDispatcher unit testleri
+* ✅ StatementParser unit testleri
+* ✅ Pl1Parser statement routing testleri
+
+### Bilinçli Olarak Eklenmeyenler
+
+* StatementParseContext
+* StatementParserBase
+
+Bu iki sınıf eklenmemiştir çünkü mevcut parser altyapısındaki ParseContext ve ParserBase statement parser için de yeterlidir.
+
+### Başarı Kriteri
+
+Parser declaration ve statement parse işlemlerini birbirinden bağımsız yönetebilir hale gelmiştir.
+
+Pl1Parser, DCL / DECLARE tokenlarını DeclarationParser'a, statement başlangıç tokenlarını StatementParser'a yönlendirebilmektedir.
+
+StatementParser, concrete parser modülleri henüz eklenmeden güvenli diagnostic ve recovery davranışı sağlamaktadır.
+
+### Sonraki Milestone
+
+P05.3 — Assignment & CALL Parser
+
+---
+
+## P05.3 — Assignment & CALL Parser
+
+### Durum
+
+⏳ Planlandı
+
+### Amaç
+
+Statement parser altyapısı üzerine ilk executable statement parser modüllerini
+eklemek ve gerçek PL/I kaynak kodundan Assignment ile CALL statement modellerini
+üretmek.
+
+### Kapsam
+
+* AssignmentStatementParser
+* CallStatementParser
+* Raw statement parsing
+* Statement boundary yönetimi
+* RawExpression oluşturulması
+* Statement parser unit testleri
+* ParserHelperTestBase genişletmeleri
+
+### Tamamlanacak Özellikler
+
+#### Assignment
+
+* Tek hedefli assignment
+
+    A = B;
+
+* Expression assignment
+
+    A = B + C;
+
+* Qualified member assignment
+
+    REC.FIELD = VALUE;
+
+* Array element assignment
+
+    DIZI(I) = VALUE;
+
+#### CALL
+
+* Parametresiz CALL
+
+    CALL PROC1;
+
+* Parametreli CALL
+
+    CALL PROC1(A, B);
+
+* Literal parametre
+
+    CALL PROC1('ABC');
+
+* Mixed parameter list
+
+    CALL PROC1(A, 'ABC', B);
+
+### Başarı Kriteri
+
+Parser gerçek PL/I Assignment ve CALL statement'larını syntax tree üzerinde
+semantic olarak temsil edebilmelidir.
+
+---
+
+## P05.4 — IF / DO Parser
+
+### Durum
+
+⏳ Planlandı
+
+### Amaç
+
+Kontrol akışı oluşturan statement yapılarını parse ederek syntax tree üzerinde
+temsil etmek.
+
+### Kapsam
+
 * IF parser
-* DO / END parser
-* Statement test altyapısı
-* Expression parser hazırlığı
+* ELSE parser
+* DO parser
+* DO WHILE parser
+* DO UNTIL parser
+* Block parser
+* Nested block parser
+* Recursive statement parsing
 
-## İlk Teknik Adım
+### Tamamlanacak Özellikler
 
-Statement model hiyerarşisi oluşturulacaktır.
+#### IF
 
-* Pl1Statement
-* Pl1Expression
-* Pl1AssignmentStatement
-* Pl1CallStatement
-* Pl1IfStatement
-* Pl1DoStatement
-* Pl1BlockStatement
+    IF A = B THEN
+        CALL PROC;
 
-## İlk Desteklenecek Statement Türleri
+#### IF ELSE
 
-1. Assignment
-2. CALL
-3. IF
-4. DO / END
+    IF A = B THEN
+        CALL PROC1;
+    ELSE
+        CALL PROC2;
 
-## Başarı Kriteri
+#### IF THEN DO
 
-Parser declaration dışındaki ilk executable statement türlerini syntax tree üzerinde semantic olarak temsil edebilmelidir.
+    IF SQLCODE = 0 THEN DO;
+        ...
+    END;
 
-İlk aşamada transpiler desteği zorunlu değildir.
+#### Nested IF
+
+    IF A THEN
+        IF B THEN
+            ...
+
+#### DO
+
+    DO;
+        ...
+    END;
+
+#### DO WHILE
+
+    DO WHILE(SQLCODE = 0);
+        ...
+    END;
+
+#### DO UNTIL
+
+    DO UNTIL(EOF);
+        ...
+    END;
+
+### Başarı Kriteri
+
+Parser nested executable statement bloklarını doğru syntax hiyerarşisiyle
+oluşturabilmelidir.
+
+---
+
+## P05.5 — Statement Integration & Tests
+
+### Durum
+
+⏳ Planlandı
+
+### Amaç
+
+Statement parser'ın declaration parser ile tamamen entegre edilmesi ve gerçek
+PL/I programlarının parser tarafından uçtan uca okunabilmesi.
+
+### Kapsam
+
+* Parser orchestration güncellemesi
+* Statement dispatcher entegrasyonu
+* Visitor genişletmeleri
+* Walker genişletmeleri
+* Parser integration testleri
+* Büyük örnek PL/I dosyaları
+* Regression testleri
+
+### Tamamlanacak Özellikler
+
+#### Integration
+
+* Declaration + Statement birlikte parse
+
+* Mixed source parsing
+
+* Recursive block parsing
+
+* Visitor integration
+
+* Walker integration
+
+* Statement traversal testleri
+
+### Başarı Kriteri
+
+Parser declaration ve executable statement'ları tek syntax tree içerisinde
+eksiksiz temsil edebilmelidir.
+
+P05 sonunda transpiler katmanı statement desteğini kullanabilecek seviyeye
+hazırlanmış olacaktır.
 
 ## Sonraki Faz
 
@@ -411,7 +657,8 @@ P06 — Procedure Desteği
 
 ## Amaç
 
-PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve semantic model olarak temsil edilmesini sağlamak.
+PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve semantic
+model olarak temsil edilmesini sağlamak.
 
 ## Kapsam
 
@@ -424,7 +671,8 @@ PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve semantic 
 
 ## Başarı Kriteri
 
-Bir PL/I source dosyası procedure seviyesinde eksiksiz parse edilebilmeli ve statement parser ile entegre çalışmalıdır.
+Bir PL/I source dosyası procedure seviyesinde eksiksiz parse edilebilmeli ve
+statement parser ile entegre çalışmalıdır.
 
 ## Sonraki Faz
 
@@ -440,7 +688,8 @@ P07 — Legacy PL/I Yapıları
 
 ## Amaç
 
-Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların desteklenmesini sağlamak.
+Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların desteklenmesini
+sağlamak.
 
 ## Kapsam
 
@@ -453,7 +702,8 @@ Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların desteklenmesin
 
 ## Başarı Kriteri
 
-Gerçek kurumsal PL/I projelerinde kullanılan temel legacy yapıların parser tarafından okunabilmesi.
+Gerçek kurumsal PL/I projelerinde kullanılan temel legacy yapıların parser
+tarafından okunabilmesi.
 
 ## Sonraki Faz
 
@@ -482,7 +732,11 @@ P08 — Dönüşüm Kalitesini Artırma
 
 ## Başarı Kriteri
 
-Desteklenmeyen syntax'lar mümkün olduğunca parse edilmeye devam edilmeli ve kullanıcıya anlaşılır diagnostic mesajları sunulmalıdır.
+Desteklenmeyen syntax'lar mümkün olduğunca parse edilmeye devam edilmeli ve
+kullanıcıya anlaşılır diagnostic mesajları sunmalıdır.
+
+Üretilen EGL kodu okunabilir, tutarlı ve mümkün olduğunca manuel düzenleme
+gerektirmeyecek kaliteye ulaşmalıdır.
 
 ## Sonraki Faz
 
@@ -498,7 +752,8 @@ P09 — Semantic Analysis
 
 ## Amaç
 
-Parser tarafından oluşturulan syntax modelini analiz ederek semantic doğrulama yapmak ve transpiler katmanını beslemek.
+Parser tarafından oluşturulan syntax modelini analiz ederek semantic doğrulama
+yapmak ve transpiler katmanını beslemek.
 
 ## Kapsam
 
@@ -511,7 +766,8 @@ Parser tarafından oluşturulan syntax modelini analiz ederek semantic doğrulam
 
 ## Başarı Kriteri
 
-Syntax modeli semantic olarak doğrulanmalı ve transpiler yalnızca semantic olarak geçerli modeller üzerinde çalışmalıdır.
+Syntax modeli semantic olarak doğrulanmalı ve transpiler yalnızca semantic
+olarak geçerli modeller üzerinde çalışmalıdır.
 
 ## Sonraki Faz
 
@@ -555,18 +811,20 @@ P11 — Yeni Hedef Diller
 
 ## Amaç
 
-Mevcut parser ve semantic altyapısını kullanarak farklı hedef dillere dönüşüm yapabilmek.
+Mevcut parser ve semantic altyapısını kullanarak farklı hedef dillere dönüşüm
+yapabilmek.
 
 ## İlk Hedefler
 
 * PL/I → C#
 * EGL → C#
 * PL/I → Java
-* PL/I → Kotlin (opsiyonel)
+* PL/I → Kotlin (Opsiyonel)
 
 ## Başarı Kriteri
 
-Yeni hedef dillere dönüşüm yalnızca yeni generator katmanları eklenerek gerçekleştirilebilmelidir.
+Yeni hedef dillere dönüşüm yalnızca yeni generator katmanları eklenerek
+gerçekleştirilebilmelidir.
 
 ## Sonraki Faz
 
@@ -596,7 +854,8 @@ Kurumsal projelerde ihtiyaç duyulacak yardımcı araçları geliştirmek.
 
 ## Başarı Kriteri
 
-Binlerce PL/I dosyası kurumsal ölçekte güvenilir ve raporlanabilir şekilde dönüştürülebilmelidir.
+Binlerce PL/I dosyası kurumsal ölçekte güvenilir ve raporlanabilir şekilde
+dönüştürülebilmelidir.
 
 ## Sonraki Faz
 
@@ -606,22 +865,66 @@ Projenin ihtiyaçlarına göre yeni fazlar eklenecektir.
 
 # Uzun Vadeli Hedef
 
-LegacyCodeTransformer'ın yalnızca **PL/I → EGL** dönüşümü yapan bir araç olması hedeflenmemektedir.
+LegacyCodeTransformer'ın yalnızca **PL/I → EGL** dönüşümü yapan bir araç
+olması hedeflenmemektedir.
 
 Uzun vadeli hedef;
 
-Kaynak dili parse edebilen,
-
-semantic model oluşturabilen,
-
-farklı hedef dillere dönüştürebilen,
-
-genişletilebilir,
-
-sürdürülebilir,
-
-test edilebilir,
-
-kurumsal ölçekte kullanılabilir
+* Kaynak dili parse edebilen,
+* Semantic model oluşturabilen,
+* Farklı hedef dillere dönüştürebilen,
+* Genişletilebilir,
+* Sürdürülebilir,
+* Test edilebilir,
+* Kurumsal ölçekte kullanılabilir
 
 bir **Legacy Code Transformation Platformu** oluşturmaktır.
+
+---
+
+# Mevcut Geliştirme Durumu
+
+## Tamamlanan Fazlar
+
+* ✅ P01 — Proje Kurulumu
+* ✅ P02 — Core Foundation
+* ✅ P03 — İlk PL/I → EGL Dönüşümü
+* ✅ P04 — PL/I Veri Tipleri ve Parser Foundation
+
+## Aktif Faz
+
+* 🚧 P05 — PL/I Statement Desteği
+
+### P05 Milestone Durumu
+
+* ✅ P05.1 — Statement Model Foundation
+* 🚧 P05.2 — Statement Parser Foundation
+* ⏳ P05.3 — Assignment & CALL Parser
+* ⏳ P05.4 — IF / DO Parser
+* ⏳ P05.5 — Statement Integration & Tests
+
+## Sonraki Büyük Faz
+
+* ⏳ P06 — Procedure Desteği
+
+---
+
+# Yol Haritası Güncelleme Kuralları
+
+Roadmap.md yaşayan bir dokümandır.
+
+Aşağıdaki durumlarda güncellenmelidir:
+
+* Yeni bir faz başlatıldığında.
+* Bir milestone tamamlandığında.
+* Büyük mimari kararlar roadmap'i etkilediğinde.
+* Faz kapsamı değiştiğinde.
+* Başarı kriterleri güncellendiğinde.
+
+Teknik implementasyon ayrıntıları bu dokümanda tutulmaz.
+
+Mimari kararlar Decisions.md içerisinde dokümante edilir.
+
+Tamamlanan geliştirmeler ModuleSummaries.md içerisinde kronolojik olarak özetlenir.
+
+Roadmap.md yalnızca projenin geliştirme yönünü ve planlanan fazlarını gösteren üst seviye referans dokümandır.

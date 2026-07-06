@@ -10,22 +10,16 @@
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// Keyword, identifier, sayı, string literal ve punctuation gibi PL/I kaynak
-/// parçalarını güçlü tipli enum değerleriyle temsil eder.
+/// Keyword, identifier, sayı, string literal, punctuation ve statement operator gibi
+/// PL/I kaynak parçalarını güçlü tipli enum değerleriyle temsil eder.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - DCL PARAM CHAR(08) INIT(' ');
-/// - DCL AMOUNT FIXED DEC(17,2);
-/// - DCL COUNT FIXED BIN(15);
-/// - DCL PARAM1 PIC '999';
-/// - DCL FLAG BIT(1);
-/// - DCL PARAM CHAR(10) DIM(2);
-/// - DCL PARAM CHAR(10) DIMENSION(2);
-/// - DCL RATE FLOAT DECIMAL(16);
-/// - DCL RATE FLOAT BIN(53);
-/// - DCL RATE REAL;
-/// - DCL RATE DOUBLE PRECISION;
+/// - PARAM = 'ABC';
+/// - CALL FETCH_CURSOR;
+/// - IF SQLCODE = 0 THEN DO;
+/// - DO WHILE(SQLCODE ^= 100);
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -34,18 +28,21 @@
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// Yeni PL/I keyword, operator ve declaration türleri eklendikçe lexer/parser
-/// sözleşmesinin merkezi enum modeli olarak genişletilir.
+/// Statement parser, expression parser, procedure parser, embedded SQL ve
+/// control-flow parser geliştirmelerinde lexer/parser sözleşmesinin merkezi enum
+/// modeli olarak genişletilir.
 /// </summary>
 public enum Pl1TokenKind
 {
     BadToken,
     EndOfFile,
+
     Identifier,
     Number,
     StringLiteral,
 
     DclKeyword,
+
     FixedKeyword,
     DecimalKeyword,
     DecKeyword,
@@ -66,9 +63,35 @@ public enum Pl1TokenKind
     DoubleKeyword,
     PrecisionKeyword,
 
+    CallKeyword,
+    IfKeyword,
+    ThenKeyword,
+    ElseKeyword,
+    DoKeyword,
+    EndKeyword,
+    WhileKeyword,
+    UntilKeyword,
+
     OpenParenthesis,
     CloseParenthesis,
     Comma,
     Semicolon,
-    Asterisk
+    Dot,
+    Colon,
+
+    Equals,
+    Plus,
+    Minus,
+    Asterisk,
+    Slash,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+    NotEqual,
+    NotLessThan,
+    NotGreaterThan,
+    Ampersand,
+    Exclamation,
+    Caret
 }

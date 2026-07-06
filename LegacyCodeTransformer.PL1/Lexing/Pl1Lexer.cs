@@ -10,19 +10,23 @@ namespace LegacyCodeTransformer.Pl1.Lexing
     /// Neden var?
     /// ----------------------
     /// Parser doğrudan raw string üzerinden çalışmamalıdır.
-    /// Önce kaynak metnin keyword, identifier, number, string literal ve
-    /// punctuation gibi anlamlı parçalara ayrılması gerekir.
+    /// Önce kaynak metnin keyword, identifier, number, string literal, punctuation
+    /// ve statement operator gibi anlamlı parçalara ayrılması gerekir.
     ///
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I kaynak kodunu parser'ın okuyabileceği Pl1Token listesine çevirir.
+    /// Declaration parsing için kullanılan token desteğini korurken P05 statement
+    /// parser için gerekli CALL, IF, THEN, ELSE, DO, END, WHILE, UNTIL keyword'lerini
+    /// ve assignment / comparison / logical operator token'larını üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - DCL MUST_NO FIXED DECIMAL(8);
     /// - DCL PARAM CHAR(08) INIT(' ');
-    /// - DCL CUSTOMER_NAME VARCHAR(50);
-    /// - DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);
+    /// - PARAM = 'ABC';
+    /// - CALL FETCH_CURSOR;
+    /// - IF SQLCODE = 0 THEN DO;
+    /// - DO WHILE(SQLCODE ^= 100);
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -32,14 +36,14 @@ namespace LegacyCodeTransformer.Pl1.Lexing
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Yeni PL/I keyword, operator, comment, compiler directive ve statement
-    /// destekleri eklendikçe ilk genişletilecek katmandır.
+    /// Statement parser, expression parser, procedure parser, embedded SQL parser,
+    /// compiler directive parser ve IDE syntax highlighting altyapısı bu lexer
+    /// sözleşmesi üzerine genişletilecektir.
     /// </summary>
     public sealed class Pl1Lexer
     {
         private readonly string _source;
         private readonly List<Pl1Token> _tokens = new();
-
         private int _position;
 
         /// <summary>
@@ -59,20 +63,18 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Whitespace karakterlerini atlar, keyword / identifier ayrımını yapar
-        /// ve statement punctuation karakterlerini ayrı token olarak üretir.
+        /// Whitespace karakterlerini atlar, keyword / identifier ayrımını yapar,
+        /// string literal ve number token'larını üretir, statement punctuation ve
+        /// operator karakterlerini ayrı token olarak temsil eder.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// DCL CUSTOMER_NAME VARCHAR(50);
+        /// PARAM = 'ABC';
         ///
         /// Bu input için sırasıyla:
-        /// - DclKeyword
         /// - Identifier
-        /// - VarcharKeyword
-        /// - OpenParenthesis
-        /// - Number
-        /// - CloseParenthesis
+        /// - Equals
+        /// - StringLiteral
         /// - Semicolon
         ///
         /// tokenları üretilir.
@@ -81,6 +83,11 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// ----------------------
         /// - ConversionService içinde parser öncesinde
         /// - Lexer ve parser unit testlerinde
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// P05 statement parser gerçek kaynak metinden statement modeli üretirken
+        /// bu token akışını kullanacaktır.
         /// </summary>
         public IReadOnlyList<Pl1Token> Tokenize()
         {
@@ -134,8 +141,60 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                         Advance();
                         break;
 
+                    case '.':
+                        AddToken(Pl1TokenKind.Dot, current.ToString());
+                        Advance();
+                        break;
+
+                    case ':':
+                        AddToken(Pl1TokenKind.Colon, current.ToString());
+                        Advance();
+                        break;
+
+                    case '=':
+                        AddToken(Pl1TokenKind.Equals, current.ToString());
+                        Advance();
+                        break;
+
+                    case '+':
+                        AddToken(Pl1TokenKind.Plus, current.ToString());
+                        Advance();
+                        break;
+
+                    case '-':
+                        AddToken(Pl1TokenKind.Minus, current.ToString());
+                        Advance();
+                        break;
+
                     case '*':
                         AddToken(Pl1TokenKind.Asterisk, current.ToString());
+                        Advance();
+                        break;
+
+                    case '/':
+                        AddToken(Pl1TokenKind.Slash, current.ToString());
+                        Advance();
+                        break;
+
+                    case '<':
+                        TokenizeLessThanOrLessThanOrEqual();
+                        break;
+
+                    case '>':
+                        TokenizeGreaterThanOrGreaterThanOrEqual();
+                        break;
+
+                    case '^':
+                        TokenizeCaretOperator();
+                        break;
+
+                    case '&':
+                        AddToken(Pl1TokenKind.Ampersand, current.ToString());
+                        Advance();
+                        break;
+
+                    case '!':
+                        AddToken(Pl1TokenKind.Exclamation, current.ToString());
                         Advance();
                         break;
 
@@ -158,8 +217,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         {
             var start = _position;
 
-            while (!IsAtEnd() &&
-                   (char.IsLetterOrDigit(Current) || Current == '_'))
+            while (!IsAtEnd() && (char.IsLetterOrDigit(Current) || Current == '_'))
             {
                 Advance();
             }
@@ -177,8 +235,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         {
             var start = _position;
 
-            while (!IsAtEnd() &&
-                   char.IsDigit(Current))
+            while (!IsAtEnd() && char.IsDigit(Current))
             {
                 Advance();
             }
@@ -196,36 +253,30 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I INIT / INITIAL ifadelerinde karakter sabitleri tek tırnak içinde
-        /// yazılır.
-        ///
-        /// Örnek PL/I:
-        ///
-        /// INIT(' ')
-        /// INIT(';')
-        /// INITIAL('ABCD')
+        /// PL/I INIT / INITIAL ifadelerinde ve statement expression'larında karakter
+        /// sabitleri tek tırnak içinde yazılır.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Kaynak metindeki tek tırnakları syntax işareti olarak kabul eder ve
-        /// token text değerine yalnızca tırnak içindeki gerçek karakter değerini
-        /// taşır.
+        /// Kaynak metindeki tek tırnakları syntax işareti olarak kabul eder ve token
+        /// text değerine yalnızca tırnak içindeki gerçek karakter değerini taşır.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// - ' '   => " "
-        /// - ';'   => ";"
+        /// - ' ' => " "
+        /// - ';' => ";"
         /// - 'ABCD' => "ABCD"
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// - ParseOptionalInitialValue içerisinde
         /// - INIT / INITIAL başlangıç değeri modellemesinde
+        /// - Statement raw expression oluşturma aşamasında
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Escape edilmiş karakter sabitleri veya daha gelişmiş string literal
-        /// parse kuralları gerektiğinde bu method genişletilecektir.
+        /// Escape edilmiş karakter sabitleri, quote restore davranışı veya daha
+        /// gelişmiş string literal parse kuralları gerektiğinde bu method
+        /// genişletilecektir.
         /// </summary>
         private void TokenizeStringLiteral()
         {
@@ -235,8 +286,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
 
             var valueStart = _position;
 
-            while (!IsAtEnd() &&
-                   Current != '\'')
+            while (!IsAtEnd() && Current != '\'')
             {
                 Advance();
             }
@@ -256,6 +306,102 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 new SourceLocation(tokenStart, 0, 0)));
         }
 
+        private void TokenizeLessThanOrLessThanOrEqual()
+        {
+            var start = _position;
+
+            Advance();
+
+            if (!IsAtEnd() && Current == '=')
+            {
+                Advance();
+
+                _tokens.Add(new Pl1Token(
+                    Pl1TokenKind.LessThanOrEqual,
+                    "<=",
+                    new SourceLocation(start, 0, 0)));
+
+                return;
+            }
+
+            _tokens.Add(new Pl1Token(
+                Pl1TokenKind.LessThan,
+                "<",
+                new SourceLocation(start, 0, 0)));
+        }
+
+        private void TokenizeGreaterThanOrGreaterThanOrEqual()
+        {
+            var start = _position;
+
+            Advance();
+
+            if (!IsAtEnd() && Current == '=')
+            {
+                Advance();
+
+                _tokens.Add(new Pl1Token(
+                    Pl1TokenKind.GreaterThanOrEqual,
+                    ">=",
+                    new SourceLocation(start, 0, 0)));
+
+                return;
+            }
+
+            _tokens.Add(new Pl1Token(
+                Pl1TokenKind.GreaterThan,
+                ">",
+                new SourceLocation(start, 0, 0)));
+        }
+
+        private void TokenizeCaretOperator()
+        {
+            var start = _position;
+
+            Advance();
+
+            if (!IsAtEnd() && Current == '=')
+            {
+                Advance();
+
+                _tokens.Add(new Pl1Token(
+                    Pl1TokenKind.NotEqual,
+                    "^=",
+                    new SourceLocation(start, 0, 0)));
+
+                return;
+            }
+
+            if (!IsAtEnd() && Current == '<')
+            {
+                Advance();
+
+                _tokens.Add(new Pl1Token(
+                    Pl1TokenKind.NotLessThan,
+                    "^<",
+                    new SourceLocation(start, 0, 0)));
+
+                return;
+            }
+
+            if (!IsAtEnd() && Current == '>')
+            {
+                Advance();
+
+                _tokens.Add(new Pl1Token(
+                    Pl1TokenKind.NotGreaterThan,
+                    "^>",
+                    new SourceLocation(start, 0, 0)));
+
+                return;
+            }
+
+            _tokens.Add(new Pl1Token(
+                Pl1TokenKind.Caret,
+                "^",
+                new SourceLocation(start, 0, 0)));
+        }
+
         /// <summary>
         /// Identifier olarak okunan metnin PL/I keyword olup olmadığını belirler.
         ///
@@ -271,23 +417,13 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
+        /// - DCL / DECLARE
         /// - FIXED DECIMAL
-        /// - FIXED DEC
-        /// - DECIMAL FIXED
-        /// - DEC FIXED
-        /// - FIXED BINARY
-        /// - FIXED BIN
-        /// - BINARY FIXED
-        /// - BIN FIXED
-        /// - PIC
-        /// - PICTURE
-        /// - BIT
-        /// - DIM
-        /// - DIMENSION
-        /// - FLOAT
-        /// - REAL
-        /// - DOUBLE
-        /// - PRECISION
+        /// - PIC / PICTURE
+        /// - CALL
+        /// - IF / THEN / ELSE
+        /// - DO / END
+        /// - WHILE / UNTIL
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -295,7 +431,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Yeni keyword synonym destekleri eklendikçe bu mapping genişletilecektir.
+        /// Yeni PL/I keyword synonym destekleri eklendikçe bu mapping genişletilecektir.
         /// </summary>
         private static Pl1TokenKind GetKeywordKind(string text)
         {
@@ -303,25 +439,42 @@ namespace LegacyCodeTransformer.Pl1.Lexing
             {
                 "DCL" => Pl1TokenKind.DclKeyword,
                 "DECLARE" => Pl1TokenKind.DclKeyword,
+
                 "FIXED" => Pl1TokenKind.FixedKeyword,
                 "DECIMAL" => Pl1TokenKind.DecimalKeyword,
                 "DEC" => Pl1TokenKind.DecKeyword,
                 "BINARY" => Pl1TokenKind.BinaryKeyword,
                 "BIN" => Pl1TokenKind.BinKeyword,
+
                 "CHAR" => Pl1TokenKind.CharKeyword,
                 "CHARACTER" => Pl1TokenKind.CharacterKeyword,
                 "VARCHAR" => Pl1TokenKind.VarcharKeyword,
+
                 "PIC" => Pl1TokenKind.PicKeyword,
                 "PICTURE" => Pl1TokenKind.PictureKeyword,
+
                 "INIT" => Pl1TokenKind.InitKeyword,
                 "INITIAL" => Pl1TokenKind.InitialKeyword,
+
                 "BIT" => Pl1TokenKind.BitKeyword,
+
                 "DIM" => Pl1TokenKind.DimKeyword,
                 "DIMENSION" => Pl1TokenKind.DimensionKeyword,
+
                 "FLOAT" => Pl1TokenKind.FloatKeyword,
                 "REAL" => Pl1TokenKind.RealKeyword,
                 "DOUBLE" => Pl1TokenKind.DoubleKeyword,
                 "PRECISION" => Pl1TokenKind.PrecisionKeyword,
+
+                "CALL" => Pl1TokenKind.CallKeyword,
+                "IF" => Pl1TokenKind.IfKeyword,
+                "THEN" => Pl1TokenKind.ThenKeyword,
+                "ELSE" => Pl1TokenKind.ElseKeyword,
+                "DO" => Pl1TokenKind.DoKeyword,
+                "END" => Pl1TokenKind.EndKeyword,
+                "WHILE" => Pl1TokenKind.WhileKeyword,
+                "UNTIL" => Pl1TokenKind.UntilKeyword,
+
                 _ => Pl1TokenKind.Identifier
             };
         }
@@ -336,10 +489,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 new SourceLocation(_position, 0, 0)));
         }
 
-        private char Current =>
-            IsAtEnd()
-                ? '\0'
-                : _source[_position];
+        private char Current => IsAtEnd() ? '\0' : _source[_position];
 
         private bool IsAtEnd()
         {
@@ -350,7 +500,5 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         {
             _position++;
         }
-
-        
     }
 }

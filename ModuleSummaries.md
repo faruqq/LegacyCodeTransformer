@@ -1996,3 +1996,67 @@ PL/I syntax traversal işlemleri aşağıdaki standart altyapıya kavuştu:
 
 ## Sonraki Adım
 P05 kapsamında statement syntax model hiyerarşisi oluşturulacaktır.
+
+## P05 - Statement Syntax Model Foundation
+
+P05 kapsamında PL/I declaration dışındaki executable statement desteği için ilk syntax model hiyerarşisi oluşturuldu.
+
+Eklenen temel modeller:
+
+- Pl1Statement
+- Pl1Expression
+- Pl1RawExpression
+- Pl1AssignmentStatement
+- Pl1CallStatement
+- Pl1IfStatement
+- Pl1DoStatement
+- Pl1DoStatementKind
+- Pl1BlockStatement
+
+Pl1SyntaxTree geriye dönük uyum korunarak Statements listesi taşıyacak şekilde genişletildi.
+
+Pl1SyntaxVisitor ve Pl1SyntaxWalker statement/expression modellerini destekleyecek şekilde güncellendi.
+
+Pl1SyntaxWalkerTests statement traversal senaryolarıyla genişletildi.
+
+Bu adım parser davranışını değiştirmez. Ama P05 statement parser, semantic analyzer ve ileride EGL statement generator çalışmaları için temel oluşturur.
+
+## P05.2 - Statement Parser Foundation
+
+P05.2 kapsamında PL/I executable statement parser altyapısının ilk foundation adımı tamamlandı.
+
+Eklenen production bileşenleri:
+
+- StatementDispatcher
+- StatementParser
+
+Güncellenen production bileşenleri:
+
+- Pl1Parser
+
+StatementDispatcher, statement başlangıç token'larını merkezi olarak tanıyacak şekilde tasarlandı.
+
+İlk tanınan statement başlangıçları:
+
+- Identifier
+- CALL
+- IF
+- DO
+
+StatementParser, concrete statement parser modülleri henüz eklenmeden güvenli recovery davranışı sağlayacak şekilde eklendi.
+
+P05.2 aşamasında statement başlangıçları tanınır, diagnostic üretilir ve statement semicolon'a kadar güvenli şekilde atlanır.
+
+Pl1Parser, declaration dışındaki statement başlangıçlarını artık top-level unsupported token olarak değerlendirmek yerine StatementParser'a yönlendirecek şekilde güncellendi.
+
+Eklenen test kapsamı:
+
+- StatementDispatcher statement başlangıç testleri
+- StatementDispatcher family name testleri
+- StatementParser unsupported concrete parser diagnostic testleri
+- StatementParser semicolon recovery testleri
+- Pl1Parser statement routing testleri
+
+Bu adım henüz Assignment, CALL, IF veya DO statement modelleri üretmez.
+
+Concrete statement model üretimi P05.3 ve P05.4 içinde eklenecektir.
