@@ -4,7 +4,7 @@ using LegacyCodeTransformer.Pl1.Parsing.Helpers;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class InitialValueParserTests
+public sealed class InitialValueParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// INIT string literal değerinin Pl1InitialValue olarak parse edildiğini doğrular.

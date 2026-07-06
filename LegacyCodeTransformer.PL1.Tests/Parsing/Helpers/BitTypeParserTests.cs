@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class BitTypeParserTests
+public sealed class BitTypeParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// BIT token akışından Pl1BitType üretildiğini doğrular.

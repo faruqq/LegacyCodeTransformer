@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class VariableDeclarationParserTests
+public sealed class VariableDeclarationParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// Basic variable declaration bilgisinin Pl1VariableDeclaration olarak parse edildiğini doğrular.

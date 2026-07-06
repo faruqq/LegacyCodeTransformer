@@ -1871,3 +1871,27 @@ Bu refactor ile parser helper result modellerinin tamamı ortak HelperParseResul
 
 ## Sonraki Adım
 Parser test altyapısı sadeleştirilecek ve ardından parser infrastructure refactor kapanış değerlendirmesi yapılacaktır.
+
+---
+# 2026-07-05 — P04-R17 Parser Test Base Refactor
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+Parser helper testlerinde tekrar eden lexer, token, diagnostic bag ve parser oluşturma kodları ortak ParserHelperTestBase sınıfına taşındı.
+
+## Yapılanlar
+- ParserHelperTestBase eklendi.
+- Helper parser testlerinde ortak ParseContext oluşturma altyapısı sağlandı.
+- Diagnostic kontrolü context üzerinden standartlaştırıldı.
+- CharacterTypeParserTests örnek olarak sadeleştirildi.
+- Diğer helper parser testleri için aynı dönüşüm kuralı belirlendi.
+- Production davranış değişikliği yapılmadı.
+
+## İlgili Kararlar
+- Decision 054 - Assistant output delivery standard korunacaktır.
+- Decision 058 - Parser Infrastructure Components
+
+## Sonraki Adım
+Parser infrastructure refactor kapanış değerlendirmesi yapılacaktır.

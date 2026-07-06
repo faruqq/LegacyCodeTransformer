@@ -6,7 +6,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class StructureParserTests
+public sealed class StructureParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// Basic structure declaration bilgisinin Pl1StructureDeclaration olarak parse edildiğini doğrular.

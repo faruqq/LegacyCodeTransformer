@@ -1,11 +1,8 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class CharacterTypeParserTests
+public sealed class CharacterTypeParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// CHAR token akışından Pl1CharacterType üretildiğini doğrular.
@@ -22,18 +19,15 @@ public sealed class CharacterTypeParserTests
     [Fact]
     public void ParseCharacterType_WithCharKeyword_ShouldCreateCharacterType()
     {
-        var tokens = new Pl1Lexer("CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new CharacterTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateCharacterTypeParser(
+            "CHAR(08);",
+            out var context);
 
         var result = parser.ParseCharacterType();
 
         var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -51,18 +45,15 @@ public sealed class CharacterTypeParserTests
     [Fact]
     public void ParseCharacterType_WithCharacterKeyword_ShouldCreateCharacterType()
     {
-        var tokens = new Pl1Lexer("CHARACTER(25);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new CharacterTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateCharacterTypeParser(
+            "CHARACTER(25);",
+            out var context);
 
         var result = parser.ParseCharacterType();
 
         var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(25, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -80,17 +71,14 @@ public sealed class CharacterTypeParserTests
     [Fact]
     public void ParseVarcharType_WithVarcharKeyword_ShouldCreateVarcharType()
     {
-        var tokens = new Pl1Lexer("VARCHAR(50);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new CharacterTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateCharacterTypeParser(
+            "VARCHAR(50);",
+            out var context);
 
         var result = parser.ParseVarcharType();
 
         var dataType = Assert.IsType<Pl1VarcharType>(result.Value);
         Assert.Equal(50, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

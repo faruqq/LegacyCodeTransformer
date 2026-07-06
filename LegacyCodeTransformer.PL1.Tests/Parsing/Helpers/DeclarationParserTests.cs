@@ -6,7 +6,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class DeclarationParserTests
+public sealed class DeclarationParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// DCL sonrasında Identifier geldiğinde variable declaration parser'a yönlendirildiğini doğrular.

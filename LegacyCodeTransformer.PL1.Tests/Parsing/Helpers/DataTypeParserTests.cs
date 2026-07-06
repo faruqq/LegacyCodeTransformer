@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class DataTypeParserTests
+public sealed class DataTypeParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// CHAR token akışının Pl1CharacterType modeline yönlendirildiğini doğrular.

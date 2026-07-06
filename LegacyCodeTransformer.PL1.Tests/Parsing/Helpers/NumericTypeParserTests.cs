@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class NumericTypeParserTests
+public sealed class NumericTypeParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// FIXED DECIMAL token akışından Pl1FixedDecimalType üretildiğini doğrular.

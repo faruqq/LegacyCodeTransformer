@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Parsing.Helpers;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class DimensionParserTests
+public sealed class DimensionParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// Name-based array size bilgisinin parse edildiğini doğrular.

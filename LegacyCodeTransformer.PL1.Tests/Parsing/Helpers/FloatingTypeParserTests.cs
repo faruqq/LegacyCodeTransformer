@@ -5,7 +5,7 @@ using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
-public sealed class FloatingTypeParserTests
+public sealed class FloatingTypeParserTests : ParserHelperTestBase
 {
     /// <summary>
     /// FLOAT token akışından Pl1FloatingType üretildiğini doğrular.
