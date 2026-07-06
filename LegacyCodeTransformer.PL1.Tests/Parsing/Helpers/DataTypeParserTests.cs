@@ -28,7 +28,7 @@ public sealed class DataTypeParserTests
 
         var result = parser.Parse();
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(8, dataType.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
@@ -54,7 +54,7 @@ public sealed class DataTypeParserTests
 
         var result = parser.Parse();
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);
@@ -81,7 +81,7 @@ public sealed class DataTypeParserTests
 
         var result = parser.Parse();
 
-        var dataType = Assert.IsType<Pl1PictureType>(result.DataType);
+        var dataType = Assert.IsType<Pl1PictureType>(result.Value);
         Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
         Assert.Equal(5, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
@@ -109,7 +109,7 @@ public sealed class DataTypeParserTests
 
         var result = parser.Parse();
 
-        var dataType = Assert.IsType<Pl1BitType>(result.DataType);
+        var dataType = Assert.IsType<Pl1BitType>(result.Value);
         Assert.Equal(8, dataType.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
@@ -135,7 +135,7 @@ public sealed class DataTypeParserTests
 
         var result = parser.Parse();
 
-        var dataType = Assert.IsType<Pl1FloatingType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
         Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
         Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
         Assert.Equal(53, dataType.Precision);

@@ -16,6 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// BIT keyword ve length parse sorumluluğunu Pl1Parser dışına taşır.
 /// Ortak token okuma davranışını ParserBase üzerinden kullanır.
+/// Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -73,7 +74,7 @@ internal sealed class BitTypeParser : ParserBase
     /// ----------------------
     /// BIT length validation ve hedef dile özel BIT mapping kararları burada genişletilebilir.
     /// </summary>
-    public BitTypeParseResult Parse()
+    public HelperParseResult<Pl1BitType> Parse()
     {
         var bitToken = Consume(
             Pl1TokenKind.BitKeyword,
@@ -93,7 +94,7 @@ internal sealed class BitTypeParser : ParserBase
 
         if (bitToken is null || lengthToken is null)
         {
-            return new BitTypeParseResult(
+            return new HelperParseResult<Pl1BitType>(
                 null,
                 Position);
         }
@@ -105,30 +106,15 @@ internal sealed class BitTypeParser : ParserBase
                     "BIT uzunluk değeri sayısal olmalıdır",
                     lengthToken));
 
-            return new BitTypeParseResult(
+            return new HelperParseResult<Pl1BitType>(
                 null,
                 Position);
         }
 
-        return new BitTypeParseResult(
+        return new HelperParseResult<Pl1BitType>(
             new Pl1BitType(
                 length,
                 bitToken.Location),
             Position);
-    }
-}
-
-internal sealed class BitTypeParseResult
-{
-    public Pl1BitType? DataType { get; }
-
-    public int Position { get; }
-
-    public BitTypeParseResult(
-        Pl1BitType? dataType,
-        int position)
-    {
-        DataType = dataType;
-        Position = position;
     }
 }

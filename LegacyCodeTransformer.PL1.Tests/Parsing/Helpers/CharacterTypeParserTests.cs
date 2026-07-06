@@ -31,7 +31,7 @@ public sealed class CharacterTypeParserTests
 
         var result = parser.ParseCharacterType();
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(8, dataType.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
@@ -60,7 +60,7 @@ public sealed class CharacterTypeParserTests
 
         var result = parser.ParseCharacterType();
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(25, dataType.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
@@ -89,7 +89,7 @@ public sealed class CharacterTypeParserTests
 
         var result = parser.ParseVarcharType();
 
-        var dataType = Assert.IsType<Pl1VarcharType>(result.DataType);
+        var dataType = Assert.IsType<Pl1VarcharType>(result.Value);
         Assert.Equal(50, dataType.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }

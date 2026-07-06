@@ -97,7 +97,7 @@ internal sealed class DataTypeParser : ParserBase
     /// Yeni data type aileleri eklendiğinde Pl1Parser veya declaration parser sınıfları
     /// büyümeden bu dispatch sınıfı genişletilir.
     /// </summary>
-    public DataTypeParseResult Parse()
+    public HelperParseResult<Pl1DataType> Parse()
     {
         if (Current.Kind == Pl1TokenKind.FixedKeyword)
         {
@@ -138,8 +138,8 @@ internal sealed class DataTypeParser : ParserBase
             var parser = new BitTypeParser(Context);
             var result = parser.Parse();
 
-            return new DataTypeParseResult(
-                result.DataType,
+            return new HelperParseResult<Pl1DataType>(
+                result.Value,
                 Position);
         }
 
@@ -150,8 +150,8 @@ internal sealed class DataTypeParser : ParserBase
             var parser = new FloatingTypeParser(Context);
             var result = parser.Parse();
 
-            return new DataTypeParseResult(
-                result.DataType,
+            return new HelperParseResult<Pl1DataType>(
+                result.Value,
                 Position);
         }
 
@@ -160,7 +160,7 @@ internal sealed class DataTypeParser : ParserBase
             $"Beklenen PL/I veri tipi bulunamadı. Gelen token: {Current.Text}",
             Current.Location));
 
-        return new DataTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             null,
             Position);
     }
@@ -191,14 +191,14 @@ internal sealed class DataTypeParser : ParserBase
     /// ----------------------
     /// Numeric parser davranışı genişledikçe DataTypeParser içindeki tekrarları düşük tutar.
     /// </summary>
-    private DataTypeParseResult ParseWithNumericParser(
-        Func<NumericTypeParser, NumericTypeParseResult> parse)
+    private HelperParseResult<Pl1DataType> ParseWithNumericParser(
+    Func<NumericTypeParser, HelperParseResult<Pl1DataType>> parse)
     {
         var parser = new NumericTypeParser(Context);
         var result = parse(parser);
 
-        return new DataTypeParseResult(
-            result.DataType,
+        return new HelperParseResult<Pl1DataType>(
+            result.Value,
             Position);
     }
 
@@ -228,14 +228,14 @@ internal sealed class DataTypeParser : ParserBase
     /// ----------------------
     /// Character-family syntax genişledikçe DataTypeParser içindeki tekrarları düşük tutar.
     /// </summary>
-    private DataTypeParseResult ParseWithCharacterParser(
-        Func<CharacterTypeParser, CharacterTypeParseResult> parse)
+    private HelperParseResult<Pl1DataType> ParseWithCharacterParser(
+        Func<CharacterTypeParser, HelperParseResult<Pl1DataType>> parse)
     {
         var parser = new CharacterTypeParser(Context);
         var result = parse(parser);
 
-        return new DataTypeParseResult(
-            result.DataType,
+        return new HelperParseResult<Pl1DataType>(
+            result.Value,
             Position);
     }
 
@@ -269,7 +269,7 @@ internal sealed class DataTypeParser : ParserBase
     /// PIC token okuma davranışı tüm declaration parser akışlarında aynı şekilde
     /// yeniden kullanılabilir.
     /// </summary>
-    private DataTypeParseResult ParsePictureType()
+    private HelperParseResult<Pl1DataType> ParsePictureType()
     {
         var pictureToken = Current;
 
@@ -285,7 +285,7 @@ internal sealed class DataTypeParser : ParserBase
                 $"PIC veya PICTURE bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
 
-            return new DataTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 null,
                 Position);
         }
@@ -296,30 +296,15 @@ internal sealed class DataTypeParser : ParserBase
 
         if (patternToken is null)
         {
-            return new DataTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 null,
                 Position);
         }
 
-        return new DataTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             PictureTypeParser.Parse(
                 patternToken.Text,
                 pictureToken.Location),
             Position);
-    }
-}
-
-internal sealed class DataTypeParseResult
-{
-    public Pl1DataType? DataType { get; }
-
-    public int Position { get; }
-
-    public DataTypeParseResult(
-        Pl1DataType? dataType,
-        int position)
-    {
-        DataType = dataType;
-        Position = position;
     }
 }

@@ -31,8 +31,8 @@ public sealed class BitTypeParserTests
 
         var result = parser.Parse();
 
-        Assert.NotNull(result.DataType);
-        Assert.Equal(1, result.DataType!.Length);
+        Assert.NotNull(result.Value);
+        Assert.Equal(1, result.Value!.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
 
@@ -60,8 +60,8 @@ public sealed class BitTypeParserTests
 
         var result = parser.Parse();
 
-        Assert.NotNull(result.DataType);
-        Assert.Equal(8, result.DataType!.Length);
+        Assert.NotNull(result.Value);
+        Assert.Equal(8, result.Value!.Length);
         Assert.Empty(diagnostics.Diagnostics);
     }
 }

@@ -83,7 +83,7 @@ internal sealed class FloatingTypeParser : ParserBase
     /// ----------------------
     /// Floating type validasyonları ve mapping öncesi semantic enrichment bu method üzerinde genişletilebilir.
     /// </summary>
-    public FloatingTypeParseResult Parse()
+    public HelperParseResult<Pl1FloatingType> Parse()
     {
         var typeToken = Current;
 
@@ -91,7 +91,7 @@ internal sealed class FloatingTypeParser : ParserBase
         {
             Advance();
 
-            return new FloatingTypeParseResult(
+            return new HelperParseResult<Pl1FloatingType>(
                 new Pl1FloatingType(
                     Pl1FloatingTypeKind.Real,
                     Pl1FloatingBase.Unspecified,
@@ -109,7 +109,7 @@ internal sealed class FloatingTypeParser : ParserBase
                 Advance();
             }
 
-            return new FloatingTypeParseResult(
+            return new HelperParseResult<Pl1FloatingType>(
                 new Pl1FloatingType(
                     Pl1FloatingTypeKind.DoublePrecision,
                     Pl1FloatingBase.Unspecified,
@@ -125,7 +125,7 @@ internal sealed class FloatingTypeParser : ParserBase
                 $"FLOAT, REAL veya DOUBLE bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
 
-            return new FloatingTypeParseResult(
+            return new HelperParseResult<Pl1FloatingType>(
                 null,
                 Position);
         }
@@ -150,7 +150,7 @@ internal sealed class FloatingTypeParser : ParserBase
         var precision = ParseOptionalParenthesizedPrecision(
             "FLOAT precision değeri bekleniyordu.");
 
-        return new FloatingTypeParseResult(
+        return new HelperParseResult<Pl1FloatingType>(
             new Pl1FloatingType(
                 Pl1FloatingTypeKind.Float,
                 floatingBase,
@@ -217,20 +217,5 @@ internal sealed class FloatingTypeParser : ParserBase
                 precisionToken));
 
         return null;
-    }
-}
-
-internal sealed class FloatingTypeParseResult
-{
-    public Pl1FloatingType? DataType { get; }
-
-    public int Position { get; }
-
-    public FloatingTypeParseResult(
-        Pl1FloatingType? dataType,
-        int position)
-    {
-        DataType = dataType;
-        Position = position;
     }
 }

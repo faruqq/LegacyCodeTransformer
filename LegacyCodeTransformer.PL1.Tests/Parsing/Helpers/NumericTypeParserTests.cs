@@ -28,7 +28,7 @@ public sealed class NumericTypeParserTests
 
         var result = parser.ParseFixedBasedType();
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Null(dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);
@@ -55,7 +55,7 @@ public sealed class NumericTypeParserTests
 
         var result = parser.ParseFixedBasedType();
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(17, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);
@@ -82,7 +82,7 @@ public sealed class NumericTypeParserTests
 
         var result = parser.ParseDecimalBasedType();
 
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(8, dataType.Precision);
         Assert.Null(dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);
@@ -109,7 +109,7 @@ public sealed class NumericTypeParserTests
 
         var result = parser.ParseFixedBasedType();
 
-        var dataType = Assert.IsType<Pl1FixedBinaryType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedBinaryType>(result.Value);
         Assert.Equal(31, dataType.Precision);
         Assert.Null(dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);
@@ -136,7 +136,7 @@ public sealed class NumericTypeParserTests
 
         var result = parser.ParseBinaryBasedType();
 
-        var dataType = Assert.IsType<Pl1FixedBinaryType>(result.DataType);
+        var dataType = Assert.IsType<Pl1FixedBinaryType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
         Assert.Empty(diagnostics.Diagnostics);

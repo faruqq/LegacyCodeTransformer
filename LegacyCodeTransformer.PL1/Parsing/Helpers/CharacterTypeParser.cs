@@ -16,6 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// CHAR, CHARACTER ve VARCHAR parsing davranışını Pl1Parser dışına taşır.
 /// Ortak token okuma davranışını ParserBase üzerinden kullanır.
+/// Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -74,7 +75,7 @@ internal sealed class CharacterTypeParser : ParserBase
     /// ----------------------
     /// Character-family veri tipleri genişledikçe aynı helper altında yönetilebilir.
     /// </summary>
-    public CharacterTypeParseResult ParseCharacterType()
+    public HelperParseResult<Pl1DataType> ParseCharacterType()
     {
         var typeToken = Current;
 
@@ -97,12 +98,12 @@ internal sealed class CharacterTypeParser : ParserBase
 
         if (!length.HasValue)
         {
-            return new CharacterTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 null,
                 Position);
         }
 
-        return new CharacterTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             new Pl1CharacterType(
                 length.Value,
                 typeToken.Location),
@@ -134,7 +135,7 @@ internal sealed class CharacterTypeParser : ParserBase
     /// VARCHAR mapping, sqlRecord column metadata ve length validation davranışları
     /// bu method üzerinde genişletilebilir.
     /// </summary>
-    public CharacterTypeParseResult ParseVarcharType()
+    public HelperParseResult<Pl1DataType> ParseVarcharType()
     {
         var varcharToken = Consume(
             Pl1TokenKind.VarcharKeyword,
@@ -146,12 +147,12 @@ internal sealed class CharacterTypeParser : ParserBase
 
         if (varcharToken is null || !length.HasValue)
         {
-            return new CharacterTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 null,
                 Position);
         }
 
-        return new CharacterTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             new Pl1VarcharType(
                 length.Value,
                 varcharToken.Location),
@@ -216,20 +217,5 @@ internal sealed class CharacterTypeParser : ParserBase
                 lengthToken));
 
         return null;
-    }
-}
-
-internal sealed class CharacterTypeParseResult
-{
-    public Pl1DataType? DataType { get; }
-
-    public int Position { get; }
-
-    public CharacterTypeParseResult(
-        Pl1DataType? dataType,
-        int position)
-    {
-        DataType = dataType;
-        Position = position;
     }
 }

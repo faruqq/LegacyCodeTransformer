@@ -356,7 +356,7 @@ internal sealed class StructureParser : ParserBase
         var parser = new DataTypeParser(Context);
         var result = parser.Parse();
 
-        return result.DataType;
+        return result.Value;
     }
 
     /// <summary>

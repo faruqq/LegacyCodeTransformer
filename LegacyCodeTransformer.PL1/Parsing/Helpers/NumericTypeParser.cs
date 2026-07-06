@@ -83,7 +83,7 @@ internal sealed class NumericTypeParser : ParserBase
     /// ----------------------
     /// FIXED FLOAT gibi farklı numeric family varyasyonları gerektiğinde bu dispatch noktası genişletilebilir.
     /// </summary>
-    public NumericTypeParseResult ParseFixedBasedType()
+    public HelperParseResult<Pl1DataType> ParseFixedBasedType()
     {
         var fixedToken = Consume(
             Pl1TokenKind.FixedKeyword,
@@ -95,7 +95,7 @@ internal sealed class NumericTypeParser : ParserBase
             var dataType = ParseFixedDecimalTypeAfterPrefix(
                 fixedToken?.Location ?? SourceLocation.Unknown);
 
-            return new NumericTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 dataType,
                 Position);
         }
@@ -106,7 +106,7 @@ internal sealed class NumericTypeParser : ParserBase
             var dataType = ParseFixedBinaryTypeAfterPrefix(
                 fixedToken?.Location ?? SourceLocation.Unknown);
 
-            return new NumericTypeParseResult(
+            return new HelperParseResult<Pl1DataType>(
                 dataType,
                 Position);
         }
@@ -116,7 +116,7 @@ internal sealed class NumericTypeParser : ParserBase
             $"FIXED sonrasında DECIMAL, DEC, BINARY veya BIN bekleniyordu. Gelen token: {Current.Text}",
             Current.Location));
 
-        return new NumericTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             null,
             Position);
     }
@@ -145,7 +145,7 @@ internal sealed class NumericTypeParser : ParserBase
     /// ----------------------
     /// DECIMAL FLOAT gibi ileride desteklenebilecek decimal family tipler için ayrı dispatch davranışına temel olur.
     /// </summary>
-    public NumericTypeParseResult ParseDecimalBasedType()
+    public HelperParseResult<Pl1DataType> ParseDecimalBasedType()
     {
         var decimalToken = Current;
         Advance();
@@ -157,7 +157,7 @@ internal sealed class NumericTypeParser : ParserBase
         var dataType = ParseDecimalPrecisionAndScale(
             decimalToken.Location);
 
-        return new NumericTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             dataType,
             Position);
     }
@@ -187,7 +187,7 @@ internal sealed class NumericTypeParser : ParserBase
     /// ----------------------
     /// Binary precision / scale validation veya unsupported binary diagnostic kuralları bu method üzerinde genişletilebilir.
     /// </summary>
-    public NumericTypeParseResult ParseBinaryBasedType()
+    public HelperParseResult<Pl1DataType> ParseBinaryBasedType()
     {
         var binaryToken = Current;
         Advance();
@@ -199,7 +199,7 @@ internal sealed class NumericTypeParser : ParserBase
         var dataType = ParseBinaryPrecisionAndScale(
             binaryToken.Location);
 
-        return new NumericTypeParseResult(
+        return new HelperParseResult<Pl1DataType>(
             dataType,
             Position);
     }
@@ -449,20 +449,5 @@ internal sealed class NumericTypeParser : ParserBase
             precision,
             scale,
             location);
-    }
-}
-
-internal sealed class NumericTypeParseResult
-{
-    public Pl1DataType? DataType { get; }
-
-    public int Position { get; }
-
-    public NumericTypeParseResult(
-        Pl1DataType? dataType,
-        int position)
-    {
-        DataType = dataType;
-        Position = position;
     }
 }

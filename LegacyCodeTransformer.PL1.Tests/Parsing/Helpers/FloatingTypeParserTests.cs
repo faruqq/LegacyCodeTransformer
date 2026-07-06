@@ -34,10 +34,10 @@ public sealed class FloatingTypeParserTests
         var result = parser.Parse();
 
         // Assert
-        Assert.NotNull(result.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.DataType!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.DataType.Base);
-        Assert.Null(result.DataType.Precision);
+        Assert.NotNull(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
+        Assert.Null(result.Value.Precision);
         Assert.Empty(diagnostics.Diagnostics);
     }
 
@@ -68,10 +68,10 @@ public sealed class FloatingTypeParserTests
         var result = parser.Parse();
 
         // Assert
-        Assert.NotNull(result.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.DataType!.Kind);
-        Assert.Equal(Pl1FloatingBase.Decimal, result.DataType.Base);
-        Assert.Equal(16, result.DataType.Precision);
+        Assert.NotNull(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
+        Assert.Equal(Pl1FloatingBase.Decimal, result.Value.Base);
+        Assert.Equal(16, result.Value.Precision);
         Assert.Empty(diagnostics.Diagnostics);
     }
 
@@ -102,10 +102,10 @@ public sealed class FloatingTypeParserTests
         var result = parser.Parse();
 
         // Assert
-        Assert.NotNull(result.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.DataType!.Kind);
-        Assert.Equal(Pl1FloatingBase.Binary, result.DataType.Base);
-        Assert.Equal(53, result.DataType.Precision);
+        Assert.NotNull(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
+        Assert.Equal(Pl1FloatingBase.Binary, result.Value.Base);
+        Assert.Equal(53, result.Value.Precision);
         Assert.Empty(diagnostics.Diagnostics);
     }
 
@@ -136,10 +136,10 @@ public sealed class FloatingTypeParserTests
         var result = parser.Parse();
 
         // Assert
-        Assert.NotNull(result.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Real, result.DataType!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.DataType.Base);
-        Assert.Null(result.DataType.Precision);
+        Assert.NotNull(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Real, result.Value!.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
+        Assert.Null(result.Value.Precision);
         Assert.Empty(diagnostics.Diagnostics);
     }
 
@@ -170,10 +170,10 @@ public sealed class FloatingTypeParserTests
         var result = parser.Parse();
 
         // Assert
-        Assert.NotNull(result.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, result.DataType!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.DataType.Base);
-        Assert.Null(result.DataType.Precision);
+        Assert.NotNull(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, result.Value!.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
+        Assert.Null(result.Value.Precision);
         Assert.Empty(diagnostics.Diagnostics);
     }
 }
