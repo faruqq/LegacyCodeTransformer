@@ -2197,3 +2197,28 @@ Doğrulanan temel davranışlar:
 - Pl1Parser declaration ve executable statement modellerini aynı Pl1SyntaxTree içinde taşıyabilir.
 
 P05 sonunda parser declaration dışındaki ilk executable statement ailesini destekleyecek seviyeye ulaşmıştır.
+
+## P05.6 - Statement Visitor Walker Integration Verification
+
+P05.6 kapsamında mevcut visitor/walker altyapısının statement modelleriyle uyumu doğrulandı.
+
+Production kodunda değişiklik yapılmadı.
+
+Doğrulanan mevcut davranışlar:
+
+- Pl1SyntaxVisitor Assignment, CALL, IF, DO, Block ve RawExpression dispatch desteğine sahiptir.
+- Pl1SyntaxWalker SyntaxTree.Statements listesini dolaşır.
+- Pl1SyntaxWalker Assignment target/value expression modellerini dolaşır.
+- Pl1SyntaxWalker CALL argument expression listesini dolaşır.
+- Pl1SyntaxWalker IF condition, THEN ve ELSE statement modellerini dolaşır.
+- Pl1SyntaxWalker DO condition ve body block modellerini dolaşır.
+- Pl1SyntaxWalker nested DO block hiyerarşisini recursive olarak dolaşır.
+
+Eklenen test kapsamı:
+
+- IF THEN ELSE traversal verification
+- DO WHILE condition/body traversal verification
+- Nested DO block traversal verification
+- CALL argument expression traversal verification
+
+Bu milestone sonunda statement transpiler foundation öncesinde visitor/walker altyapısının yeterli olduğu doğrulanmıştır.

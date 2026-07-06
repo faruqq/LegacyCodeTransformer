@@ -255,6 +255,188 @@ public sealed class Pl1SyntaxWalkerTests
         Assert.Equal(1, walker.RawExpressionCount);
     }
 
+    /// <summary>
+    /// Syntax walker'ın IF THEN ELSE statement hiyerarşisini eksiksiz dolaştığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Walker, IF condition expression'ı, THEN statement'ı ve ELSE statement'ı recursive
+    /// olarak ziyaret etmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde IF A = B THEN CALL PROC1; ELSE CALL PROC2; karşılığı oluşturulur.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// IfStatementCount 1, CallStatementCount 2 ve RawExpressionCount 1 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Visit_WithIfThenElseStatement_ShouldVisitConditionThenAndElse()
+    {
+        var syntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1IfStatement(
+                condition: new Pl1RawExpression("A = B", SourceLocation.Unknown),
+                thenStatement: new Pl1CallStatement(
+                    procedureName: "PROC1",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                elseStatement: new Pl1CallStatement(
+                    procedureName: "PROC2",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var walker = new CountingSyntaxWalker();
+
+        walker.Visit(syntaxTree);
+
+        Assert.Equal(1, walker.IfStatementCount);
+        Assert.Equal(2, walker.CallStatementCount);
+        Assert.Equal(1, walker.RawExpressionCount);
+    }
+
+    /// <summary>
+    /// Syntax walker'ın DO body içindeki nested statement hiyerarşisini dolaştığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Walker, DO statement condition alanını, body block'unu ve block içindeki child
+    /// statement listesini recursive olarak ziyaret etmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END; karşılığı oluşturulur.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// DoStatementCount 1, BlockStatementCount 1, CallStatementCount 1 ve RawExpressionCount 1 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Visit_WithDoWhileStatement_ShouldVisitConditionBodyAndChildStatement()
+    {
+        var syntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1DoStatement(
+                kind: Pl1DoStatementKind.While,
+                condition: new Pl1RawExpression("SQLCODE = 0", SourceLocation.Unknown),
+                body: new Pl1BlockStatement(
+                    statements: new[]
+                    {
+                        new Pl1CallStatement(
+                            procedureName: "FETCH_CURSOR",
+                            arguments: null,
+                            location: SourceLocation.Unknown)
+                    },
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var walker = new CountingSyntaxWalker();
+
+        walker.Visit(syntaxTree);
+
+        Assert.Equal(1, walker.DoStatementCount);
+        Assert.Equal(1, walker.BlockStatementCount);
+        Assert.Equal(1, walker.CallStatementCount);
+        Assert.Equal(1, walker.RawExpressionCount);
+    }
+
+    /// <summary>
+    /// Syntax walker'ın nested DO block hiyerarşisini recursive dolaştığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Walker, DO body içinde tekrar DO statement bulunduğunda iç DO block'a kadar
+    /// recursive olarak inmeli ve child statement'ları ziyaret etmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DO; DO; CALL PROC1; END; END; karşılığı oluşturulur.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// DoStatementCount 2, BlockStatementCount 2 ve CallStatementCount 1 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Visit_WithNestedDoBlock_ShouldVisitNestedStatementHierarchy()
+    {
+        var syntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1DoStatement(
+                kind: Pl1DoStatementKind.Block,
+                condition: null,
+                body: new Pl1BlockStatement(
+                    statements: new[]
+                    {
+                        new Pl1DoStatement(
+                            kind: Pl1DoStatementKind.Block,
+                            condition: null,
+                            body: new Pl1BlockStatement(
+                                statements: new[]
+                                {
+                                    new Pl1CallStatement(
+                                        procedureName: "PROC1",
+                                        arguments: null,
+                                        location: SourceLocation.Unknown)
+                                },
+                                location: SourceLocation.Unknown),
+                            location: SourceLocation.Unknown)
+                    },
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var walker = new CountingSyntaxWalker();
+
+        walker.Visit(syntaxTree);
+
+        Assert.Equal(2, walker.DoStatementCount);
+        Assert.Equal(2, walker.BlockStatementCount);
+        Assert.Equal(1, walker.CallStatementCount);
+    }
+
+    /// <summary>
+    /// Syntax walker'ın CALL argument expression listesini dolaştığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Walker, Pl1CallStatement argument listesindeki her expression node'unu ziyaret etmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde CALL PROC1(A, 'ABC', B); karşılığı oluşturulur.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// CallStatementCount 1 ve RawExpressionCount 3 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Visit_WithCallArguments_ShouldVisitAllArgumentExpressions()
+    {
+        var syntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1CallStatement(
+                procedureName: "PROC1",
+                arguments: new[]
+                {
+                    new Pl1RawExpression("A", SourceLocation.Unknown),
+                    new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                    new Pl1RawExpression("B", SourceLocation.Unknown)
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var walker = new CountingSyntaxWalker();
+
+        walker.Visit(syntaxTree);
+
+        Assert.Equal(1, walker.CallStatementCount);
+        Assert.Equal(3, walker.RawExpressionCount);
+    }
+
     private static Pl1SyntaxTree ParseSyntaxTree(string source)
     {
         var tokens = new Pl1Lexer(source).Tokenize();

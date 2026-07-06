@@ -2786,3 +2786,143 @@ Bu yaklaşım over engineering riskini azaltır ve mevcut davranışı testlerle
 ### Durum
 
 Kabul edildi.
+
+## Decision 071 - P05 Statement Pipeline Olarak Tamamlanacaktır
+
+### Karar
+
+P05 yalnızca PL/I executable statement parser fazı olarak kapatılmayacaktır.
+
+P05, statement parser çıktılarının transpiler ve EGL generator katmanına kadar doğrulandığı bir Statement Pipeline fazı olarak tamamlanacaktır.
+
+Bu nedenle P06 Procedure Desteği fazına geçmeden önce P05 aşağıdaki ek milestone’larla genişletilecektir.
+
+- P05.6 — Statement Visitor / Walker Integration Verification
+- P05.7 — Statement Transpiler Foundation
+- P05.8 — Assignment EGL Generation
+- P05.9 — CALL EGL Generation
+- P05.10 — IF EGL Generation
+- P05.11 — DO EGL Generation
+- P05.12 — Statement End-to-End Tests
+
+P05 tamamlandığında parser, transpiler ve EGL generator katmanları statement desteği için uçtan uca çalışır durumda olacaktır.
+
+### Gerekçe
+
+Parser desteğinin tek başına tamamlanması dönüşüm hattının tamamlandığı anlamına gelmez.
+
+PL/I statement modelleri syntax tree üzerinde üretildikten sonra bu modellerin transpiler ve EGL output katmanında da kullanılabilir olduğu doğrulanmalıdır.
+
+Parser bitiminden hemen sonra transpiler/generator katmanına geçmek, parser modelindeki eksikleri erken ortaya çıkarır.
+
+Bu yaklaşım P06 Procedure Desteği’ne geçmeden önce statement pipeline’ın sağlamlaşmasını sağlar.
+
+Böylece procedure parser eklendiğinde procedure body içinde bulunan executable statement’lar zaten hazır olan statement pipeline üzerinden işlenebilir.
+
+### Etkilediği Modüller
+
+- Documentation/Roadmap.md
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.Transpilers
+- LegacyCodeTransformer.Egl
+- LegacyCodeTransformer.Application
+- Tüm ilgili test projeleri
+
+### Durum
+
+Kabul edildi.
+
+## Decision 072 - Refactor Öncesi Mevcut Yapı Doğrulanacaktır
+
+### Karar
+
+Production refactor önerileri mevcut kod tabanı doğrulanmadan varsayımsal olarak önerilmeyecektir.
+
+Bir refactor önerisi aşağıdaki kurallara uymalıdır:
+
+- Mevcut sınıf gerçekten analiz edilmiş olmalıdır.
+- Yeni helper method öneriliyorsa mevcut implementasyonda gerçekten tekrar eden kod olduğu doğrulanmalıdır.
+- "Şöyle olabilir", "muhtemelen vardır", "eklenebilir" yaklaşımıyla production refactor önerilmeyecektir.
+- Eğer bir sınıf değişecekse değişecek sınıfın tamamı verilecektir.
+- Eğer yalnızca yeni test ekleniyorsa sadece yeni test methodları verilecektir.
+
+### Gerekçe
+
+LegacyCodeTransformer uzun ömürlü bir projedir.
+
+Varsayımsal refactor önerileri gereksiz kod üretimine ve mevcut mimariden sapmalara neden olabilir.
+
+Bu nedenle tüm production refactor kararları mevcut kod tabanı doğrulanarak alınacaktır.
+
+### Etkilediği Modüller
+
+- Tüm production kodları
+- Refactor süreci
+- Kod inceleme süreci
+
+### Durum
+
+Kabul edildi.
+
+## Decision 072 - Refactor Öncesi Mevcut Yapı Doğrulanacaktır
+
+### Karar
+
+Production refactor önerileri mevcut kod tabanı doğrulanmadan varsayımsal olarak önerilmeyecektir.
+
+Bir refactor önerisi aşağıdaki kurallara uymalıdır:
+
+- Mevcut sınıf gerçekten analiz edilmiş olmalıdır.
+- Yeni helper method öneriliyorsa mevcut implementasyonda gerçekten tekrar eden kod olduğu doğrulanmalıdır.
+- "Şöyle olabilir", "muhtemelen vardır", "eklenebilir" yaklaşımıyla production refactor önerilmeyecektir.
+- Eğer bir sınıf değişecekse değişecek sınıfın tamamı verilecektir.
+- Eğer yalnızca yeni test ekleniyorsa sadece yeni test methodları verilecektir.
+
+### Gerekçe
+
+LegacyCodeTransformer uzun ömürlü bir projedir.
+
+Varsayımsal refactor önerileri gereksiz kod üretimine ve mevcut mimariden sapmalara neden olabilir.
+
+Bu nedenle tüm production refactor kararları mevcut kod tabanı doğrulanarak alınacaktır.
+
+### Etkilediği Modüller
+
+- Tüm production kodları
+- Refactor süreci
+- Kod inceleme süreci
+- Assistant çıktı standardı
+
+### Durum
+
+Kabul edildi.
+
+## Decision 073 - P05.6 Statement Visitor Walker Verification
+
+### Karar
+
+P05.6 kapsamında yeni production abstraction eklenmeyecektir.
+
+Mevcut Pl1SyntaxVisitor ve Pl1SyntaxWalker altyapısının Assignment, CALL, IF, DO, Block ve RawExpression modellerini eksiksiz dolaştığı testlerle doğrulanacaktır.
+
+Production refactor yalnızca mevcut traversal davranışında eksiklik veya gerçek tekrar tespit edilirse yapılacaktır.
+
+Mevcut doğrulama sonucunda production refactor gerekmemektedir.
+
+### Gerekçe
+
+Statement transpiler foundation öncesinde visitor/walker altyapısının statement node ailesini doğru dolaştığı garanti altına alınmalıdır.
+
+Ancak mevcut Pl1SyntaxVisitor ve Pl1SyntaxWalker yapısı statement dispatch ve recursive traversal için yeterlidir.
+
+Bu nedenle yeni VisitorBase, StatementWalker veya ekstra abstraction eklemek over engineering olacaktır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Syntax/Pl1SyntaxVisitor
+- LegacyCodeTransformer.PL1/Syntax/Pl1SyntaxWalker
+- LegacyCodeTransformer.PL1.Tests/Syntax/Pl1SyntaxWalkerTests
+
+### Durum
+
+Kabul edildi.

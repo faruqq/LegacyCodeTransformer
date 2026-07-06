@@ -360,7 +360,7 @@ P05 — PL/I Statement Desteği
 
 ---
 
-# P05 — PL/I Statement Desteği
+# P05 — PL/I Statement Pipeline
 
 ## Durum
 
@@ -368,9 +368,27 @@ P05 — PL/I Statement Desteği
 
 ## Amaç
 
-PL/I declaration dışındaki executable statement modellerini oluşturmak, parser altyapısını statement desteği için genişletmek ve ilerleyen fazlarda transpiler katmanında kullanılacak semantic statement modelini hazırlamak.
+PL/I declaration dışındaki executable statement modellerini oluşturmak, parser altyapısını statement desteği için genişletmek ve statement modellerini transpiler ile EGL generator katmanına kadar uçtan uca çalışır hale getirmek.
 
-P05, parser mimarisinin declaration odaklı yapıdan gerçek PL/I programlarını temsil edebilecek executable statement mimarisine geçiş fazıdır.
+P05 yalnızca parser geliştirme fazı değildir.
+
+Bu faz sonunda Assignment, CALL, IF ve DO statement türleri aşağıdaki dönüşüm hattı boyunca doğrulanmış olacaktır.
+
+    PL/I Source
+        ↓
+    Lexer
+        ↓
+    Statement Parser
+        ↓
+    PL/I Syntax Tree
+        ↓
+    Statement Transpiler
+        ↓
+    EGL Syntax Tree
+        ↓
+    EGL Generator
+
+P05, declaration odaklı parser mimarisinden gerçek PL/I executable statement pipeline mimarisine geçiş fazıdır.
 
 ---
 
@@ -685,9 +703,57 @@ Nested IF / DO control-flow yapıları syntax tree üzerinde hiyerarşik olarak 
 
 P05 sonunda transpiler katmanı statement desteğini kullanabilecek seviyeye hazırlanmıştır.
 
-### Sonraki Faz
+### Sonraki Milestone
 
-P06 — Procedure Desteği
+P05.6 — Statement Visitor / Walker Integration Verification
+
+---
+
+## P05.6 — Statement Visitor / Walker Integration Verification
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+Statement transpiler foundation öncesinde mevcut Pl1SyntaxVisitor ve Pl1SyntaxWalker altyapısının statement node ailesini eksiksiz dolaştığını doğrulamak.
+
+### Tamamlananlar
+
+#### Production Verification
+
+* ✅ Pl1SyntaxVisitor statement dispatch desteği doğrulandı.
+* ✅ Pl1SyntaxVisitor expression dispatch desteği doğrulandı.
+* ✅ Pl1SyntaxWalker SyntaxTree.Statements traversal desteği doğrulandı.
+* ✅ Pl1SyntaxWalker Assignment target/value traversal desteği doğrulandı.
+* ✅ Pl1SyntaxWalker CALL argument traversal desteği doğrulandı.
+* ✅ Pl1SyntaxWalker IF condition / THEN / ELSE traversal desteği doğrulandı.
+* ✅ Pl1SyntaxWalker DO condition / body traversal desteği doğrulandı.
+* ✅ Pl1SyntaxWalker nested block recursive traversal desteği doğrulandı.
+
+#### Production Refactor
+
+* ✅ Production refactor gerekmediği doğrulandı.
+* ✅ Yeni VisitorBase / StatementWalker abstraction eklenmedi.
+* ✅ Mevcut Pl1SyntaxVisitor ve Pl1SyntaxWalker altyapısı korundu.
+
+#### Testler
+
+* ✅ IF THEN ELSE traversal testleri
+* ✅ DO WHILE traversal testleri
+* ✅ Nested DO block traversal testleri
+* ✅ CALL argument expression traversal testleri
+
+### Başarı Kriteri
+
+Visitor / Walker altyapısı Assignment, CALL, IF, DO, Block ve RawExpression modellerini eksiksiz dolaşabilmektedir.
+
+Statement transpiler foundation için mevcut traversal altyapısının yeterli olduğu doğrulanmıştır.
+
+### Sonraki Milestone
+
+P05.7 — Statement Transpiler Foundation
 
 ---
 
