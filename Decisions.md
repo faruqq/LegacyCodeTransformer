@@ -2282,3 +2282,60 @@ Ortak parser altyapısı:
 
 ### Durum
 Accepted
+
+## Decision 059 - Statement Parser P05 Kademeli Başlatılacaktır
+
+### Karar
+P05 kapsamında PL/I statement desteği kademeli olarak geliştirilecektir.
+
+İlk aşamada parser, top-level DCL dışındaki tokenları doğrudan geniş statement parsing ile çözmeye çalışmayacaktır. Bunun yerine statement parser altyapısı ayrı modeller ve helper parser sınıflarıyla hazırlanacaktır.
+
+İlk desteklenecek statement aileleri aşağıdaki sırayla ele alınacaktır:
+- Assignment statement
+- CALL statement
+- IF statement
+- DO / END statement blokları
+
+### Gerekçe
+Parser altyapısı P04 sonunda sadeleştirilmiş ve declaration parsing helper sınıflara ayrılmıştır.
+
+Statement parsing declaration parsing’den daha karmaşıktır. Expression parsing, block scope, statement terminator ve nested statement davranışları içerir.
+
+Bu nedenle P05 tek büyük değişiklik olarak değil, küçük ve test edilebilir parser adımlarıyla ilerletilecektir.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.PL1.Parsing
+- LegacyCodeTransformer.PL1.Syntax
+- LegacyCodeTransformer.PL1.Tests
+- ConversionService
+- Transpiler pipeline
+
+### Durum
+Accepted
+
+## Decision 060 - Non-Invasive PL/I Syntax Visitor ve Walker Altyapısı
+
+### Karar
+PL/I syntax model traversal işlemleri için non-invasive visitor / walker altyapısı eklenecektir.
+
+İlk aşamada mevcut syntax node modellerine Accept methodu eklenmeyecektir. Bunun yerine Pl1SyntaxVisitor ve Pl1SyntaxWalker sınıfları, mevcut modeller üzerinde dışarıdan traversal sağlayacaktır.
+
+### Gerekçe
+Mevcut parser ve transpiler davranışını değiştirmeden traversal altyapısı oluşturmak daha düşük risklidir.
+
+Statement parser, semantic analysis, metrics, dependency analysis ve ileride visitor tabanlı transpiler refactor çalışmaları için ortak traversal standardı gereklidir.
+
+Bu yaklaşım:
+- Mevcut syntax modellerini bozmaz.
+- Parser davranışını değiştirmez.
+- Transpiler refactor için güvenli zemin hazırlar.
+- P05 statement modellerinin aynı traversal standardına eklenmesini kolaylaştırır.
+
+### Etkilediği Modüller
+- LegacyCodeTransformer.PL1
+- LegacyCodeTransformer.PL1.Syntax
+- LegacyCodeTransformer.PL1.Tests
+
+### Durum
+Accepted

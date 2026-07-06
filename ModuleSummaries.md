@@ -1951,3 +1951,48 @@ Parser katmanı artık aşağıdaki sorumluluk ayrımına sahiptir:
 
 ## Sonraki Adım
 P04 kapanışından sonra P05 statement parser hazırlığına geçilecektir. İlk önerilen teknik adım, top-level declaration dışındaki statement tokenlarının hata olarak değil ileride statement parser'a yönlendirilebilecek aday syntax olarak ele alınacağı parser dispatch tasarımını belirlemektir.
+
+---
+# 2026-07-06 — P05-R1 SyntaxVisitor ve SyntaxWalker Altyapısı
+
+## Durum
+✅ Tamamlandı
+
+## Özet
+PL/I syntax tree üzerinde tip güvenli traversal sağlayacak non-invasive visitor / walker altyapısı eklendi.
+
+Mevcut syntax modellerine Accept methodu eklenmedi. Bunun yerine Pl1SyntaxVisitor ve Pl1SyntaxWalker sınıfları mevcut syntax modelleri üzerinde dışarıdan traversal sağlayacak şekilde tasarlandı.
+
+## Yapılanlar
+- Pl1SyntaxVisitor eklendi.
+- Pl1SyntaxWalker eklendi.
+- Syntax tree root traversal desteği eklendi.
+- Declaration dispatch traversal desteği eklendi.
+- Variable declaration traversal desteği eklendi.
+- Structure declaration traversal desteği eklendi.
+- Structure member recursive traversal desteği eklendi.
+- Data type dispatch traversal desteği eklendi.
+- Initial value traversal desteği eklendi.
+- Pl1SyntaxWalkerTests eklendi.
+
+## Mimari Sonuç
+PL/I syntax traversal işlemleri aşağıdaki standart altyapıya kavuştu:
+
+    Pl1SyntaxVisitor
+        Tip güvenli Visit dispatch davranışı sağlar.
+
+    Pl1SyntaxWalker
+        Default recursive traversal davranışı sağlar.
+
+## Kapsam Dışı Bırakılanlar
+- Syntax node modellerine Accept methodu eklenmesi
+- Visitor tabanlı transpiler refactor
+- Statement node traversal desteği
+- Expression node traversal desteği
+- Semantic analysis implementation
+
+## İlgili Kararlar
+- Decision 060 - Non-Invasive PL/I Syntax Visitor ve Walker Altyapısı
+
+## Sonraki Adım
+P05 kapsamında statement syntax model hiyerarşisi oluşturulacaktır.

@@ -169,21 +169,15 @@ Aşağıdaki dönüşüm başarıyla gerçekleştirilmektedir.
 
 PL/I
 
-```pli
-DCL MUST_NO FIXED DECIMAL(8);
+    DCL MUST_NO FIXED DECIMAL(8);
 
-DCL CUSTOMER_NO FIXED DECIMAL(10,2);
-```
-
-↓
+    DCL CUSTOMER_NO FIXED DECIMAL(10,2);
 
 EGL
 
-```egl
-mustNo decimal(8);
+    mustNo decimal(8);
 
-customerNo decimal(10,2);
-```
+    customerNo decimal(10,2);
 
 ## Sonraki Faz
 
@@ -194,55 +188,164 @@ P04 — PL/I Veri Tiplerini Genişletme
 # P04 — PL/I Veri Tiplerini Genişletme
 
 ## Durum
+
 ✅ Tamamlandı
 
 ## Amaç
-PL/I veri tipi, declaration ve structure desteğini gerçek projelerde kullanılabilecek seviyeye çıkarmak.
+
+PL/I veri tipi, declaration, structure ve parser altyapısını gerçek projelerde kullanılabilecek seviyeye çıkarmak.
+
+## Kapsam
+
+* PL/I scalar veri tipleri
+* PL/I declaration parsing
+* INIT / INITIAL başlangıç değeri parsing
+* Structure declaration parsing
+* Structure array desteği
+* Structure member array desteği
+* Nested structure parsing
+* PL/I → EGL record dönüşümü
+* EGL output casing ve indentation standardı
+* Parser helper mimarisi
+* Parser test altyapısı
 
 ## Tamamlananlar
-- ✅ CHAR / CHARACTER veri tipi desteği
-- ✅ VARCHAR → EGL char dönüşümü
-- ✅ INIT / INITIAL parse desteği
-- ✅ INIT / INITIAL güvenli scalar subset → EGL default value dönüşümü
-- ✅ Identifier naming strategy desteği
-- ✅ PL/I basic structure declaration parse desteği
-- ✅ PL/I structure declaration → EGL record dönüşümü
-- ✅ PL/I structure array → EGL parent array field dönüşümü
-- ✅ PL/I structure member array → EGL field array dönüşümü
-- ✅ DIM / DIMENSION syntax desteği
-- ✅ PL/I nested structure → EGL parent group field dönüşümü
-- ✅ Recursive nested structure mapping desteği
-- ✅ EGL output casing ve indentation standardı
-- ✅ Decimal scale bilgisinin nullable korunması
-- ✅ FIXED DECIMAL / DEC FIXED / DECIMAL FIXED synonym desteği
-- ✅ FIXED BIN / BIN FIXED numeric mapping desteği
-- ✅ smallint / int casing standardı
-- ✅ PIC / PICTURE ayrı model parse desteği
-- ✅ Güvenli numeric PIC subset → EGL num mapping desteği
-- ✅ Alphanumeric PIC subset → EGL char mapping desteği
-- ✅ Signed PIC classification desteği
-- ✅ Formatted PIC örnekleri için diagnostic üretimi
-- ✅ BIT(n) parser desteği ve EGL diagnostic davranışı
-- ✅ sqlRecord opt-in record type strategy desteği
-- ✅ FLOAT / REAL / DOUBLE parser foundation
-- ✅ FLOAT / REAL / DOUBLE güvenli EGL mapping subset desteği
+
+### Character ve Initialization
+
+* ✅ CHAR / CHARACTER veri tipi desteği
+* ✅ VARCHAR → EGL char dönüşümü
+* ✅ INIT / INITIAL parse desteği
+* ✅ INIT / INITIAL güvenli scalar subset → EGL default value dönüşümü
+* ✅ INIT repeat factor bilgisinin syntax model üzerinde korunması
+* ✅ INIT all-elements bilgisinin syntax model üzerinde korunması
+
+### Identifier ve EGL Output Standardı
+
+* ✅ Identifier naming strategy desteği
+* ✅ EGL output casing standardı
+* ✅ EGL indentation standardı
+* ✅ basicRecord casing standardı
+* ✅ sqlRecord opt-in record type strategy desteği
+* ✅ char, num, smallint, int, decimal type casing standardı
+
+### Structure Declaration
+
+* ✅ PL/I basic structure declaration parse desteği
+* ✅ PL/I structure declaration → EGL record dönüşümü
+* ✅ PL/I structure array → EGL parent array field dönüşümü
+* ✅ PL/I structure member array → EGL field array dönüşümü
+* ✅ DIM / DIMENSION syntax desteği
+* ✅ PL/I nested structure parse desteği
+* ✅ PL/I nested structure → EGL parent group field dönüşümü
+* ✅ Recursive nested structure mapping desteği
+* ✅ Record / structure level değerlerinin 5 ve 5’in katları olarak üretilmesi
+* ✅ Level bazlı indentation standardı
+
+### Numeric Types
+
+* ✅ Decimal scale bilgisinin nullable korunması
+* ✅ FIXED DECIMAL(p) desteği
+* ✅ FIXED DECIMAL(p,0) explicit zero scale desteği
+* ✅ FIXED DECIMAL(p,s) scale desteği
+* ✅ FIXED DEC / DEC FIXED / DECIMAL FIXED synonym desteği
+* ✅ FIXED BIN / BIN FIXED numeric mapping desteği
+* ✅ FIXED BIN(15) → EGL smallint mapping desteği
+* ✅ FIXED BIN(31) → EGL int mapping desteği
+* ✅ smallint / int casing standardı
+
+### PIC / PICTURE
+
+* ✅ PIC / PICTURE ayrı model parse desteği
+* ✅ Numeric PIC güvenli subset parse desteği
+* ✅ Güvenli numeric PIC subset → EGL num mapping desteği
+* ✅ Alphanumeric PIC subset parse desteği
+* ✅ Alphanumeric PIC subset → EGL char mapping desteği
+* ✅ PIC repeat notation length / precision hesabı
+* ✅ PIC implied decimal scale hesabı
+* ✅ Signed PIC classification desteği
+* ✅ Formatted PIC örnekleri için diagnostic üretimi
+
+### BIT ve Floating Types
+
+* ✅ BIT(n) parser desteği
+* ✅ BIT(n) semantic model desteği
+* ✅ BIT(n) için EGL diagnostic davranışı
+* ✅ FLOAT parser desteği
+* ✅ REAL parser desteği
+* ✅ DOUBLE PRECISION parser desteği
+* ✅ FLOAT DECIMAL desteği
+* ✅ FLOAT BIN desteği
+* ✅ FLOAT semantic model desteği
+* ✅ Floating precision bilgisinin korunması
+* ✅ FLOAT / REAL / DOUBLE güvenli EGL mapping subset desteği
+
+### Parser Infrastructure
+
+* ✅ ParseContext ortak parser state modeli
+* ✅ ParserBase ortak parser altyapısı
+* ✅ ParserDiagnosticFactory ortak diagnostic üretimi
+* ✅ HelperParseResult<T> generic helper parse modeli
+* ✅ DeclarationParser ayrıştırması
+* ✅ VariableDeclarationParser ayrıştırması
+* ✅ StructureParser ayrıştırması
+* ✅ DataTypeParser ayrıştırması
+* ✅ CharacterTypeParser ayrıştırması
+* ✅ NumericTypeParser ayrıştırması
+* ✅ FloatingTypeParser ayrıştırması
+* ✅ PictureTypeParser ayrıştırması
+* ✅ PicturePatternAnalyzer ayrıştırması
+* ✅ BitTypeParser ayrıştırması
+* ✅ InitialValueParser ayrıştırması
+* ✅ DimensionParser ayrıştırması
+* ✅ Parser helper test altyapısının ortaklaştırılması
+* ✅ Parser test tekrarlarının kaldırılması
+* ✅ Pl1Parser sınıfının orchestration seviyesine indirgenmesi
+
+## Mimari Sonuç
+
+P04 sonunda parser aşağıdaki sorumluluk dağılımına sahiptir.
+
+    Pl1Parser
+        DeclarationParser
+            VariableDeclarationParser
+                DataTypeParser
+                DimensionParser
+                InitialValueParser
+
+            StructureParser
+                DataTypeParser
+                DimensionParser
+                InitialValueParser
+
+    DataTypeParser
+        CharacterTypeParser
+        NumericTypeParser
+        PictureTypeParser
+        BitTypeParser
+        FloatingTypeParser
 
 ## Kapsam Dışı Bırakılanlar
-- FLOAT DECIMAL için kesin EGL mapping
-- BIT için kesin EGL mapping
-- Formatted PIC için display metadata üretimi
-- Repeat factor INIT expansion
-- Structure member default value output
-- Çok boyutlu DIMENSION desteği
-- Table / column metadata içeren gelişmiş sqlRecord üretimi
+
+* FLOAT DECIMAL için kesin EGL mapping
+* BIT için kesin EGL mapping
+* Formatted PIC için display metadata üretimi
+* INIT repeat factor expansion
+* Structure member default value output
+* Çok boyutlu DIMENSION desteği
+* Gelişmiş sqlRecord metadata üretimi
+* Statement parsing
+* Procedure parsing
+* Expression parsing
 
 ## Başarı Kriteri
-Parser, Transpiler ve Generator katmanları PL/I veri tipi ve declaration yapılarını uçtan uca destekleyecek seviyeye getirilmiştir.
 
-## Sonraki Teknik Hazırlık
-P05’e geçmeden önce parser internal refactor yapılacaktır.
+Parser, Transpiler ve Generator katmanları gerçek PL/I declaration yapılarını uçtan uca destekleyecek seviyeye ulaşmıştır.
+
+Parser mimarisi helper parser yaklaşımı ile sadeleştirilmiş ve yeni parser modüllerinin eklenmesine uygun hale getirilmiştir.
 
 ## Sonraki Faz
+
 P05 — PL/I Statement Desteği
 
 ---
@@ -251,21 +354,48 @@ P05 — PL/I Statement Desteği
 
 ## Durum
 
-⏳ Planlandı
+🚧 Aktif olarak geliştiriliyor
 
 ## Amaç
 
-PL/I içerisindeki temel işlem ifadelerini desteklemek.
+PL/I declaration dışındaki executable statement modellerini oluşturmak, parser altyapısını statement desteği için genişletmek ve ilerleyen fazlarda transpiler katmanında kullanılacak semantic statement modelini hazırlamak.
 
-## İlk Hedefler
+## Kapsam
 
-* Assignment
-* IF
-* THEN
-* ELSE
-* DO
-* END
-* CALL
+* Statement syntax modeli
+* Statement parser altyapısı
+* Statement dispatcher
+* Assignment parser
+* CALL parser
+* IF parser
+* DO / END parser
+* Statement test altyapısı
+* Expression parser hazırlığı
+
+## İlk Teknik Adım
+
+Statement model hiyerarşisi oluşturulacaktır.
+
+* Pl1Statement
+* Pl1Expression
+* Pl1AssignmentStatement
+* Pl1CallStatement
+* Pl1IfStatement
+* Pl1DoStatement
+* Pl1BlockStatement
+
+## İlk Desteklenecek Statement Türleri
+
+1. Assignment
+2. CALL
+3. IF
+4. DO / END
+
+## Başarı Kriteri
+
+Parser declaration dışındaki ilk executable statement türlerini syntax tree üzerinde semantic olarak temsil edebilmelidir.
+
+İlk aşamada transpiler desteği zorunlu değildir.
 
 ## Sonraki Faz
 
@@ -281,14 +411,20 @@ P06 — Procedure Desteği
 
 ## Amaç
 
-Procedure seviyesinde dönüşüm gerçekleştirebilmek.
+PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve semantic model olarak temsil edilmesini sağlamak.
 
-## İlk Hedefler
+## Kapsam
 
-* PROCEDURE
-* Parametreler
-* RETURN
-* Local Variable Scope
+* PROCEDURE parser
+* ENTRY parser
+* Parametre listeleri
+* RETURN statement
+* Local scope oluşturulması
+* Procedure semantic modeli
+
+## Başarı Kriteri
+
+Bir PL/I source dosyası procedure seviyesinde eksiksiz parse edilebilmeli ve statement parser ile entegre çalışmalıdır.
 
 ## Sonraki Faz
 
@@ -304,15 +440,20 @@ P07 — Legacy PL/I Yapıları
 
 ## Amaç
 
-Kurumsal PL/I projelerinde sık kullanılan yapıları desteklemek.
+Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların desteklenmesini sağlamak.
 
-## İlk Hedefler
+## Kapsam
 
 * INCLUDE
 * Compiler Directives
-* Embedded SQL
-* CICS Çağrıları
+* EXEC SQL
+* CICS çağrıları
 * Makrolar
+* COPY benzeri yapılar
+
+## Başarı Kriteri
+
+Gerçek kurumsal PL/I projelerinde kullanılan temel legacy yapıların parser tarafından okunabilmesi.
 
 ## Sonraki Faz
 
@@ -328,23 +469,28 @@ P08 — Dönüşüm Kalitesini Artırma
 
 ## Amaç
 
-Üretilen kodun doğruluğunu ve okunabilirliğini artırmak.
+Üretilen EGL kodunun doğruluğunu, okunabilirliğini ve bakım kolaylığını artırmak.
 
-## İlk Hedefler
+## Kapsam
 
 * Gelişmiş Normalizer
 * Kod formatlama
-* Unsupported Syntax raporları
+* Unsupported Syntax Recovery
 * Daha gelişmiş Diagnostic sistemi
 * İsimlendirme kuralları
+* Diagnostic iyileştirmeleri
+
+## Başarı Kriteri
+
+Desteklenmeyen syntax'lar mümkün olduğunca parse edilmeye devam edilmeli ve kullanıcıya anlaşılır diagnostic mesajları sunulmalıdır.
 
 ## Sonraki Faz
 
-P09 — IDE Entegrasyonu
+P09 — Semantic Analysis
 
 ---
 
-# P09 — IDE Entegrasyonu
+# P09 — Semantic Analysis
 
 ## Durum
 
@@ -352,22 +498,56 @@ P09 — IDE Entegrasyonu
 
 ## Amaç
 
-Dönüştürme aracını IDE içerisinden kullanılabilir hale getirmek.
+Parser tarafından oluşturulan syntax modelini analiz ederek semantic doğrulama yapmak ve transpiler katmanını beslemek.
 
-## İlk Hedefler
+## Kapsam
+
+* Symbol Table
+* Scope Analysis
+* Duplicate Declaration Detection
+* Type Resolution
+* Constant Evaluation
+* Semantic Diagnostic üretimi
+
+## Başarı Kriteri
+
+Syntax modeli semantic olarak doğrulanmalı ve transpiler yalnızca semantic olarak geçerli modeller üzerinde çalışmalıdır.
+
+## Sonraki Faz
+
+P10 — IDE Entegrasyonu
+
+---
+
+# P10 — IDE Entegrasyonu
+
+## Durum
+
+⏳ Planlandı
+
+## Amaç
+
+LegacyCodeTransformer'ın IDE içerisinden kullanılabilir hale getirilmesi.
+
+## Kapsam
 
 * Eclipse tabanlı eklenti
 * IBM RBD entegrasyonu
 * Tek dosya dönüşümü
 * Çoklu dosya dönüşümü
+* Progress gösterimi
+
+## Başarı Kriteri
+
+Kullanıcı IDE üzerinden PL/I dosyalarını doğrudan dönüştürebilmelidir.
 
 ## Sonraki Faz
 
-P10 — Yeni Hedef Diller
+P11 — Yeni Hedef Diller
 
 ---
 
-# P10 — Yeni Hedef Diller
+# P11 — Yeni Hedef Diller
 
 ## Durum
 
@@ -375,21 +555,26 @@ P10 — Yeni Hedef Diller
 
 ## Amaç
 
-Mevcut parser altyapısını kullanarak farklı hedef dillere dönüşüm yapabilmek.
+Mevcut parser ve semantic altyapısını kullanarak farklı hedef dillere dönüşüm yapabilmek.
 
 ## İlk Hedefler
 
 * PL/I → C#
 * EGL → C#
 * PL/I → Java
+* PL/I → Kotlin (opsiyonel)
+
+## Başarı Kriteri
+
+Yeni hedef dillere dönüşüm yalnızca yeni generator katmanları eklenerek gerçekleştirilebilmelidir.
 
 ## Sonraki Faz
 
-P11 — Kurumsal Özellikler
+P12 — Kurumsal Özellikler
 
 ---
 
-# P11 — Kurumsal Özellikler
+# P12 — Kurumsal Özellikler
 
 ## Durum
 
@@ -407,6 +592,11 @@ Kurumsal projelerde ihtiyaç duyulacak yardımcı araçları geliştirmek.
 * Satır eşleme (Line Mapping)
 * Performans ölçümleri
 * Loglama
+* Konfigürasyon profilleri
+
+## Başarı Kriteri
+
+Binlerce PL/I dosyası kurumsal ölçekte güvenilir ve raporlanabilir şekilde dönüştürülebilmelidir.
 
 ## Sonraki Faz
 
@@ -420,11 +610,18 @@ LegacyCodeTransformer'ın yalnızca **PL/I → EGL** dönüşümü yapan bir ara
 
 Uzun vadeli hedef;
 
-farklı legacy dilleri modern dillere dönüştürebilen,
+Kaynak dili parse edebilen,
 
-* genişletilebilir,
-* sürdürülebilir,
-* test edilebilir,
-* kurumsal ölçekte kullanılabilir
+semantic model oluşturabilen,
+
+farklı hedef dillere dönüştürebilen,
+
+genişletilebilir,
+
+sürdürülebilir,
+
+test edilebilir,
+
+kurumsal ölçekte kullanılabilir
 
 bir **Legacy Code Transformation Platformu** oluşturmaktır.
