@@ -1536,4 +1536,147 @@ public sealed class Pl1ParserTests
         Assert.Equal("DCLGLAU.BRM_KOD", targetExpression.Text);
         Assert.Equal("888", valueExpression.Text);
     }
+
+    /// <summary>
+    /// Parser'ın top-level CALL statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, CALL statement'ı StatementParser'a yönlendirmeli ve üretilen
+    /// Pl1CallStatement modelini SyntaxTree.Statements listesine eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations boş, Statements tek elemanlı olmalı ve ProcedureName FETCH_CURSOR olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithCallStatement_ShouldAddCallStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "CALL FETCH_CURSOR;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(statement);
+
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+        Assert.Empty(callStatement.Arguments);
+    }
+
+    /// <summary>
+    /// Parser'ın argument listesi içeren CALL statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, CALL argument listesini raw expression modelleri olarak taşımalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL SQL_HATA_OLUSTUR('SELECT GLAU_HISTORY');
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ProcedureName SQL_HATA_OLUSTUR olmalı ve tek argument 'SELECT GLAU_HISTORY'
+    /// olarak taşınmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithCallStatementArguments_ShouldAddCallStatementWithArgumentsToSyntaxTree()
+    {
+        var result = ParseSource(
+            "CALL SQL_HATA_OLUSTUR('SELECT GLAU_HISTORY');");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(statement);
+
+        Assert.Equal("SQL_HATA_OLUSTUR", callStatement.ProcedureName);
+
+        var argument = Assert.Single(callStatement.Arguments);
+        var rawArgument = Assert.IsType<Pl1RawExpression>(argument);
+
+        Assert.Equal("'SELECT GLAU_HISTORY'", rawArgument.Text);
+    }
+
+    /// <summary>
+    /// Parser'ın declaration, assignment ve CALL statement modellerini aynı syntax tree içinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, declaration ve birden fazla executable statement'ı sırasıyla parse edip
+    /// aynı syntax tree içinde temsil etmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(08); PARAM = 'ABC'; CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations tek elemanlı, Statements iki elemanlı olmalıdır. İlk statement assignment,
+    /// ikinci statement CALL olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDeclarationAssignmentAndCallStatement_ShouldAddAllModelsToSyntaxTree()
+    {
+        var result = ParseSource(
+            "DCL PARAM CHAR(08); PARAM = 'ABC'; CALL FETCH_CURSOR;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(2, result.SyntaxTree.Statements.Count);
+
+        var assignmentStatement = Assert.IsType<Pl1AssignmentStatement>(result.SyntaxTree.Statements[0]);
+        var callStatement = Assert.IsType<Pl1CallStatement>(result.SyntaxTree.Statements[1]);
+
+        var assignmentTarget = Assert.Single(assignmentStatement.Targets);
+        var assignmentTargetExpression = Assert.IsType<Pl1RawExpression>(assignmentTarget);
+        var assignmentValueExpression = Assert.IsType<Pl1RawExpression>(assignmentStatement.Value);
+
+        Assert.Equal("PARAM", assignmentTargetExpression.Text);
+        Assert.Equal("'ABC'", assignmentValueExpression.Text);
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+    }
+
+    /// <summary>
+    /// Parser'ın declaration sonrasında gelen CALL statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, DCL declaration parse ettikten sonra CALL statement'ı StatementParser'a
+    /// yönlendirmeli ve Pl1CallStatement modelini Statements listesine eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(08); CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declaration listesinde PARAM declaration bulunmalı, Statements listesinde
+    /// FETCH_CURSOR procedure adına sahip Pl1CallStatement bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDeclarationFollowedByCallStatement_ShouldAddCallStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "DCL PARAM CHAR(08); CALL FETCH_CURSOR;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(statement);
+
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+        Assert.Empty(callStatement.Arguments);
+    }
 }

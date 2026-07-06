@@ -22,11 +22,12 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 ///     PARAM = 'ABC';
 ///     CALL FETCH_CURSOR;
+///     CALL PROC1(A, 'ABC', B);
 ///     IF SQLCODE = 0 THEN DO;
 ///     DO WHILE(SQLCODE = 0);
 ///
-/// P05.3 içinde assignment parser gerçek model üretir. CALL, IF ve DO parser
-/// davranışları sonraki adımlarda eklenecektir.
+/// P05.3 içinde Assignment ve CALL parser gerçek model üretir. IF ve DO parser
+/// davranışları sonraki milestone içinde eklenecektir.
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -35,8 +36,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// CallStatementParser, IfStatementParser ve DoStatementParser bu orchestration
-/// sınıfı üzerinden devreye alınacaktır.
+/// IfStatementParser ve DoStatementParser bu orchestration sınıfı üzerinden
+/// devreye alınacaktır.
 /// </summary>
 internal sealed class StatementParser : ParserBase
 {
@@ -65,16 +66,15 @@ internal sealed class StatementParser : ParserBase
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Mevcut token'ın statement başlangıcı olup olmadığını kontrol eder. Statement
-    /// başlangıcı değilse null döndürür. Assignment başlangıcıysa
-    /// AssignmentStatementParser'a yönlendirir. Henüz desteklenmeyen statement türleri
-    /// için diagnostic ve recovery davranışını korur.
+    /// Mevcut token'ın statement başlangıcı olup olmadığını kontrol eder. Assignment
+    /// başlangıcıysa AssignmentStatementParser'a, CALL başlangıcıysa
+    /// CallStatementParser'a yönlendirir. Henüz desteklenmeyen statement türleri için
+    /// diagnostic ve recovery davranışını korur.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     ///     PARAM = 'ABC';
-    ///
-    /// Bu input P05.3 ile Pl1AssignmentStatement üretir.
+    ///     CALL FETCH_CURSOR;
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -82,8 +82,8 @@ internal sealed class StatementParser : ParserBase
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// CALL, IF ve DO parser'ları eklendiğinde bu method aynı dispatcher standardı
-    /// üzerinden ilgili concrete parser'lara yönlenecektir.
+    /// IF ve DO parser'ları eklendiğinde bu method aynı dispatcher standardı üzerinden
+    /// ilgili concrete parser'lara yönlenecektir.
     /// </summary>
     public HelperParseResult<Pl1Statement> ParseStatement()
     {
@@ -96,6 +96,8 @@ internal sealed class StatementParser : ParserBase
                 Position),
 
             StatementParserKind.Assignment => ParseAssignmentStatement(),
+
+            StatementParserKind.Call => ParseCallStatement(),
 
             _ => ParseUnsupportedStatement(parserKind)
         };
@@ -111,6 +113,16 @@ internal sealed class StatementParser : ParserBase
         return result;
     }
 
+    private HelperParseResult<Pl1Statement> ParseCallStatement()
+    {
+        var parser = new CallStatementParser(Context);
+        var result = parser.ParseCallStatement();
+
+        Position = result.Position;
+
+        return result;
+    }
+
     private HelperParseResult<Pl1Statement> ParseUnsupportedStatement(StatementParserKind parserKind)
     {
         var statementFamilyName = GetStatementFamilyName(parserKind);
@@ -120,7 +132,9 @@ internal sealed class StatementParser : ParserBase
                 Current,
                 $"{statementFamilyName} parser henüz eklenmedi"));
 
-        SkipCurrentStatement();
+        var recoveryHelper = new StatementRecoveryHelper(Context);
+
+        recoveryHelper.SkipCurrentStatement();
 
         return new HelperParseResult<Pl1Statement>(
             null,
@@ -137,47 +151,5 @@ internal sealed class StatementParser : ParserBase
             StatementParserKind.Do => "DO",
             _ => "Unknown"
         };
-    }
-
-    /// <summary>
-    /// Mevcut statement'ı noktalı virgüle veya EOF'a kadar güvenli şekilde atlar.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Concrete statement parser'lar eklenmeden önce statement başlangıçları tanınsa
-    /// bile parser'ın sonsuz döngüye girmemesi gerekir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Desteklenmeyen veya henüz parse edilmeyen statement içeriğini semicolon'a kadar
-    /// tüketir. Semicolon bulunursa onu da tüketerek parser'ı sonraki statement veya
-    /// declaration için hazır hale getirir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     CALL FETCH_CURSOR;
-    ///
-    /// CALL parser eklenene kadar bu statement model üretilmeden tamamen tüketilir.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// ParseUnsupportedStatement içinde recovery davranışı olarak kullanılır.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Unsupported syntax recovery ve diagnostic sonrası toparlama davranışı için
-    /// ortak temel oluşturur.
-    /// </summary>
-    private void SkipCurrentStatement()
-    {
-        while (!IsAtEnd() && Current.Kind != Pl1TokenKind.Semicolon)
-        {
-            Advance();
-        }
-
-        if (Current.Kind == Pl1TokenKind.Semicolon)
-        {
-            Advance();
-        }
     }
 }

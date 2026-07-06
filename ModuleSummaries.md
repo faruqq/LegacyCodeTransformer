@@ -2060,3 +2060,65 @@ Eklenen test kapsamı:
 Bu adım henüz Assignment, CALL, IF veya DO statement modelleri üretmez.
 
 Concrete statement model üretimi P05.3 ve P05.4 içinde eklenecektir.
+
+## P05.3 - Assignment ve CALL Parser Foundation
+
+P05.3 kapsamında PL/I executable statement desteğinin ilk gerçek parser adımı tamamlandı.
+
+Eklenen production bileşenleri:
+
+- AssignmentStatementParser
+- CallStatementParser
+- AssignmentRawExpressionBuilder
+- ExpressionFactory
+- DelimitedTokenReader
+- StatementRecoveryHelper
+- StatementParserKind
+
+Güncellenen production bileşenleri:
+
+- StatementParser
+- StatementDispatcher
+
+Assignment parser aşağıdaki temel subset'i destekleyecek şekilde eklendi:
+
+- Identifier assignment
+- String literal assignment
+- Numeric assignment
+- Qualified member assignment
+- Raw expression value taşıma
+
+Desteklenen örnekler:
+
+    PARAM = 'ABC';
+    SQLCODE = 0;
+    DCLGLAU.BRM_KOD = 888;
+
+CALL parser aşağıdaki temel subset'i destekleyecek şekilde eklendi:
+
+- Parametresiz CALL
+- Parametreli CALL
+- String literal argument
+- Identifier argument
+- Qualified member argument
+
+Desteklenen örnekler:
+
+    CALL FETCH_CURSOR;
+    CALL PROC1(A, 'ABC', B);
+    CALL SQL_HATA_OLUSTUR('SELECT GLAU_HISTORY');
+
+Parser utility refactor kapsamında delimiter bazlı token okuma, raw expression üretimi ve statement recovery davranışları ortak helper sınıflarına ayrıldı.
+
+Eklenen test kapsamı:
+
+- AssignmentRawExpressionBuilderTests
+- ExpressionFactoryTests
+- DelimitedTokenReaderTests
+- StatementRecoveryHelperTests
+- StatementParser assignment testleri
+- StatementParser CALL testleri
+- Pl1Parser assignment integration testleri
+- Pl1Parser CALL integration testleri
+
+Bu milestone sonunda Pl1Parser, declaration, assignment ve CALL statement modellerini aynı Pl1SyntaxTree içinde taşıyabilir hale gelmiştir.

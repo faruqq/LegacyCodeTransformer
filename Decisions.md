@@ -2548,3 +2548,109 @@ StatementParser yalnızca orchestration yapar. Gerçek parse davranışları ile
 ### Durum
 
 Kabul edildi.
+
+## Decision 066 - Parser Helper Visibility ve Behavior Test Standardı
+
+### Karar
+
+Parser helper, dispatcher ve internal orchestration sınıfları mümkün olduğunca implementation detail olarak tutulacaktır.
+
+Yeni parser/helper sınıfları için önce aşağıdaki sorular değerlendirilecektir:
+
+1. Bu sınıf gerçekten dışarıdan görünmeli mi?
+2. Bu sınıf implementation detayı mı?
+3. Bu davranış test edilmeli mi, yoksa implementation mı test ediliyor?
+4. Bu sınıf gelecekte başka parser'lar tarafından tekrar kullanılacak mı?
+
+Internal enum, helper veya dispatcher kararları public test method signature içinde kullanılmayacaktır.
+
+Testlerde implementation detail yerine observable behavior doğrulanacaktır.
+
+### Gerekçe
+
+Parser altyapısı büyüdükçe gereksiz public/internal detayların test API'sine sızması bakım maliyeti oluşturur.
+
+GetParserKind gibi dispatcher iç kararları doğrudan test etmek yerine, bu kararın dışarıdan görülen etkisi test edilmelidir.
+
+Örneğin Assignment, CALL, IF ve DO routing davranışı StatementParserTests üzerinden doğrulanmalıdır.
+
+Böylece testler implementation detayına değil gerçek davranışa bağlı kalır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Parsing/Helpers
+- LegacyCodeTransformer.PL1.Tests/Parsing/Helpers
+- Parser geliştirme standardı
+- Test yazım standardı
+
+### Durum
+
+Kabul edildi.
+
+## Decision 067 - P05 Assignment ve CALL Parser Foundation
+
+### Karar
+
+P05.3 kapsamında Assignment ve CALL statement parsing desteği eklenecektir.
+
+Assignment statement parsing için:
+
+- AssignmentStatementParser
+- AssignmentRawExpressionBuilder
+- ExpressionFactory
+- DelimitedTokenReader
+- StatementRecoveryHelper
+
+kullanılacaktır.
+
+CALL statement parsing için:
+
+- CallStatementParser
+- ExpressionFactory
+- DelimitedTokenReader
+- StatementRecoveryHelper
+
+kullanılacaktır.
+
+StatementParser, concrete parser seçiminde StatementDispatcher ve StatementParserKind üzerinden ilerleyecektir.
+
+Assignment ve CALL parser ilk aşamada tam expression tree üretmeyecektir. Expression tarafı Pl1RawExpression olarak korunacaktır.
+
+### Gerekçe
+
+PL/I executable statement desteğinin ilk güvenli alt kümesi Assignment ve CALL statement türleridir.
+
+Assignment parser aşağıdaki örnekleri destekler:
+
+    PARAM = 'ABC';
+    SQLCODE = 0;
+    DCLGLAU.BRM_KOD = 888;
+
+CALL parser aşağıdaki örnekleri destekler:
+
+    CALL FETCH_CURSOR;
+    CALL PROC1(A, 'ABC', B);
+    CALL SQL_HATA_OLUSTUR('SELECT GLAU_HISTORY');
+
+Expression parser henüz detaylandırılmadığı için expression içeriğini kaybetmeden Pl1RawExpression olarak taşımak en güvenli yaklaşımdır.
+
+Parser utility refactor ile delimiter okuma, expression üretimi ve statement recovery davranışları tekrar eden parser kodlarından ayrılmıştır.
+
+Bu yapı P05.4 IF / DO parser geliştirmeleri için de ortak foundation sağlar.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Parsing/Helpers/AssignmentStatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/CallStatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/AssignmentRawExpressionBuilder
+- LegacyCodeTransformer.PL1/Parsing/Helpers/ExpressionFactory
+- LegacyCodeTransformer.PL1/Parsing/Helpers/DelimitedTokenReader
+- LegacyCodeTransformer.PL1/Parsing/Helpers/StatementRecoveryHelper
+- LegacyCodeTransformer.PL1/Parsing/Helpers/StatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/StatementDispatcher
+- LegacyCodeTransformer.PL1.Tests/Parsing/Helpers
+- LegacyCodeTransformer.PL1.Tests/Parsing/Pl1ParserTests
+
+### Durum
+
+Kabul edildi.

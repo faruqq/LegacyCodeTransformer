@@ -50,8 +50,7 @@ internal sealed class AssignmentStatementParser : ParserBase
     /// Ne çözüyor?
     /// ----------------------
     /// Sol taraf target tokenlarını '=' operatörüne kadar, sağ taraf value tokenlarını
-    /// semicolon'a kadar toplar ve Pl1RawExpression tabanlı Pl1AssignmentStatement
-    /// modeli üretir.
+    /// semicolon'a kadar toplar ve ExpressionFactory üzerinden Pl1Expression üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -71,7 +70,10 @@ internal sealed class AssignmentStatementParser : ParserBase
     public HelperParseResult<Pl1Statement> ParseAssignmentStatement()
     {
         var statementStart = Current.Location;
-        var targetTokens = ReadTokensUntil(Pl1TokenKind.Equals);
+        var tokenReader = new DelimitedTokenReader(Context);
+        var recoveryHelper = new StatementRecoveryHelper(Context);
+
+        var targetTokens = tokenReader.ReadUntil(Pl1TokenKind.Equals);
 
         if (Current.Kind != Pl1TokenKind.Equals)
         {
@@ -80,7 +82,7 @@ internal sealed class AssignmentStatementParser : ParserBase
                     "'=' bekleniyordu.",
                     Current));
 
-            SkipCurrentStatement();
+            recoveryHelper.SkipCurrentStatement();
 
             return new HelperParseResult<Pl1Statement>(
                 null,
@@ -89,7 +91,7 @@ internal sealed class AssignmentStatementParser : ParserBase
 
         Advance();
 
-        var valueTokens = ReadTokensUntil(Pl1TokenKind.Semicolon);
+        var valueTokens = tokenReader.ReadUntil(Pl1TokenKind.Semicolon);
 
         if (Current.Kind != Pl1TokenKind.Semicolon)
         {
@@ -129,103 +131,24 @@ internal sealed class AssignmentStatementParser : ParserBase
                 Position);
         }
 
-        var targetExpressionText = AssignmentRawExpressionBuilder.Build(targetTokens);
-        var valueExpressionText = AssignmentRawExpressionBuilder.Build(valueTokens);
+        var targetExpression = ExpressionFactory.Create(
+            targetTokens,
+            statementStart);
+
+        var valueExpression = ExpressionFactory.Create(
+            valueTokens,
+            statementStart);
 
         var statement = new Pl1AssignmentStatement(
             targets: new[]
             {
-                new Pl1RawExpression(targetExpressionText, statementStart)
+                targetExpression
             },
-            value: new Pl1RawExpression(valueExpressionText, statementStart),
+            value: valueExpression,
             location: statementStart);
 
         return new HelperParseResult<Pl1Statement>(
             statement,
             Position);
-    }
-
-    /// <summary>
-    /// Belirtilen token türüne veya EOF'a kadar tokenları okur.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Assignment grammar içinde target ve value taraflarını ayırmak için
-    /// delimiter tabanlı token toplama gerekir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// '=' veya ';' gibi sınır tokenlarına kadar olan tokenları expression adayı
-    /// olarak toplar.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// A = B; inputunda:
-    ///
-    /// - '=' öncesinde A tokenı
-    /// - ';' öncesinde B tokenı
-    ///
-    /// toplanır.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// ParseAssignmentStatement içinde targetTokens ve valueTokens üretiminde.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Expression parser eklendiğinde delimiter tabanlı okuma davranışı statement
-    /// boundary tespiti için kullanılmaya devam edebilir.
-    /// </summary>
-    private List<Pl1Token> ReadTokensUntil(Pl1TokenKind delimiterKind)
-    {
-        var tokens = new List<Pl1Token>();
-
-        while (!IsAtEnd() && Current.Kind != delimiterKind)
-        {
-            tokens.Add(Advance());
-        }
-
-        return tokens;
-    }
-
-    /// <summary>
-    /// Hatalı assignment statement'ı semicolon'a veya EOF'a kadar atlar.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Assignment parse sırasında '=' eksikse parser'ın aynı token üzerinde takılıp
-    /// sonsuz döngüye girmemesi gerekir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Hatalı statement içeriğini tüketir ve parser'ı sonraki statement için güvenli
-    /// pozisyona taşır.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     PARAM 'ABC';
-    ///
-    /// Bu inputta '=' olmadığı için statement semicolon'a kadar atlanır.
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// ParseAssignmentStatement içinde recovery davranışı olarak.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Unsupported assignment syntax recovery davranışı ileride bu method üzerinden
-    /// genişletilebilir.
-    /// </summary>
-    private void SkipCurrentStatement()
-    {
-        while (!IsAtEnd() && Current.Kind != Pl1TokenKind.Semicolon)
-        {
-            Advance();
-        }
-
-        if (Current.Kind == Pl1TokenKind.Semicolon)
-        {
-            Advance();
-        }
     }
 }

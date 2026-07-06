@@ -168,21 +168,21 @@ public sealed class StatementParserTests
     }
 
     /// <summary>
-    /// CALL statement başlangıcı için diagnostic üretildiğini ve statement'ın atlandığını doğrular.
+    /// CALL statement başlangıcı için Pl1CallStatement üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// CALL keyword statement başlangıcı olarak tanınır fakat concrete CallStatementParser
-    /// henüz eklenmediği için diagnostic üretilir.
+    /// CALL keyword statement başlangıcı CallStatementParser'a yönlenmeli ve
+    /// Pl1CallStatement üretmelidir.
     ///
     /// Hangi input'u test eder?
     /// CALL FETCH_CURSOR;
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Value null, Position EOF öncesi statement sonrasına ilerlemiş ve diagnostic
-    /// içinde CALL parser henüz eklenmedi mesajı bulunmalıdır.
+    /// Value Pl1CallStatement olmalı, ProcedureName FETCH_CURSOR olmalı, Arguments boş
+    /// olmalı, position EOF öncesi statement sonrasına ilerlemeli ve diagnostic listesi boş kalmalıdır.
     /// </summary>
     [Fact]
-    public void ParseStatement_WithCallStart_ShouldAddDiagnosticAndSkipStatement()
+    public void ParseStatement_WithCallStart_ShouldReturnCallStatement()
     {
         var tokens = Tokenize("CALL FETCH_CURSOR;");
         var diagnostics = new DiagnosticBag();
@@ -190,11 +190,12 @@ public sealed class StatementParserTests
 
         var result = parser.ParseStatement();
 
-        Assert.Null(result.Value);
+        var callStatement = Assert.IsType<Pl1CallStatement>(result.Value);
+
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+        Assert.Empty(callStatement.Arguments);
         Assert.Equal(tokens.Count - 1, result.Position);
-        Assert.Contains(
-            diagnostics.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("CALL parser henüz eklenmedi"));
+        Assert.Empty(diagnostics.Diagnostics);
     }
 
     /// <summary>
@@ -258,35 +259,6 @@ public sealed class StatementParserTests
     }
 
     /// <summary>
-    /// Semicolon olmayan unsupported statement için parser'ın EOF'a kadar güvenli ilerlediğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// StatementParser, henüz concrete parser'ı olmayan ve semicolon içermeyen CALL
-    /// statement'ta sonsuz döngüye girmeden EOF tokenına kadar ilerlemelidir.
-    ///
-    /// Hangi input'u test eder?
-    /// CALL FETCH_CURSOR
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Value null, Position EOF token pozisyonunda olmalıdır.
-    /// </summary>
-    [Fact]
-    public void ParseStatement_WithMissingSemicolonOnUnsupportedStatement_ShouldSkipUntilEndOfFile()
-    {
-        var tokens = Tokenize("CALL FETCH_CURSOR");
-        var diagnostics = new DiagnosticBag();
-        var parser = new StatementParser(tokens, 0, diagnostics);
-
-        var result = parser.ParseStatement();
-
-        Assert.Null(result.Value);
-        Assert.Equal(tokens.Count - 1, result.Position);
-        Assert.Contains(
-            diagnostics.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("CALL parser henüz eklenmedi"));
-    }
-
-    /// <summary>
     /// Semicolon olmayan assignment statement için diagnostic üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
@@ -342,6 +314,129 @@ public sealed class StatementParserTests
         Assert.Contains(
             diagnostics.Diagnostics,
             diagnostic => diagnostic.Message.Contains("'=' bekleniyordu"));
+    }
+
+    /// <summary>
+    /// Parametreli CALL statement için argument expression modellerinin üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CallStatementParser parantez içindeki argument listesini virgül bazlı ayırmalı ve
+    /// her argument için Pl1RawExpression üretmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL PROC1(A, 'ABC', B);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ProcedureName PROC1, Arguments A, 'ABC', B olmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithCallArguments_ShouldReturnCallStatementWithArguments()
+    {
+        var tokens = Tokenize("CALL PROC1(A, 'ABC', B);");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        var callStatement = Assert.IsType<Pl1CallStatement>(result.Value);
+
+        Assert.Equal("PROC1", callStatement.ProcedureName);
+        Assert.Equal(3, callStatement.Arguments.Count);
+
+        Assert.Equal("A", Assert.IsType<Pl1RawExpression>(callStatement.Arguments[0]).Text);
+        Assert.Equal("'ABC'", Assert.IsType<Pl1RawExpression>(callStatement.Arguments[1]).Text);
+        Assert.Equal("B", Assert.IsType<Pl1RawExpression>(callStatement.Arguments[2]).Text);
+        Assert.Empty(diagnostics.Diagnostics);
+    }
+
+    /// <summary>
+    /// CALL procedure adı eksik olduğunda diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CALL keyword sonrasında identifier gelmiyorsa parser model üretmemeli ve procedure adı
+    /// bekleniyordu diagnostic'i üretmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL ;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Value null olmalı ve diagnostic içinde CALL procedure adı bekleniyordu mesajı bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithMissingCallProcedureName_ShouldReturnDiagnostic()
+    {
+        var tokens = Tokenize("CALL ;");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        Assert.Null(result.Value);
+        Assert.Equal(tokens.Count - 1, result.Position);
+        Assert.Contains(
+            diagnostics.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("CALL procedure adı bekleniyordu"));
+    }
+
+    /// <summary>
+    /// CALL statement semicolon eksik olduğunda diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CALL statement sonunda semicolon yoksa parser model üretmemeli ve semicolon bekleniyordu
+    /// diagnostic'i üretmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL FETCH_CURSOR
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Value null olmalı ve diagnostic içinde ';' bekleniyordu mesajı bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithMissingSemicolonOnCall_ShouldReturnDiagnostic()
+    {
+        var tokens = Tokenize("CALL FETCH_CURSOR");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        Assert.Null(result.Value);
+        Assert.Equal(tokens.Count - 1, result.Position);
+        Assert.Contains(
+            diagnostics.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("';' bekleniyordu"));
+    }
+
+    /// <summary>
+    /// CALL argument içinde qualified member expression taşındığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CallStatementParser, argument expression üretimini ExpressionFactory üzerinden
+    /// yapmalı ve qualified member access formatını korumalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL PROC1(DCLGLAU.BRM_KOD);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Argument Text değeri DCLGLAU.BRM_KOD olmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithCallQualifiedMemberArgument_ShouldPreserveArgumentExpression()
+    {
+        var tokens = Tokenize("CALL PROC1(DCLGLAU.BRM_KOD);");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        var callStatement = Assert.IsType<Pl1CallStatement>(result.Value);
+
+        var argument = Assert.Single(callStatement.Arguments);
+        var rawArgument = Assert.IsType<Pl1RawExpression>(argument);
+
+        Assert.Equal("PROC1", callStatement.ProcedureName);
+        Assert.Equal("DCLGLAU.BRM_KOD", rawArgument.Text);
+        Assert.Empty(diagnostics.Diagnostics);
     }
 
     private static IReadOnlyList<Pl1Token> Tokenize(string source)

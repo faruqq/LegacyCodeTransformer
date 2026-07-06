@@ -462,66 +462,81 @@ P05.3 — Assignment & CALL Parser
 
 ### Durum
 
-⏳ Planlandı
+✅ Tamamlandı
 
 ### Amaç
 
-Statement parser altyapısı üzerine ilk executable statement parser modüllerini
-eklemek ve gerçek PL/I kaynak kodundan Assignment ile CALL statement modellerini
-üretmek.
+Statement parser altyapısı üzerine ilk executable statement parser modüllerini eklemek ve gerçek PL/I kaynak kodundan Assignment ile CALL statement modellerini üretmek.
 
-### Kapsam
+### Tamamlananlar
 
-* AssignmentStatementParser
-* CallStatementParser
-* Raw statement parsing
-* Statement boundary yönetimi
-* RawExpression oluşturulması
-* Statement parser unit testleri
-* ParserHelperTestBase genişletmeleri
+#### Assignment Parser
 
-### Tamamlanacak Özellikler
+* ✅ AssignmentStatementParser
+* ✅ Identifier assignment desteği
+* ✅ String literal assignment desteği
+* ✅ Numeric assignment desteği
+* ✅ Qualified member assignment desteği
+* ✅ Raw expression target/value taşıma
 
-#### Assignment
+#### CALL Parser
 
-* Tek hedefli assignment
+* ✅ CallStatementParser
+* ✅ Parametresiz CALL desteği
+* ✅ Parametreli CALL desteği
+* ✅ Identifier argument desteği
+* ✅ String literal argument desteği
+* ✅ Qualified member argument desteği
 
-    A = B;
+#### Parser Utility Refactor
 
-* Expression assignment
+* ✅ AssignmentRawExpressionBuilder
+* ✅ ExpressionFactory
+* ✅ DelimitedTokenReader
+* ✅ StatementRecoveryHelper
+* ✅ StatementParserKind
+* ✅ StatementDispatcher parser kind mapping
+* ✅ StatementParser concrete parser routing
 
-    A = B + C;
+#### Testler
 
-* Qualified member assignment
+* ✅ AssignmentRawExpressionBuilderTests
+* ✅ ExpressionFactoryTests
+* ✅ DelimitedTokenReaderTests
+* ✅ StatementRecoveryHelperTests
+* ✅ StatementParser assignment testleri
+* ✅ StatementParser CALL testleri
+* ✅ Pl1Parser assignment integration testleri
+* ✅ Pl1Parser CALL integration testleri
 
-    REC.FIELD = VALUE;
+### Desteklenen Örnekler
 
-* Array element assignment
-
-    DIZI(I) = VALUE;
-
-#### CALL
-
-* Parametresiz CALL
-
-    CALL PROC1;
-
-* Parametreli CALL
-
-    CALL PROC1(A, B);
-
-* Literal parametre
-
-    CALL PROC1('ABC');
-
-* Mixed parameter list
-
+    PARAM = 'ABC';
+    SQLCODE = 0;
+    DCLGLAU.BRM_KOD = 888;
+    CALL FETCH_CURSOR;
     CALL PROC1(A, 'ABC', B);
+    CALL SQL_HATA_OLUSTUR('SELECT GLAU_HISTORY');
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* Çoklu assignment
+* Tam expression parser
+* Operator precedence
+* Nested function call argument parsing
+* IF parser
+* DO parser
+* EGL statement output
 
 ### Başarı Kriteri
 
-Parser gerçek PL/I Assignment ve CALL statement'larını syntax tree üzerinde
-semantic olarak temsil edebilmelidir.
+Parser gerçek PL/I Assignment ve CALL statement'larını syntax tree üzerinde semantic olarak temsil edebilir hale gelmiştir.
+
+Pl1Parser declaration, assignment ve CALL statement modellerini aynı Pl1SyntaxTree içinde taşıyabilmektedir.
+
+### Sonraki Milestone
+
+P05.4 — IF / DO Parser
 
 ---
 
