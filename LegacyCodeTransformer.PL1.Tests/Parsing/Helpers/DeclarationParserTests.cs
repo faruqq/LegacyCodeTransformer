@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Declarations;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
+﻿using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
@@ -12,8 +9,7 @@ public sealed class DeclarationParserTests : ParserHelperTestBase
     /// DCL sonrasında Identifier geldiğinde variable declaration parser'a yönlendirildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// DeclarationParser'ın DCL PARAM CHAR(08); syntax bilgisini Pl1VariableDeclaration
-    /// olarak parse ettiğini doğrular.
+    /// DeclarationParser'ın DCL PARAM CHAR(08); syntax bilgisini Pl1VariableDeclaration olarak parse ettiğini doğrular.
     ///
     /// Hangi input'u test eder?
     /// DCL PARAM CHAR(08);
@@ -24,26 +20,25 @@ public sealed class DeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseDeclaration_WithIdentifierAfterDcl_ShouldCreateVariableDeclaration()
     {
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateDeclarationParser(
+            "DCL PARAM CHAR(08);",
+            out var context);
 
         var result = parser.ParseDeclaration();
 
-        var declaration = Assert.IsType<Pl1VariableDeclaration>(result.Declaration);
+        var declaration = Assert.IsType<Pl1VariableDeclaration>(result.Value);
         Assert.Equal("PARAM", declaration.Name);
 
         var dataType = Assert.IsType<Pl1CharacterType>(declaration.DataType);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
     /// DCL sonrasında Number geldiğinde structure declaration parser'a yönlendirildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// DeclarationParser'ın DCL 1 REC, 5 PARAM CHAR(08); syntax bilgisini
-    /// Pl1StructureDeclaration olarak parse ettiğini doğrular.
+    /// DeclarationParser'ın DCL 1 REC, 5 PARAM CHAR(08); syntax bilgisini Pl1StructureDeclaration olarak parse ettiğini doğrular.
     ///
     /// Hangi input'u test eder?
     /// DCL 1 REC, 5 PARAM CHAR(08);
@@ -54,25 +49,24 @@ public sealed class DeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseDeclaration_WithNumberAfterDcl_ShouldCreateStructureDeclaration()
     {
-        var tokens = new Pl1Lexer("DCL 1 REC, 5 PARAM CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateDeclarationParser(
+            "DCL 1 REC, 5 PARAM CHAR(08);",
+            out var context);
 
         var result = parser.ParseDeclaration();
 
-        var declaration = Assert.IsType<Pl1StructureDeclaration>(result.Declaration);
+        var declaration = Assert.IsType<Pl1StructureDeclaration>(result.Value);
         Assert.Equal("REC", declaration.Name);
         Assert.Equal(1, declaration.Level);
         Assert.Single(declaration.Members);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
     /// DCL sonrasında geçersiz token geldiğinde diagnostic üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// DeclarationParser'ın DCL sonrasında variable name veya structure level gelmediğinde
-    /// diagnostic ürettiğini doğrular.
+    /// DeclarationParser'ın DCL sonrasında variable name veya structure level gelmediğinde diagnostic ürettiğini doğrular.
     ///
     /// Hangi input'u test eder?
     /// DCL ;
@@ -83,16 +77,17 @@ public sealed class DeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseDeclaration_WithInvalidTokenAfterDcl_ShouldReturnDiagnostic()
     {
-        var tokens = new Pl1Lexer("DCL ;").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateDeclarationParser(
+            "DCL ;",
+            out var context);
 
         var result = parser.ParseDeclaration();
+        var diagnostics = GetDiagnostics(context);
 
-        Assert.Null(result.Declaration);
-        Assert.Single(diagnostics.Diagnostics);
+        Assert.Null(result.Value);
+        Assert.Single(diagnostics);
         Assert.Contains(
             "DCL sonrasında değişken adı veya structure seviye numarası bekleniyordu.",
-            diagnostics.Diagnostics[0].Message);
+            diagnostics[0].Message);
     }
 }

@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,15 +19,15 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithCharKeyword_ShouldCreateCharacterType()
     {
-        var tokens = new Pl1Lexer("CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DataTypeParser(tokens, 0, diagnostics);
+        var parser = CreateDataTypeParser(
+            "CHAR(08);",
+            out var context);
 
         var result = parser.Parse();
 
         var dataType = Assert.IsType<Pl1CharacterType>(result.Value);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -48,16 +45,16 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithFixedDecimalKeyword_ShouldCreateFixedDecimalType()
     {
-        var tokens = new Pl1Lexer("FIXED DECIMAL(15,2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DataTypeParser(tokens, 0, diagnostics);
+        var parser = CreateDataTypeParser(
+            "FIXED DECIMAL(15,2);",
+            out var context);
 
         var result = parser.Parse();
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -75,9 +72,9 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithPictureKeyword_ShouldCreatePictureType()
     {
-        var tokens = new Pl1Lexer("PIC '999V99';").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DataTypeParser(tokens, 0, diagnostics);
+        var parser = CreateDataTypeParser(
+            "PIC '999V99';",
+            out var context);
 
         var result = parser.Parse();
 
@@ -85,7 +82,7 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
         Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
         Assert.Equal(5, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -103,15 +100,15 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithBitKeyword_ShouldCreateBitType()
     {
-        var tokens = new Pl1Lexer("BIT(8);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DataTypeParser(tokens, 0, diagnostics);
+        var parser = CreateDataTypeParser(
+            "BIT(8);",
+            out var context);
 
         var result = parser.Parse();
 
         var dataType = Assert.IsType<Pl1BitType>(result.Value);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -129,9 +126,9 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithFloatKeyword_ShouldCreateFloatingType()
     {
-        var tokens = new Pl1Lexer("FLOAT BIN(53);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DataTypeParser(tokens, 0, diagnostics);
+        var parser = CreateDataTypeParser(
+            "FLOAT BIN(53);",
+            out var context);
 
         var result = parser.Parse();
 
@@ -139,6 +136,6 @@ public sealed class DataTypeParserTests : ParserHelperTestBase
         Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
         Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
         Assert.Equal(53, dataType.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

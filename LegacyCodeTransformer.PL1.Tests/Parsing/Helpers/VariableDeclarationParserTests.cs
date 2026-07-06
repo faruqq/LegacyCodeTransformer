@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,20 +19,20 @@ public sealed class VariableDeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseVariableDeclaration_WithBasicCharDeclaration_ShouldCreateVariableDeclaration()
     {
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new VariableDeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateVariableDeclarationParser(
+            "DCL PARAM CHAR(08);",
+            out var context);
 
         var result = parser.ParseVariableDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.Equal("PARAM", result.Declaration!.Name);
-        Assert.Null(result.Declaration.ArraySize);
-        Assert.Null(result.Declaration.InitialValue);
+        Assert.NotNull(result.Value);
+        Assert.Equal("PARAM", result.Value!.Name);
+        Assert.Null(result.Value.ArraySize);
+        Assert.Null(result.Value.InitialValue);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.Declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value.DataType);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -53,16 +50,16 @@ public sealed class VariableDeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseVariableDeclaration_WithInitialValue_ShouldSetInitialValue()
     {
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(08) INIT(' ');").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new VariableDeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateVariableDeclarationParser(
+            "DCL PARAM CHAR(08) INIT(' ');",
+            out var context);
 
         var result = parser.ParseVariableDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.NotNull(result.Declaration!.InitialValue);
-        Assert.Equal(" ", result.Declaration.InitialValue!.Value);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.NotNull(result.Value);
+        Assert.NotNull(result.Value!.InitialValue);
+        Assert.Equal(" ", result.Value.InitialValue!.Value);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -80,18 +77,18 @@ public sealed class VariableDeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseVariableDeclaration_WithNameArraySize_ShouldSetArraySize()
     {
-        var tokens = new Pl1Lexer("DCL PARAM(2) CHAR(10);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new VariableDeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateVariableDeclarationParser(
+            "DCL PARAM(2) CHAR(10);",
+            out var context);
 
         var result = parser.ParseVariableDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.Equal(2, result.Declaration!.ArraySize);
+        Assert.NotNull(result.Value);
+        Assert.Equal(2, result.Value!.ArraySize);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.Declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value.DataType);
         Assert.Equal(10, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -109,17 +106,17 @@ public sealed class VariableDeclarationParserTests : ParserHelperTestBase
     [Fact]
     public void ParseVariableDeclaration_WithDimensionAttribute_ShouldSetArraySize()
     {
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(10) DIM(2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new VariableDeclarationParser(tokens, 0, diagnostics);
+        var parser = CreateVariableDeclarationParser(
+            "DCL PARAM CHAR(10) DIM(2);",
+            out var context);
 
         var result = parser.ParseVariableDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.Equal(2, result.Declaration!.ArraySize);
+        Assert.NotNull(result.Value);
+        Assert.Equal(2, result.Value!.ArraySize);
 
-        var dataType = Assert.IsType<Pl1CharacterType>(result.Declaration.DataType);
+        var dataType = Assert.IsType<Pl1CharacterType>(result.Value.DataType);
         Assert.Equal(10, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

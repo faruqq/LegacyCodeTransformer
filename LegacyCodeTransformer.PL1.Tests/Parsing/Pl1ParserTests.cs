@@ -1,326 +1,237 @@
 ﻿using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Parsing;
+using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
+using LegacyCodeTransformer.Core.Results;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing;
 
-/// <summary>
-/// Pl1Parser için syntax tree üretim testlerini içerir.
-///
-/// Neden var?
-/// ----------------------
-/// Lexer token üretimini doğruladık.
-/// Şimdi bu token'ların doğru PL/I syntax modeline dönüştürüldüğünü
-/// garanti altına almamız gerekir.
-///
-/// Bu testler özellikle DCL FIXED DECIMAL ifadelerinin
-/// Pl1VariableDeclaration ve Pl1FixedDecimalType olarak parse edildiğini doğrular.
-/// </summary>
 public sealed class Pl1ParserTests
 {
-    [Fact]
-    public void Parse_WithFixedDecimalDeclaration_ShouldCreateVariableDeclaration()
+    private static ParseResult<Pl1SyntaxTree> ParseSource(string source)
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL MUST_NO FIXED DECIMAL(8);").Tokenize();
+        var tokens = new Pl1Lexer(source).Tokenize();
         var parser = new Pl1Parser(tokens);
 
-        // Act
-        var result = parser.Parse();
+        return parser.Parse();
+    }
 
-        // Assert
+    private static Pl1VariableDeclaration ParseSingleVariableDeclaration(string source)
+    {
+        var result = ParseSource(source);
+
         Assert.True(result.Success);
         Assert.Empty(result.Diagnostics);
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        return Assert.IsType<Pl1VariableDeclaration>(declaration);
+    }
+
+    private static Pl1StructureDeclaration ParseSingleStructureDeclaration(string source)
+    {
+        var result = ParseSource(source);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+
+        return Assert.IsType<Pl1StructureDeclaration>(declaration);
+    }
+
+    /// <summary>
+    /// FIXED DECIMAL declaration bilgisinin variable declaration olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DCL MUST_NO FIXED DECIMAL(8); ifadesini Pl1VariableDeclaration ve Pl1FixedDecimalType olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL MUST_NO FIXED DECIMAL(8);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı MUST_NO, precision 8 ve scale null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFixedDecimalDeclaration_ShouldCreateVariableDeclaration()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL MUST_NO FIXED DECIMAL(8);");
 
         Assert.Equal("MUST_NO", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
         Assert.Equal(8, dataType.Precision);
         Assert.Null(dataType.Scale);
     }
 
+    /// <summary>
+    /// FIXED DECIMAL declaration içinde açıkça verilen zero scale bilgisinin korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FIXED DECIMAL(8,0) içindeki scale 0 bilgisini null'a çevirmeden taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL MUST_NO FIXED DECIMAL(8,0);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı MUST_NO, precision 8 ve scale 0 olmalıdır.
+    /// </summary>
     [Fact]
     public void Parse_WithFixedDecimalZeroScaleDeclaration_ShouldCreateVariableDeclarationWithZeroScale()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL MUST_NO FIXED DECIMAL(8,0);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL MUST_NO FIXED DECIMAL(8,0);");
 
         Assert.Equal("MUST_NO", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
         Assert.Equal(8, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
     }
 
+    /// <summary>
+    /// FIXED DECIMAL declaration içinde scale bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FIXED DECIMAL(10,2) içindeki precision ve scale bilgisini doğru taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL CUSTOMER_NO FIXED DECIMAL(10,2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı CUSTOMER_NO, precision 10 ve scale 2 olmalıdır.
+    /// </summary>
     [Fact]
     public void Parse_WithFixedDecimalScaleDeclaration_ShouldCreateVariableDeclarationWithScale()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL CUSTOMER_NO FIXED DECIMAL(10,2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL CUSTOMER_NO FIXED DECIMAL(10,2);");
 
         Assert.Equal("CUSTOMER_NO", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
         Assert.Equal(10, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
     }
 
+    /// <summary>
+    /// Eksik semicolon durumunda parser diagnostic ürettiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın declaration sonunda semicolon beklediğini ve eksik olduğunda diagnostic ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL MUST_NO FIXED DECIMAL(8)
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Parse başarısız olmalı ve "';' bekleniyordu." diagnostic mesajı bulunmalıdır.
+    /// </summary>
     [Fact]
     public void Parse_WithMissingSemicolon_ShouldReturnDiagnosticError()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL MUST_NO FIXED DECIMAL(8)").Tokenize();
-        var parser = new Pl1Parser(tokens);
+        var result = ParseSource(
+            "DCL MUST_NO FIXED DECIMAL(8)");
 
-        // Act
-        var result = parser.Parse();
-
-        // Assert
         Assert.False(result.Success);
         Assert.NotEmpty(result.Diagnostics);
-        Assert.Contains(result.Diagnostics, x => x.Message.Contains("';' bekleniyordu."));
+        Assert.Contains(
+            result.Diagnostics,
+            x => x.Message.Contains("';' bekleniyordu."));
     }
 
     /// <summary>
     /// PL/I CHAR(n) tanımının Pl1CharacterType olarak parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// Lexer CHAR keyword'ünü ürettikten sonra parser'ın bu token'ı
-    /// karakter veri tipi modeline dönüştürmesi gerekir.
+    /// Bu test neyi doğrular?
+    /// Parser'ın CHAR keyword'ünü karakter veri tipi modeline dönüştürdüğünü doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM CHAR(25);
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM
-    /// - DataType: Pl1CharacterType
-    /// - Length: 25
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - CHAR declaration desteğini doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// CHAR üzerine INIT, VARYING, structure field gibi özellikler eklendiğinde
-    /// temel CHAR parse davranışının bozulmadığını garanti eder.
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, veri tipi Pl1CharacterType ve Length 25 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithCharDeclaration_ShouldCreateCharacterTypeDeclaration()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(25);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(25);");
 
         Assert.Equal("PARAM", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
-
         Assert.Equal(25, dataType.Length);
     }
 
     /// <summary>
     /// PL/I CHAR uzunluğunda baştaki sıfırların modelde normalize edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// Gerçek PL/I kodlarında CHAR(08), CHAR(01), CHAR(02) gibi başında
-    /// sıfır bulunan uzunluk değerleri kullanılabilir.
-    /// Parser bu değeri model üzerinde sayısal uzunluk olarak tutmalıdır.
+    /// Bu test neyi doğrular?
+    /// Parser'ın CHAR(08) değerini sayısal length 8 olarak taşıdığını doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM CHAR(08);
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM
-    /// - DataType: Pl1CharacterType
-    /// - Length: 8
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - Numeric token normalizasyon davranışını doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Array dimension, precision, scale ve tekrar sayısı gibi numeric
-    /// alanlarda benzer normalizasyon yaklaşımına referans olur.
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, veri tipi Pl1CharacterType ve Length 8 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithCharDeclarationHavingLeadingZeroLength_ShouldNormalizeLength()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(08);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(08);");
 
         Assert.Equal("PARAM", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
-
         Assert.Equal(8, dataType.Length);
     }
 
     /// <summary>
     /// PL/I CHARACTER(n) tanımının Pl1CharacterType olarak parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I dilinde CHARACTER uzun form, CHAR ise kısa form olarak kullanılır.
-    /// Parser iki kullanımı da aynı veri tipi modeliyle temsil etmelidir.
+    /// Bu test neyi doğrular?
+    /// Parser'ın CHARACTER uzun formunu CHAR ile aynı semantic model olarak ele aldığını doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DECLARE PARAM CHARACTER(08);
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM
-    /// - DataType: Pl1CharacterType
-    /// - Length: 8
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - DECLARE alias ve CHARACTER veri tipi desteğini doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Kod tabanında farklı PL/I ekipleri CHAR yerine CHARACTER kullansa bile
-    /// dönüşüm davranışının aynı kalmasını garanti eder.
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, veri tipi Pl1CharacterType ve Length 8 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithCharacterDeclaration_ShouldCreateCharacterTypeDeclaration()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DECLARE PARAM CHARACTER(08);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DECLARE PARAM CHARACTER(08);");
 
         Assert.Equal("PARAM", variableDeclaration.Name);
 
         var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
-
         Assert.Equal(8, dataType.Length);
     }
 
     /// <summary>
     /// PL/I INIT(' ') başlangıç değerinin declaration modeline taşındığını doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// Gerçek PL/I kaynaklarında CHAR alanlar çoğunlukla boşluk karakteriyle
-    /// initialize edilir.
-    /// Parser bu bilgiyi kaybetmeden Pl1VariableDeclaration.InitialValue
-    /// üzerinde saklamalıdır.
+    /// Bu test neyi doğrular?
+    /// Parser'ın simple INIT string literal bilgisini Pl1VariableDeclaration.InitialValue üzerinde koruduğunu doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM CHAR(08) INIT(' ');
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM
-    /// - InitialValue.Value: " "
-    /// - InitialValue.RepeatCount: null
-    /// - InitialValue.AppliesToAllElements: false
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - INIT başlangıç değeri desteğini doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// EGL default value mapping kararı alındığında bu bilginin Syntax Tree
-    /// üzerinde hazır olduğunu garanti eder.
+    /// Beklenen temel model/çıktı nedir?
+    /// InitialValue.Value boşluk, RepeatCount null ve AppliesToAllElements false olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithSimpleInitValue_ShouldSetInitialValue()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(08) INIT(' ');").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(08) INIT(' ');");
 
         Assert.Equal("PARAM", variableDeclaration.Name);
         Assert.NotNull(variableDeclaration.InitialValue);
@@ -332,50 +243,20 @@ public sealed class Pl1ParserTests
     /// <summary>
     /// PL/I INIT(';') başlangıç değerinin karakter sabiti olarak taşındığını doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I kaynaklarında başlangıç değeri yalnızca boşluk olmayabilir.
-    /// Noktalı virgül gibi özel karakterler de karakter sabiti olarak
-    /// kullanılabilir.
+    /// Bu test neyi doğrular?
+    /// Parser'ın özel karakter içeren string literal başlangıç değerini kaybetmeden taşıdığını doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM2 CHAR(01) INIT(';');
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM2
-    /// - InitialValue.Value: ";"
-    /// - InitialValue.RepeatCount: null
-    /// - InitialValue.AppliesToAllElements: false
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - StringLiteral token içeriğinin doğru taşındığını doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Özel karakterli default value dönüşümlerinde string literal bilgisinin
-    /// korunmasını garanti eder.
+    /// Beklenen temel model/çıktı nedir?
+    /// InitialValue.Value noktalı virgül olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithSemicolonInitValue_ShouldSetInitialValue()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM2 CHAR(01) INIT(';');").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM2 CHAR(01) INIT(';');");
 
         Assert.Equal("PARAM2", variableDeclaration.Name);
         Assert.NotNull(variableDeclaration.InitialValue);
@@ -387,50 +268,20 @@ public sealed class Pl1ParserTests
     /// <summary>
     /// PL/I INIT((08)' ') tekrar faktörünün sayısal olarak parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I başlangıç değeri söz diziminde aynı değerin birden fazla kez
-    /// tekrar ettirilmesi için tekrar faktörü kullanılabilir.
-    /// Bu bilgi Syntax Tree üzerinde kaybedilmeden tutulmalıdır.
+    /// Bu test neyi doğrular?
+    /// Parser'ın repeat factor bilgisini InitialValue.RepeatCount alanında koruduğunu doğrular.
     ///
-    /// Test edilen PL/I:
-    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM3 CHAR(8) INIT((08)' ');
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM3
-    /// - InitialValue.Value: " "
-    /// - InitialValue.RepeatCount: 8
-    /// - InitialValue.AppliesToAllElements: false
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - INIT repeat factor desteğini doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Array, structure ve fixed-length alan initialization dönüşümleri
-    /// desteklendiğinde repeat count bilgisi kullanılacaktır.
+    /// Beklenen temel model/çıktı nedir?
+    /// InitialValue.Value boşluk, RepeatCount 8 ve AppliesToAllElements false olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithRepeatedInitValue_ShouldSetRepeatCount()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM3 CHAR(8) INIT((08)' ');").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM3 CHAR(8) INIT((08)' ');");
 
         Assert.Equal("PARAM3", variableDeclaration.Name);
         Assert.NotNull(variableDeclaration.InitialValue);
@@ -440,56 +291,24 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// PL/I INIT((*)' ') tekrar faktörünün tüm elemanlar anlamında parse
-    /// edildiğini doğrular.
+    /// PL/I INIT((*)' ') all-elements bilgisinin parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I array ve structure initialization söz diziminde (*) kullanımı,
-    /// başlangıç değerinin ilgili tüm elemanlara uygulanacağını ifade eder.
-    /// Basit declaration aşamasında bile bu bilginin model üzerinde
-    /// korunması gerekir.
+    /// Bu test neyi doğrular?
+    /// Parser'ın (*) repeat factor bilgisini AppliesToAllElements true olarak taşıdığını doğrular.
     ///
-    /// Test edilen PL/I:
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(8) INIT((*)' ');
     ///
-    /// DCL PARAM4 CHAR(8) INIT((*)' ');
-    ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM4
-    /// - InitialValue.Value: " "
-    /// - InitialValue.RepeatCount: null
-    /// - InitialValue.AppliesToAllElements: true
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - INIT all-elements semantics bilgisini doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Structure array desteği geldiğinde INIT((*)' ') davranışı bu bilgi
-    /// üzerinden yorumlanacaktır.
+    /// Beklenen temel model/çıktı nedir?
+    /// InitialValue.Value boşluk, RepeatCount null ve AppliesToAllElements true olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithAllElementsInitValue_ShouldSetAppliesToAllElements()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM4 CHAR(8) INIT((*)' ');").Tokenize();
-        var parser = new Pl1Parser(tokens);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(8) INIT((*)' ');");
 
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM4", variableDeclaration.Name);
+        Assert.Equal("PARAM", variableDeclaration.Name);
         Assert.NotNull(variableDeclaration.InitialValue);
         Assert.Equal(" ", variableDeclaration.InitialValue!.Value);
         Assert.Null(variableDeclaration.InitialValue.RepeatCount);
@@ -497,53 +316,941 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// PL/I INITIAL keyword'ünün INIT ile aynı başlangıç değeri davranışını
-    /// ürettiğini doğrular.
+    /// PL/I basic structure declaration bilgisinin parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// PL/I dilinde INITIAL uzun kullanım, INIT ise kısa kullanım olarak
-    /// kullanılabilir.
-    /// Parser iki keyword'ü de aynı Pl1InitialValue modeline dönüştürmelidir.
+    /// Bu test neyi doğrular?
+    /// Parser'ın DCL 1 ile başlayan structure declaration ifadesini Pl1StructureDeclaration olarak modellediğini doğrular.
     ///
-    /// Test edilen PL/I:
+    /// Hangi input'u test eder?
+    /// DCL 1 PARAME_LIST, 5 PARAM CHAR(08);
     ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Structure adı PARAME_LIST, level 1, tek member PARAM CHAR(8) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBasicStructureDeclaration_ShouldCreateStructureDeclaration()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 PARAME_LIST, 5 PARAM CHAR(08);");
+
+        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
+        Assert.Equal(1, structureDeclaration.Level);
+        Assert.Null(structureDeclaration.ArraySize);
+
+        var member = Assert.Single(structureDeclaration.Members);
+        Assert.Equal("PARAM", member.Name);
+        Assert.Equal(5, member.Level);
+        Assert.Null(member.InitialValue);
+        Assert.Null(member.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(8, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I structure member INIT bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member üzerindeki INIT(' ') bilgisini Pl1StructureMember.InitialValue alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 PARAME_LIST, 5 PARAM CHAR(08) INIT(' ');
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// PARAM member InitialValue.Value boşluk olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureMemberInitValue_ShouldSetMemberInitialValue()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 PARAME_LIST, 5 PARAM CHAR(08) INIT(' ');");
+
+        var member = Assert.Single(structureDeclaration.Members);
+
+        Assert.Equal("PARAM", member.Name);
+        Assert.NotNull(member.InitialValue);
+        Assert.Equal(" ", member.InitialValue!.Value);
+        Assert.Null(member.InitialValue.RepeatCount);
+        Assert.False(member.InitialValue.AppliesToAllElements);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(8, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I structure array declaration bilgisinin root ArraySize alanında korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DCL 1 DIZI(6) syntax bilgisini structure declaration array size olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Structure adı DIZI, ArraySize 6 ve member DIZI_PARAM1 CHAR(1) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureArrayDeclaration_ShouldSetStructureArraySize()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 DIZI(6), 3 DIZI_PARAM1 CHAR(01);");
+
+        Assert.Equal("DIZI", structureDeclaration.Name);
+        Assert.Equal(1, structureDeclaration.Level);
+        Assert.Equal(6, structureDeclaration.ArraySize);
+
+        var member = Assert.Single(structureDeclaration.Members);
+        Assert.Equal("DIZI_PARAM1", member.Name);
+        Assert.Equal(3, member.Level);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(1, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I variable declaration name-based array bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PARAM(2) syntax bilgisini Pl1VariableDeclaration.ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM(2) CHAR(10);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, ArraySize 2 ve data type CHAR(10) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVariableArrayDeclaration_ShouldSetArraySize()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM(2) CHAR(10);");
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(2, variableDeclaration.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I variable declaration DIM attribute bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın data type sonrasında gelen DIM(2) bilgisini Pl1VariableDeclaration.ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(10) DIM(2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, ArraySize 2 ve data type CHAR(10) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVariableDimensionAttribute_ShouldSetArraySize()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(10) DIM(2);");
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(2, variableDeclaration.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I variable declaration DIMENSION attribute bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DIMENSION(3) bilgisini Pl1VariableDeclaration.ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(10) DIMENSION(3);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı PARAM, ArraySize 3 ve data type CHAR(10) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVariableDimensionKeywordAttribute_ShouldSetArraySize()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM CHAR(10) DIMENSION(3);");
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(3, variableDeclaration.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I structure member name-based array bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member adından sonra gelen (2) bilgisini member ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 REC, 5 PARAM_LIST(2) CHAR(10);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// PARAM_LIST member ArraySize 2 ve data type CHAR(10) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureMemberArrayDeclaration_ShouldSetMemberArraySize()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 REC, 5 PARAM_LIST(2) CHAR(10);");
+
+        var member = Assert.Single(structureDeclaration.Members);
+
+        Assert.Equal("PARAM_LIST", member.Name);
+        Assert.Equal(2, member.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I structure member DIM attribute bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member veri tipi sonrasında gelen DIM(2) bilgisini member ArraySize alanına taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 REC, 5 PARAM_LIST CHAR(10) DIM(2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// PARAM_LIST member ArraySize 2 ve data type CHAR(10) olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithStructureMemberDimensionAttribute_ShouldSetMemberArraySize()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 REC, 5 PARAM_LIST CHAR(10) DIM(2);");
+
+        var member = Assert.Single(structureDeclaration.Members);
+
+        Assert.Equal("PARAM_LIST", member.Name);
+        Assert.Equal(2, member.ArraySize);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
+        Assert.Equal(10, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I nested structure bilgisinin recursive member modeliyle parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın veri tipi olmayan group member alanını nested group olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ADRES group member olmalı, altında IL child member bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithNestedStructureDeclaration_ShouldCreateNestedMembers()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);");
+
+        var groupMember = Assert.Single(structureDeclaration.Members);
+
+        Assert.Equal("ADRES", groupMember.Name);
+        Assert.True(groupMember.IsGroup);
+        Assert.Null(groupMember.DataType);
+
+        var childMember = Assert.Single(groupMember.Members);
+
+        Assert.Equal("IL", childMember.Name);
+        Assert.Equal(10, childMember.Level);
+
+        var dataType = Assert.IsType<Pl1CharacterType>(childMember.DataType);
+        Assert.Equal(2, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I VARCHAR declaration bilgisinin Pl1VarcharType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın VARCHAR(n) syntax bilgisini Pl1VarcharType modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL CUSTOMER_NAME VARCHAR(50);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı CUSTOMER_NAME, veri tipi Pl1VarcharType ve Length 50 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithVarcharDeclaration_ShouldCreateVarcharType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL CUSTOMER_NAME VARCHAR(50);");
+
+        Assert.Equal("CUSTOMER_NAME", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1VarcharType>(variableDeclaration.DataType);
+        Assert.Equal(50, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I FIXED DECIMAL synonym bilgisinin parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FIXED DEC(p,s) syntax bilgisini FIXED DECIMAL ile aynı semantic model olarak ele aldığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT FIXED DEC(15,2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı AMOUNT, precision 15 ve scale 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFixedDecSynonym_ShouldCreateFixedDecimalType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT FIXED DEC(15,2);");
+
+        Assert.Equal("AMOUNT", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
+        Assert.Equal(15, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I DEC FIXED ters keyword sırasının parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DEC FIXED(p,s) syntax bilgisini fixed decimal modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT DEC FIXED(17,2);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı AMOUNT, precision 17 ve scale 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDecFixedSynonym_ShouldCreateFixedDecimalType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT DEC FIXED(17,2);");
+
+        Assert.Equal("AMOUNT", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
+        Assert.Equal(17, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I DECIMAL FIXED ters keyword sırasının parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DECIMAL FIXED(p) syntax bilgisini fixed decimal modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT DECIMAL FIXED(12);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı AMOUNT, precision 12 ve scale null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDecimalFixedSynonym_ShouldCreateFixedDecimalType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT DECIMAL FIXED(12);");
+
+        Assert.Equal("AMOUNT", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
+        Assert.Equal(12, dataType.Precision);
+        Assert.Null(dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I FIXED BIN(15) bilgisinin Pl1FixedBinaryType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın binary fixed veri tipini precision bilgisiyle modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL SHORT_CODE FIXED BIN(15);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı SHORT_CODE, precision 15 ve scale null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFixedBin15Declaration_ShouldCreateFixedBinaryType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL SHORT_CODE FIXED BIN(15);");
+
+        Assert.Equal("SHORT_CODE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
+        Assert.Equal(15, dataType.Precision);
+        Assert.Null(dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I FIXED BIN(31) bilgisinin Pl1FixedBinaryType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın binary fixed precision 31 bilgisini koruduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL INT_CODE FIXED BIN(31);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı INT_CODE, precision 31 ve scale null olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFixedBin31Declaration_ShouldCreateFixedBinaryType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL INT_CODE FIXED BIN(31);");
+
+        Assert.Equal("INT_CODE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
+        Assert.Equal(31, dataType.Precision);
+        Assert.Null(dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I BIN FIXED ters keyword sırasının parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın BIN FIXED(p) syntax bilgisini fixed binary modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL INT_CODE BIN FIXED(31);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı INT_CODE, precision 31 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBinFixedDeclaration_ShouldCreateFixedBinaryType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL INT_CODE BIN FIXED(31);");
+
+        Assert.Equal("INT_CODE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
+        Assert.Equal(31, dataType.Precision);
+        Assert.Null(dataType.Scale);
+    }
+
+    /// <summary>
+    /// PL/I PIC numeric pattern bilgisinin Pl1PictureType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC '999' bilgisini numeric picture category olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL CODE PIC '999';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Numeric, Precision 3, Scale null ve Length 3 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithNumericPictureDeclaration_ShouldCreatePictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL CODE PIC '999';");
+
+        Assert.Equal("CODE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+        Assert.Equal("999", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
+        Assert.Equal(3, dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(3, dataType.Length);
+        Assert.True(dataType.IsNumeric);
+        Assert.False(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PIC implied decimal bilgisinin scale olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC '999V99' pattern içindeki V karakterini implied decimal separator olarak yorumladığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT PIC '999V99';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Numeric, Precision 5, Scale 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithNumericPictureHavingScale_ShouldCreatePictureTypeWithScale()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT PIC '999V99';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("999V99", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
+        Assert.Equal(5, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+        Assert.Equal(5, dataType.Length);
+        Assert.True(dataType.IsNumeric);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PIC repeat notation bilgisinin precision ve scale hesabında kullanıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC '(13)9V99' pattern bilgisini expanded numeric picture olarak analiz ettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT PIC '(13)9V99';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Numeric, Precision 15, Scale 2 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithNumericPictureHavingRepeatNotation_ShouldCreatePictureTypeWithPrecisionAndScale()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT PIC '(13)9V99';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("(13)9V99", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
+        Assert.Equal(15, dataType.Precision);
+        Assert.Equal(2, dataType.Scale);
+        Assert.Equal(15, dataType.Length);
+        Assert.True(dataType.IsNumeric);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I PICTURE keyword synonym bilgisinin PIC ile aynı şekilde parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PICTURE keyword'ünü PIC ile aynı Pl1PictureType modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL CODE PICTURE '999';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// RawPattern 999, Category Numeric ve Precision 3 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithPictureKeyword_ShouldCreatePictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL CODE PICTURE '999';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("999", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
+        Assert.Equal(3, dataType.Precision);
+        Assert.True(dataType.IsNumeric);
+    }
+
+    /// <summary>
+    /// PL/I alphanumeric PIC pattern bilgisinin Pl1PictureType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC 'XXX' pattern bilgisini alphanumeric picture category olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL NAME PIC 'XXX';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Alphanumeric, Length 3 ve SupportsDirectEglMapping true olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAlphanumericPictureDeclaration_ShouldCreateAlphanumericPictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL NAME PIC 'XXX';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("XXX", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(3, dataType.Length);
+        Assert.False(dataType.IsNumeric);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.False(dataType.IsFormatted);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I alphanumeric PIC repeat notation bilgisinin length hesabında kullanıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC '(20)X' pattern bilgisini length 20 olan alphanumeric picture olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL NAME PIC '(20)X';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Alphanumeric ve Length 20 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithAlphanumericPictureRepeatNotation_ShouldCreateAlphanumericPictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL NAME PIC '(20)X';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("(20)X", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
+        Assert.Equal(20, dataType.Length);
+        Assert.True(dataType.IsAlphanumeric);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I signed numeric PIC bilgisinin IsSigned metadata alanında korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC 'S999' pattern bilgisini signed numeric picture olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL BALANCE PIC 'S999';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Numeric, IsSigned true ve Precision 3 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithSignedNumericPictureDeclaration_ShouldCreateSignedPictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL BALANCE PIC 'S999';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("S999", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Numeric, dataType.Category);
+        Assert.Equal(3, dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Equal(3, dataType.Length);
+        Assert.True(dataType.IsSigned);
+        Assert.True(dataType.IsNumeric);
+        Assert.True(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I formatted PIC pattern bilgisinin direct EGL mapping dışında bırakıldığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PIC 'ZZ9' pattern bilgisini formatted picture olarak sınıflandırdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL AMOUNT PIC 'ZZ9';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Category Formatted, IsFormatted true ve SupportsDirectEglMapping false olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFormattedPictureDeclaration_ShouldCreateFormattedPictureType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL AMOUNT PIC 'ZZ9';");
+
+        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
+
+        Assert.Equal("ZZ9", dataType.RawPattern);
+        Assert.Equal(Pl1PictureCategory.Formatted, dataType.Category);
+        Assert.Null(dataType.Precision);
+        Assert.Null(dataType.Scale);
+        Assert.Null(dataType.Length);
+        Assert.False(dataType.IsNumeric);
+        Assert.False(dataType.IsAlphanumeric);
+        Assert.True(dataType.IsFormatted);
+        Assert.False(dataType.SupportsDirectEglMapping);
+    }
+
+    /// <summary>
+    /// PL/I BIT declaration bilgisinin Pl1BitType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın BIT(n) syntax bilgisini length değerini koruyan Pl1BitType modeline dönüştürdüğünü doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL FLAG BIT(1);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı FLAG, veri tipi Pl1BitType ve Length 1 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBitDeclaration_ShouldCreateBitType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL FLAG BIT(1);");
+
+        Assert.Equal("FLAG", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1BitType>(variableDeclaration.DataType);
+        Assert.Equal(1, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I BIT structure member bilgisinin Pl1BitType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın structure member üzerindeki BIT(8) bilgisini member data type olarak taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL 1 FLAGS, 5 MASK BIT(8);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// MASK member veri tipi Pl1BitType ve Length 8 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithBitStructureMember_ShouldCreateBitType()
+    {
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 FLAGS, 5 MASK BIT(8);");
+
+        var member = Assert.Single(structureDeclaration.Members);
+
+        Assert.Equal("MASK", member.Name);
+
+        var dataType = Assert.IsType<Pl1BitType>(member.DataType);
+        Assert.Equal(8, dataType.Length);
+    }
+
+    /// <summary>
+    /// PL/I FLOAT declaration bilgisinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT keyword bilgisini Kind Float, Base Unspecified ve Precision null olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı RATE, floating kind Float olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatDeclaration_ShouldCreateFloatingType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL RATE FLOAT;");
+
+        Assert.Equal("RATE", variableDeclaration.Name);
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
+
+    /// <summary>
+    /// PL/I FLOAT BIN precision bilgisinin Pl1FloatingType üzerinde korunduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT BIN(53) syntax bilgisini binary floating semantic ile modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT BIN(53);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Float, Base Binary ve Precision 53 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatBinaryDeclaration_ShouldCreateFloatingType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL RATE FLOAT BIN(53);");
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
+        Assert.Equal(53, dataType.Precision);
+    }
+
+    /// <summary>
+    /// PL/I REAL declaration bilgisinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın REAL keyword bilgisini Kind Real olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE REAL;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı RATE, floating kind Real olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithRealDeclaration_ShouldCreateFloatingType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL RATE REAL;");
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+
+        Assert.Equal(Pl1FloatingTypeKind.Real, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
+
+    /// <summary>
+    /// PL/I DOUBLE PRECISION declaration bilgisinin Pl1FloatingType olarak parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DOUBLE PRECISION keyword ikilisini Kind DoublePrecision olarak modellediğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE DOUBLE PRECISION;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Değişken adı RATE, floating kind DoublePrecision olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDoublePrecisionDeclaration_ShouldCreateFloatingType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL RATE DOUBLE PRECISION;");
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+
+        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+    }
+
+    /// <summary>
+    /// PL/I FLOAT DECIMAL declaration bilgisinin decimal base ile parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın FLOAT DECIMAL syntax bilgisini Base Decimal olarak koruduğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL RATE FLOAT DECIMAL(16);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Float, Base Decimal ve Precision 16 olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithFloatDecimalDeclaration_ShouldCreateFloatingType()
+    {
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL RATE FLOAT DECIMAL(16);");
+
+        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
+
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Decimal, dataType.Base);
+        Assert.Equal(16, dataType.Precision);
+    }
+
+    /// <summary>
+    /// Desteklenmeyen top-level token için diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın DCL dışında başlayan token akışını syntax tree'ye eklemeden diagnostic ürettiğini doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// PARAM CHAR(08);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Parse başarısız olmalı ve beklenmeyen token diagnostic mesajı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Parse_WithUnexpectedTopLevelToken_ShouldReturnDiagnostic()
+    {
+        var result = ParseSource(
+            "PARAM CHAR(08);");
+
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(
+            result.Diagnostics,
+            x => x.Message.Contains("Beklenmeyen token: PARAM. Beklenen: DCL."));
+    }
+
+    /// <summary>
+    /// Aynı source içinde birden fazla declaration parse edildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın ardışık DCL ifadelerini aynı syntax tree içinde declaration listesi olarak tuttuğunu doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM1 CHAR(08); DCL PARAM2 FIXED DECIMAL(5);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// SyntaxTree içinde iki declaration olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithMultipleDeclarations_ShouldCreateMultipleDeclarations()
+    {
+        var result = ParseSource(
+            "DCL PARAM1 CHAR(08); DCL PARAM2 FIXED DECIMAL(5);");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Equal(2, result.SyntaxTree!.Declarations.Count);
+
+        var firstDeclaration = Assert.IsType<Pl1VariableDeclaration>(result.SyntaxTree.Declarations[0]);
+        Assert.Equal("PARAM1", firstDeclaration.Name);
+
+        var secondDeclaration = Assert.IsType<Pl1VariableDeclaration>(result.SyntaxTree.Declarations[1]);
+        Assert.Equal("PARAM2", secondDeclaration.Name);
+    }
+
+    /// <summary>
+    /// Array size bilgisinin hem name-based hem DIM attribute ile verilmesi durumunda diagnostic üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın PARAM(2) CHAR(10) DIM(3) conflict durumunu diagnostic olarak raporladığını doğrular.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM(2) CHAR(10) DIM(3);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Parse başarısız olmalı ve array boyutu conflict diagnostic mesajı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Parse_WithArraySizeConflict_ShouldReturnDiagnostic()
+    {
+        var result = ParseSource(
+            "DCL PARAM(2) CHAR(10) DIM(3);");
+
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Contains(
+            result.Diagnostics,
+            x => x.Message.Contains("Array boyutu hem isim sonrasında hem de DIM / DIMENSION attribute ile verilemez."));
+    }
+
+    /// <summary>
+    /// PL/I INITIAL keyword'ünün INIT ile aynı başlangıç değeri davranışını ürettiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Parser'ın INITIAL keyword bilgisini Pl1InitialValue modeline taşıdığını doğrular.
+    ///
+    /// Hangi input'u test eder?
     /// DCL PARAM5 CHAR(4) INITIAL('ABCD');
     ///
-    /// Beklenen model:
-    /// - Pl1VariableDeclaration
-    /// - Name: PARAM5
-    /// - InitialValue.Value: "ABCD"
-    /// - InitialValue.RepeatCount: null
-    /// - InitialValue.AppliesToAllElements: false
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - INIT / INITIAL alias davranışını doğrulamada
-    ///
-    /// Gelecekte ne işe yarayacak?
-    /// ----------------------
-    /// Farklı PL/I kod standartlarında INIT yerine INITIAL kullanılsa bile
-    /// dönüşüm hattının aynı davranışı korumasını sağlar.
+    /// Beklenen temel model/çıktı nedir?
+    /// InitialValue.Value ABCD olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithInitialKeyword_ShouldSetInitialValue()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM5 CHAR(4) INITIAL('ABCD');").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM5 CHAR(4) INITIAL('ABCD');");
 
         Assert.Equal("PARAM5", variableDeclaration.Name);
         Assert.NotNull(variableDeclaration.InitialValue);
@@ -553,1121 +1260,87 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// PL/I structure declaration ifadesinin Pl1StructureDeclaration olarak parse edildiğini doğrular.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// DCL sonrasında seviye numarası geldiğinde parser tekil değişken değil,
-    /// structure declaration üretmelidir.
-    ///
-    /// Test edilen PL/I:
-    ///
-    /// DCL 1 PARAME_LIST,
-    ///     5 PARAM CHAR(08) INIT(' '),
-    ///     5 PARAM2 CHAR(01) INIT(';');
-    ///
-    /// Beklenen model:
-    /// - Pl1StructureDeclaration
-    /// - Name: PARAME_LIST
-    /// - Members.Count: 2
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - Structure declaration desteğini doğrulamada
-    /// </summary>
-    [Fact]
-    public void Parse_WithStructureDeclaration_ShouldCreateStructureDeclaration()
-    {
-        // Arrange
-        var source =
-            "DCL 1 PARAME_LIST, " +
-            "5 PARAM CHAR(08) INIT(' '), " +
-            "5 PARAM2 CHAR(01) INIT(';');";
-
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal(1, structureDeclaration.Level);
-        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
-        Assert.Equal(2, structureDeclaration.Members.Count);
-    }
-
-    /// <summary>
     /// PL/I structure member alanlarının veri tipi ve INIT bilgileriyle parse edildiğini doğrular.
     ///
-    /// Neden var?
-    /// ----------------------
-    /// Structure declaration yalnızca ana structure adından ibaret değildir.
-    /// Alt member alanların level, name, data type ve initial value bilgileri
-    /// de syntax tree üzerinde korunmalıdır.
+    /// Bu test neyi doğrular?
+    /// Parser'ın aynı structure altında birden fazla member alanı doğru sırayla modellediğini doğrular.
     ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - PL/I Parser testlerinde
-    /// - Structure member parse davranışını doğrulamada
+    /// Hangi input'u test eder?
+    /// DCL 1 PARAME_LIST, 5 PARAM CHAR(08) INIT(' '), 5 PARAM2 CHAR(01) INIT(';');
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// İki member oluşmalı; PARAM boşluk, PARAM2 noktalı virgül INIT değeri taşımalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithStructureDeclaration_ShouldCreateStructureMembers()
     {
-        // Arrange
-        var source =
-            "DCL 1 PARAME_LIST, " +
-            "5 PARAM CHAR(08) INIT(' '), " +
-            "5 PARAM2 CHAR(01) INIT(';');";
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 PARAME_LIST, 5 PARAM CHAR(08) INIT(' '), 5 PARAM2 CHAR(01) INIT(';');");
 
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
+        Assert.Equal(2, structureDeclaration.Members.Count);
 
         var firstMember = structureDeclaration.Members[0];
-
-        Assert.Equal(5, firstMember.Level);
         Assert.Equal("PARAM", firstMember.Name);
-
-        var firstMemberType = Assert.IsType<Pl1CharacterType>(firstMember.DataType);
-        Assert.Equal(8, firstMemberType.Length);
-
-        Assert.NotNull(firstMember.InitialValue);
         Assert.Equal(" ", firstMember.InitialValue!.Value);
 
         var secondMember = structureDeclaration.Members[1];
-
-        Assert.Equal(5, secondMember.Level);
         Assert.Equal("PARAM2", secondMember.Name);
-
-        var secondMemberType = Assert.IsType<Pl1CharacterType>(secondMember.DataType);
-        Assert.Equal(1, secondMemberType.Length);
-
-        Assert.NotNull(secondMember.InitialValue);
         Assert.Equal(";", secondMember.InitialValue!.Value);
     }
 
     /// <summary>
-    /// PL/I structure array declaration ifadesindeki array dimension bilgisinin
-    /// Pl1StructureDeclaration.ArraySize alanına taşındığını doğrular.
+    /// PL/I structure içinde çok seviyeli nested group yapısının parse edildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// ----------------------
-    /// DCL 1 DIZI(6), yapısındaki 6 değerinin parser tarafından kaybedilmeden
-    /// syntax modeline taşındığını doğrular.
-    ///
-    /// Test edilen input:
-    /// - DCL 1 DIZI(6)
-    /// - Altında 5 adet CHAR member
-    ///
-    /// Beklenen temel model:
-    /// - Pl1StructureDeclaration
-    /// - Name: DIZI
-    /// - Level: 1
-    /// - ArraySize: 6
-    /// - Members.Count: 5
-    /// </summary>
-    [Fact]
-    public void Parse_WithStructureArrayDeclaration_ShouldSetArraySize()
-    {
-        // Arrange
-        var source =
-            "DCL 1 DIZI(6), " +
-            "3 DIZI_PARAM1 CHAR(01), " +
-            "3 DIZI_PARAM2 CHAR(02), " +
-            "3 DIZI_PARAM3 CHAR(02), " +
-            "3 DIZI_PARAM4 CHAR(02), " +
-            "3 DIZI_PARAM5 CHAR(08);";
-
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal(1, structureDeclaration.Level);
-        Assert.Equal("DIZI", structureDeclaration.Name);
-        Assert.Equal(6, structureDeclaration.ArraySize);
-        Assert.Equal(5, structureDeclaration.Members.Count);
-
-        Assert.Equal(3, structureDeclaration.Members[0].Level);
-        Assert.Equal("DIZI_PARAM1", structureDeclaration.Members[0].Name);
-
-        var firstMemberType = Assert.IsType<Pl1CharacterType>(
-            structureDeclaration.Members[0].DataType);
-
-        Assert.Equal(1, firstMemberType.Length);
-
-        var fifthMemberType = Assert.IsType<Pl1CharacterType>(
-            structureDeclaration.Members[4].DataType);
-
-        Assert.Equal(8, fifthMemberType.Length);
-    }
-
-    /// <summary>
-    /// PL/I structure member üzerinde bulunan array dimension bilgisinin
-    /// Pl1StructureMember.ArraySize alanına taşındığını doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın structure member adı sonrasında gelen `(n)` dimension bilgisini
-    /// doğru okuyup member modeli üzerinde sakladığını doğrular.
+    /// Parser'ın 5, 10 ve 15 level hiyerarşisini recursive member ağacı olarak kurduğunu doğrular.
     ///
     /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL 1 PARAME_LIST,
-    ///     5 PARAM_LIST(2) CHAR(10);
+    /// DCL 1 PARAME_LIST, 5 GROUP1, 10 GROUP2, 15 FIELD1 CHAR(01);
     ///
-    /// Beklenen temel model:
-    /// ----------------------
-    /// - Pl1StructureDeclaration
-    /// - Name: PARAME_LIST
-    /// - Members.Count: 1
-    /// - Members[0].Name: PARAM_LIST
-    /// - Members[0].ArraySize: 2
-    /// - Members[0].DataType: Pl1CharacterType
-    /// - Members[0].DataType.Length: 10
-    /// </summary>
-    [Fact]
-    public void Parse_WithStructureMemberArrayDeclaration_ShouldSetMemberArraySize()
-    {
-        // Arrange
-        var source =
-            "DCL 1 PARAME_LIST, " +
-            "5 PARAM_LIST(2) CHAR(10);";
-
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal(1, structureDeclaration.Level);
-        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
-        Assert.Null(structureDeclaration.ArraySize);
-
-        var member = Assert.Single(structureDeclaration.Members);
-
-        Assert.Equal(5, member.Level);
-        Assert.Equal("PARAM_LIST", member.Name);
-        Assert.Equal(2, member.ArraySize);
-
-        var memberType = Assert.IsType<Pl1CharacterType>(member.DataType);
-
-        Assert.Equal(10, memberType.Length);
-        Assert.Null(member.InitialValue);
-    }
-
-    /// <summary>
-    /// PL/I structure içinde veri tipi olmayan nested group member yapısının
-    /// child member listesiyle birlikte parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın `5 ADRES_BILGI, 10 IL_KOD..., 10 ILCE_KOD...` yapısını
-    /// düz member listesi olarak değil, ADRES_BILGI altında child member'lar
-    /// olacak şekilde modellediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL 1 PARAME_LIST,
-    ///     5 ADRES_BILGI,
-    ///         10 IL_KOD CHAR(02),
-    ///         10 ILCE_KOD CHAR(03);
-    ///
-    /// Beklenen temel model:
-    /// ----------------------
-    /// - Root structure: PARAME_LIST
-    /// - Root member: ADRES_BILGI
-    /// - ADRES_BILGI.DataType: null
-    /// - ADRES_BILGI.IsGroup: true
-    /// - ADRES_BILGI.Members.Count: 2
-    /// - Child members: IL_KOD, ILCE_KOD
-    /// </summary>
-    [Fact]
-    public void Parse_WithNestedStructureMember_ShouldCreateGroupMemberWithChildren()
-    {
-        // Arrange
-        var source =
-            "DCL 1 PARAME_LIST, " +
-            "5 ADRES_BILGI, " +
-            "10 IL_KOD CHAR(02), " +
-            "10 ILCE_KOD CHAR(03);";
-
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
-
-        var groupMember = Assert.Single(structureDeclaration.Members);
-
-        Assert.Equal(5, groupMember.Level);
-        Assert.Equal("ADRES_BILGI", groupMember.Name);
-        Assert.Null(groupMember.DataType);
-        Assert.True(groupMember.IsGroup);
-        Assert.Equal(2, groupMember.Members.Count);
-
-        var firstChild = groupMember.Members[0];
-
-        Assert.Equal(10, firstChild.Level);
-        Assert.Equal("IL_KOD", firstChild.Name);
-        Assert.False(firstChild.IsGroup);
-
-        var firstChildType = Assert.IsType<Pl1CharacterType>(firstChild.DataType);
-
-        Assert.Equal(2, firstChildType.Length);
-
-        var secondChild = groupMember.Members[1];
-
-        Assert.Equal(10, secondChild.Level);
-        Assert.Equal("ILCE_KOD", secondChild.Name);
-        Assert.False(secondChild.IsGroup);
-
-        var secondChildType = Assert.IsType<Pl1CharacterType>(secondChild.DataType);
-
-        Assert.Equal(3, secondChildType.Length);
-    }
-
-    /// <summary>
-    /// PL/I structure içinde birden fazla nested group seviyesi bulunduğunda
-    /// parser'ın level hiyerarşisini doğru kurduğunu doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın `5 GROUP1, 10 GROUP2, 15 FIELD1...` yapısını çok seviyeli
-    /// nested member ağacı olarak modellediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL 1 PARAME_LIST,
-    ///     5 GROUP1,
-    ///         10 GROUP2,
-    ///             15 FIELD1 CHAR(01);
-    ///
-    /// Beklenen temel model:
-    /// ----------------------
-    /// - GROUP1 root member olarak gelir.
-    /// - GROUP1 altında GROUP2 vardır.
-    /// - GROUP2 altında FIELD1 vardır.
-    /// - GROUP1 ve GROUP2 group member'dır.
-    /// - FIELD1 normal typed field'dır.
+    /// Beklenen temel model/çıktı nedir?
+    /// GROUP1 altında GROUP2, GROUP2 altında FIELD1 bulunmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithMultiLevelNestedStructureMember_ShouldCreateNestedGroupTree()
     {
-        // Arrange
-        var source =
-            "DCL 1 PARAME_LIST, " +
-            "5 GROUP1, " +
-            "10 GROUP2, " +
-            "15 FIELD1 CHAR(01);";
-
-        var tokens = new Pl1Lexer(source).Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal("PARAME_LIST", structureDeclaration.Name);
+        var structureDeclaration = ParseSingleStructureDeclaration(
+            "DCL 1 PARAME_LIST, 5 GROUP1, 10 GROUP2, 15 FIELD1 CHAR(01);");
 
         var group1 = Assert.Single(structureDeclaration.Members);
-
-        Assert.Equal(5, group1.Level);
-        Assert.Equal("GROUP1", group1.Name);
         Assert.True(group1.IsGroup);
-        Assert.Null(group1.DataType);
 
         var group2 = Assert.Single(group1.Members);
-
-        Assert.Equal(10, group2.Level);
-        Assert.Equal("GROUP2", group2.Name);
         Assert.True(group2.IsGroup);
-        Assert.Null(group2.DataType);
 
         var field1 = Assert.Single(group2.Members);
-
-        Assert.Equal(15, field1.Level);
         Assert.Equal("FIELD1", field1.Name);
-        Assert.False(field1.IsGroup);
 
         var field1Type = Assert.IsType<Pl1CharacterType>(field1.DataType);
-
         Assert.Equal(1, field1Type.Length);
     }
 
     /// <summary>
-    /// PL/I VARCHAR(n) tanımının Pl1VarcharType olarak parse edildiğini doğrular.
+    /// PL/I FIXED BINARY(15,0) kullanımında explicit zero scale bilgisinin korunduğunu doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın VARCHAR keyword'ünü tanıdığını ve parantez içindeki uzunluk
-    /// bilgisini Pl1VarcharType.Length alanına taşıdığını doğrular.
+    /// Parser'ın binary fixed kullanımında açıkça yazılan ,0 bilgisini kaybetmediğini doğrular.
     ///
     /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL CUSTOMER_NAME VARCHAR(50);
-    ///
-    /// Beklenen temel model:
-    /// ----------------------
-    /// - Pl1VariableDeclaration
-    /// - Name: CUSTOMER_NAME
-    /// - DataType: Pl1VarcharType
-    /// - Length: 50
-    /// </summary>
-    [Fact]
-    public void Parse_WithVarcharDeclaration_ShouldCreateVarcharTypeDeclaration()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL CUSTOMER_NAME VARCHAR(50);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("CUSTOMER_NAME", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1VarcharType>(variableDeclaration.DataType);
-
-        Assert.Equal(50, dataType.Length);
-    }
-
-    /// <summary>
-    /// PL/I FIXED DECIMAL(p) tanımında scale verilmediğinde Scale bilgisinin
-    /// null olarak taşındığını doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın FIXED DECIMAL(15) ile FIXED DECIMAL(15,0) ifadelerini aynı
-    /// model gibi üretmediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL COUNT FIXED DECIMAL(15);
-    ///
-    /// Beklenen temel model:
-    /// - Precision: 15
-    /// - Scale: null
-    /// </summary>
-    [Fact]
-    public void Parse_WithFixedDecimalWithoutScale_ShouldSetScaleNull()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT FIXED DECIMAL(15);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
-        Assert.Equal(15, dataType.Precision);
-        Assert.Null(dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I FIXED DECIMAL(p,0) tanımında scale açıkça 0 verildiğinde Scale
-    /// bilgisinin 0 olarak taşındığını doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın kaynakta açıkça yazılan ,0 bilgisini kaybetmediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL COUNT FIXED DECIMAL(15,0);
-    ///
-    /// Beklenen temel model:
-    /// - Precision: 15
-    /// - Scale: 0
-    /// </summary>
-    [Fact]
-    public void Parse_WithFixedDecimalExplicitZeroScale_ShouldSetScaleZero()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT FIXED DECIMAL(15,0);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
-        Assert.Equal(15, dataType.Precision);
-        Assert.Equal(0, dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I FIXED DEC(p,s) synonym kullanımının Pl1FixedDecimalType olarak
-    /// parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın DEC kısaltmasını DECIMAL ile aynı semantic modele taşıdığını
-    /// doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL AMOUNT FIXED DEC(17,2);
-    ///
-    /// Beklenen temel model:
-    /// - Pl1FixedDecimalType
-    /// - Precision: 17
-    /// - Scale: 2
-    /// </summary>
-    [Fact]
-    public void Parse_WithFixedDecDeclaration_ShouldCreateFixedDecimalType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL AMOUNT FIXED DEC(17,2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("AMOUNT", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
-        Assert.Equal(17, dataType.Precision);
-        Assert.Equal(2, dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I DEC FIXED(p,s) ters keyword sırasının Pl1FixedDecimalType olarak
-    /// parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın DEC FIXED kullanımını FIXED DEC ile aynı semantic modele
-    /// taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL AMOUNT DEC FIXED(17,2);
-    ///
-    /// Beklenen temel model:
-    /// - Pl1FixedDecimalType
-    /// - Precision: 17
-    /// - Scale: 2
-    /// </summary>
-    [Fact]
-    public void Parse_WithDecFixedDeclaration_ShouldCreateFixedDecimalType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL AMOUNT DEC FIXED(17,2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("AMOUNT", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
-        Assert.Equal(17, dataType.Precision);
-        Assert.Equal(2, dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I DECIMAL FIXED(p) ters keyword sırasının scale olmadan parse
-    /// edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın DECIMAL FIXED(15) kullanımında scale bilgisini null olarak
-    /// koruduğunu doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL COUNT DECIMAL FIXED(15);
-    ///
-    /// Beklenen temel model:
-    /// - Pl1FixedDecimalType
-    /// - Precision: 15
-    /// - Scale: null
-    /// </summary>
-    [Fact]
-    public void Parse_WithDecimalFixedDeclarationWithoutScale_ShouldCreateFixedDecimalTypeWithNullScale()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT DECIMAL FIXED(15);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("COUNT", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FixedDecimalType>(variableDeclaration.DataType);
-
-        Assert.Equal(15, dataType.Precision);
-        Assert.Null(dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I FIXED BIN(15) kullanımının Pl1FixedBinaryType olarak parse edildiğini
-    /// doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın FIXED BIN synonym kullanımını binary fixed semantic modele
-    /// taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL COUNT FIXED BIN(15);
-    ///
-    /// Beklenen temel model:
-    /// - Pl1FixedBinaryType
-    /// - Precision: 15
-    /// - Scale: null
-    /// </summary>
-    [Fact]
-    public void Parse_WithFixedBinDeclaration_ShouldCreateFixedBinaryType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT FIXED BIN(15);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("COUNT", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
-
-        Assert.Equal(15, dataType.Precision);
-        Assert.Null(dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I BIN FIXED(31) ters keyword sırasının Pl1FixedBinaryType olarak
-    /// parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın BIN FIXED kullanımını FIXED BIN ile aynı semantic modele
-    /// taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL COUNT BIN FIXED(31);
-    ///
-    /// Beklenen temel model:
-    /// - Pl1FixedBinaryType
-    /// - Precision: 31
-    /// - Scale: null
-    /// </summary>
-    [Fact]
-    public void Parse_WithBinFixedDeclaration_ShouldCreateFixedBinaryType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT BIN FIXED(31);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("COUNT", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
-
-        Assert.Equal(31, dataType.Precision);
-        Assert.Null(dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I FIXED BINARY(15,0) kullanımında explicit zero scale bilgisinin
-    /// Pl1FixedBinaryType üzerinde korunduğunu doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın binary fixed kullanımında açıkça yazılan ,0 bilgisini
-    /// kaybetmediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
     /// DCL COUNT FIXED BINARY(15,0);
     ///
-    /// Beklenen temel model:
-    /// - Pl1FixedBinaryType
-    /// - Precision: 15
-    /// - Scale: 0
+    /// Beklenen temel model/çıktı nedir?
+    /// Precision 15, Scale 0 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithFixedBinaryExplicitZeroScale_ShouldCreateFixedBinaryTypeWithZeroScale()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL COUNT FIXED BINARY(15,0);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("COUNT", variableDeclaration.Name);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL COUNT FIXED BINARY(15,0);");
 
         var dataType = Assert.IsType<Pl1FixedBinaryType>(variableDeclaration.DataType);
 
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
-    }
-
-    /// <summary>
-    /// PL/I PIC '999' numeric pattern bilgisinin Pl1PictureType olarak parse
-    /// edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın PIC keyword'ünü tanıdığını ve numeric picture pattern için
-    /// precision bilgisini hesapladığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL PARAM1 PIC '999';
-    ///
-    /// Beklenen temel model:
-    /// - RawPattern: 999
-    /// - Precision: 3
-    /// - Scale: null
-    /// - IsNumeric: true
-    /// - IsFormatted: false
-    /// </summary>
-    [Fact]
-    public void Parse_WithNumericPicDeclaration_ShouldCreatePictureType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM1 PIC '999';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM1", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("999", dataType.RawPattern);
-        Assert.Equal(3, dataType.Precision);
-        Assert.Null(dataType.Scale);
-        Assert.False(dataType.IsSigned);
-        Assert.True(dataType.IsNumeric);
-        Assert.False(dataType.IsFormatted);
-    }
-
-    /// <summary>
-    /// PL/I PIC '999V99' numeric implied decimal pattern bilgisinin scale ile
-    /// parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın V karakterini implied decimal point olarak yorumladığını ve
-    /// V sonrasındaki digit sayısını scale olarak hesapladığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL PARAM2 PIC '999V99';
-    ///
-    /// Beklenen temel model:
-    /// - RawPattern: 999V99
-    /// - Precision: 5
-    /// - Scale: 2
-    /// - IsNumeric: true
-    /// </summary>
-    [Fact]
-    public void Parse_WithNumericPicHavingImpliedDecimal_ShouldCreatePictureTypeWithScale()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM2 PIC '999V99';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM2", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("999V99", dataType.RawPattern);
-        Assert.Equal(5, dataType.Precision);
-        Assert.Equal(2, dataType.Scale);
-        Assert.False(dataType.IsSigned);
-        Assert.True(dataType.IsNumeric);
-        Assert.False(dataType.IsFormatted);
-    }
-
-    /// <summary>
-    /// PL/I PIC 'S999' signed numeric pattern bilgisinin IsSigned ile parse
-    /// edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın S prefix bilgisini sign metadata olarak koruduğunu doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL PARAM3 PIC 'S999';
-    ///
-    /// Beklenen temel model:
-    /// - RawPattern: S999
-    /// - Precision: 3
-    /// - IsSigned: true
-    /// </summary>
-    [Fact]
-    public void Parse_WithSignedNumericPicDeclaration_ShouldCreateSignedPictureType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM3 PIC 'S999';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM3", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("S999", dataType.RawPattern);
-        Assert.Equal(3, dataType.Precision);
-        Assert.Null(dataType.Scale);
-        Assert.True(dataType.IsSigned);
-        Assert.True(dataType.IsNumeric);
-        Assert.False(dataType.IsFormatted);
-    }
-
-    /// <summary>
-    /// PL/I PIC '(13)9V99' repeat count ve implied decimal içeren pattern
-    /// bilgisinin doğru parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın `(n)9` tekrar söz dizimini precision hesabına dahil ettiğini
-    /// ve V sonrasındaki digit sayısını scale olarak hesapladığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL PARAM4 PIC '(13)9V99';
-    ///
-    /// Beklenen temel model:
-    /// - RawPattern: (13)9V99
-    /// - Precision: 15
-    /// - Scale: 2
-    /// </summary>
-    [Fact]
-    public void Parse_WithRepeatedNumericPicHavingImpliedDecimal_ShouldCreatePictureTypeWithPrecisionAndScale()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM4 PIC '(13)9V99';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM4", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("(13)9V99", dataType.RawPattern);
-        Assert.Equal(15, dataType.Precision);
-        Assert.Equal(2, dataType.Scale);
-        Assert.False(dataType.IsSigned);
-        Assert.True(dataType.IsNumeric);
-        Assert.False(dataType.IsFormatted);
-    }
-
-    /// <summary>
-    /// PL/I PIC 'ZZ9' formatted pattern bilgisinin numeric olmayan formatted
-    /// picture olarak işaretlendiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// ----------------------
-    /// Parser'ın Z edit mask içeren picture pattern'i güvenli numeric pattern
-    /// olarak kabul etmediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// ----------------------
-    /// DCL PARAM5 PIC 'ZZ9';
-    ///
-    /// Beklenen temel model:
-    /// - RawPattern: ZZ9
-    /// - IsNumeric: false
-    /// - IsFormatted: true
-    /// </summary>
-    [Fact]
-    public void Parse_WithFormattedPicDeclaration_ShouldCreateFormattedPictureType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM5 PIC 'ZZ9';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM5", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("ZZ9", dataType.RawPattern);
-        Assert.Null(dataType.Precision);
-        Assert.Null(dataType.Scale);
-        Assert.False(dataType.IsSigned);
-        Assert.False(dataType.IsNumeric);
-        Assert.True(dataType.IsFormatted);
-    }
-
-    /// <summary>
-    /// PL/I PIC 'XXX' alphanumeric pattern bilgisinin Pl1PictureType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın X karakterlerinden oluşan PIC pattern'ı alphanumeric olarak sınıflandırdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL PARAM6 PIC 'XXX';
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// RawPattern XXX, Category Alphanumeric, Length 3, IsAlphanumeric true.
-    /// </summary>
-    [Fact]
-    public void Parse_WithAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM6 PIC 'XXX';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM6", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("XXX", dataType.RawPattern);
-        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
-        Assert.Null(dataType.Precision);
-        Assert.Null(dataType.Scale);
-        Assert.Equal(3, dataType.Length);
-        Assert.False(dataType.IsSigned);
-        Assert.False(dataType.IsNumeric);
-        Assert.True(dataType.IsAlphanumeric);
-        Assert.False(dataType.IsFormatted);
-        Assert.True(dataType.SupportsDirectEglMapping);
-    }
-
-    /// <summary>
-    /// PL/I PIC '(20)X' alphanumeric repeat pattern bilgisinin length olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın (n)X tekrar söz dizimini alphanumeric length hesabına dahil ettiğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL PARAM7 PIC '(20)X';
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// RawPattern (20)X, Category Alphanumeric, Length 20, IsAlphanumeric true.
-    /// </summary>
-    [Fact]
-    public void Parse_WithRepeatedAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureTypeWithLength()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM7 PIC '(20)X';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM7", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
-
-        Assert.Equal("(20)X", dataType.RawPattern);
-        Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
-        Assert.Null(dataType.Precision);
-        Assert.Null(dataType.Scale);
-        Assert.Equal(20, dataType.Length);
-        Assert.False(dataType.IsSigned);
-        Assert.False(dataType.IsNumeric);
-        Assert.True(dataType.IsAlphanumeric);
-        Assert.False(dataType.IsFormatted);
-        Assert.True(dataType.SupportsDirectEglMapping);
     }
 
     /// <summary>
@@ -1680,39 +1353,20 @@ public sealed class Pl1ParserTests
     /// DCL PARAM8 PIC 'AAA';
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// RawPattern AAA, Category Alphanumeric, Length 3, IsAlphanumeric true.
+    /// Category Alphanumeric, Length 3 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithAlphabeticPicDeclaration_ShouldCreateAlphanumericPictureType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM8 PIC 'AAA';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM8", variableDeclaration.Name);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM8 PIC 'AAA';");
 
         var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
 
         Assert.Equal("AAA", dataType.RawPattern);
         Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
-        Assert.Null(dataType.Precision);
-        Assert.Null(dataType.Scale);
         Assert.Equal(3, dataType.Length);
-        Assert.False(dataType.IsSigned);
-        Assert.False(dataType.IsNumeric);
         Assert.True(dataType.IsAlphanumeric);
-        Assert.False(dataType.IsFormatted);
         Assert.True(dataType.SupportsDirectEglMapping);
     }
 
@@ -1726,408 +1380,20 @@ public sealed class Pl1ParserTests
     /// DCL PARAM9 PIC 'AXXAA';
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// RawPattern AXXAA, Category Alphanumeric, Length 5, IsAlphanumeric true.
+    /// Category Alphanumeric, Length 5 olmalıdır.
     /// </summary>
     [Fact]
     public void Parse_WithMixedAlphanumericPicDeclaration_ShouldCreateAlphanumericPictureType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM9 PIC 'AXXAA';").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM9", variableDeclaration.Name);
+        var variableDeclaration = ParseSingleVariableDeclaration(
+            "DCL PARAM9 PIC 'AXXAA';");
 
         var dataType = Assert.IsType<Pl1PictureType>(variableDeclaration.DataType);
 
         Assert.Equal("AXXAA", dataType.RawPattern);
         Assert.Equal(Pl1PictureCategory.Alphanumeric, dataType.Category);
-        Assert.Null(dataType.Precision);
-        Assert.Null(dataType.Scale);
         Assert.Equal(5, dataType.Length);
-        Assert.False(dataType.IsSigned);
-        Assert.False(dataType.IsNumeric);
         Assert.True(dataType.IsAlphanumeric);
-        Assert.False(dataType.IsFormatted);
         Assert.True(dataType.SupportsDirectEglMapping);
-    }
-
-    /// <summary>
-    /// PL/I BIT(1) declaration bilgisinin Pl1BitType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın BIT keyword'ünü veri tipi olarak tanıdığını ve parantez içindeki length bilgisini Pl1BitType modeline taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL FLAG BIT(1);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Değişken adı FLAG, veri tipi Pl1BitType ve Length 1 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithBitDeclaration_ShouldCreateBitType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL FLAG BIT(1);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("FLAG", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1BitType>(variableDeclaration.DataType);
-        Assert.Equal(1, dataType.Length);
-    }
-
-    /// <summary>
-    /// PL/I BIT(8) structure member bilgisinin Pl1BitType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın structure member içinde BIT veri tipini desteklediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL 1 FLAGS, 5 MASK BIT(8);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Structure adı FLAGS, member adı MASK, member veri tipi Pl1BitType ve Length 8 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithBitStructureMember_ShouldCreateBitType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL 1 FLAGS, 5 MASK BIT(8);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        Assert.Equal("FLAGS", structureDeclaration.Name);
-
-        var member = Assert.Single(structureDeclaration.Members);
-        Assert.Equal("MASK", member.Name);
-
-        var dataType = Assert.IsType<Pl1BitType>(member.DataType);
-        Assert.Equal(8, dataType.Length);
-    }
-
-    /// <summary>
-    /// Top-level variable declaration içinde DIM attribute bilgisinin array size olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın veri tipi sonrasında gelen DIM(2) bilgisini Pl1VariableDeclaration.ArraySize alanına taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL PARAM CHAR(10) DIM(2);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Değişken adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithVariableDimAttribute_ShouldSetVariableArraySize()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(10) DIM(2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM", variableDeclaration.Name);
-        Assert.Equal(2, variableDeclaration.ArraySize);
-
-        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
-        Assert.Equal(10, dataType.Length);
-    }
-
-    /// <summary>
-    /// Top-level variable declaration içinde DIMENSION attribute bilgisinin array size olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın DIMENSION keyword synonym bilgisini DIM ile aynı semantic array size olarak ele aldığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL PARAM CHAR(10) DIMENSION(2);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Değişken adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithVariableDimensionAttribute_ShouldSetVariableArraySize()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL PARAM CHAR(10) DIMENSION(2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("PARAM", variableDeclaration.Name);
-        Assert.Equal(2, variableDeclaration.ArraySize);
-
-        var dataType = Assert.IsType<Pl1CharacterType>(variableDeclaration.DataType);
-        Assert.Equal(10, dataType.Length);
-    }
-
-    /// <summary>
-    /// Structure member içinde DIM attribute bilgisinin member array size olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın structure member veri tipi sonrasında gelen DIM(2) bilgisini Pl1StructureMember.ArraySize alanına taşıdığını doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL 1 REC, 5 PARAM CHAR(10) DIM(2);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Member adı PARAM, veri tipi Pl1CharacterType(10), ArraySize 2 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithStructureMemberDimAttribute_ShouldSetMemberArraySize()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL 1 REC, 5 PARAM CHAR(10) DIM(2);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var structureDeclaration = Assert.IsType<Pl1StructureDeclaration>(declaration);
-
-        var member = Assert.Single(structureDeclaration.Members);
-        Assert.Equal("PARAM", member.Name);
-        Assert.Equal(2, member.ArraySize);
-
-        var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
-        Assert.Equal(10, dataType.Length);
-    }
-
-    /// <summary>
-    /// FLOAT veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın FLOAT keyword'ünü floating type ailesi içinde modellediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL RATE FLOAT;
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Değişken adı RATE, veri tipi Pl1FloatingType, Kind Float, Base Unspecified ve Precision null olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithFloatDeclaration_ShouldCreateFloatingType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL RATE FLOAT;").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        Assert.Equal("RATE", variableDeclaration.Name);
-
-        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
-        Assert.Null(dataType.Precision);
-    }
-
-    /// <summary>
-    /// FLOAT DECIMAL precision bilgisinin Pl1FloatingType üzerinde korunduğunu doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın FLOAT DECIMAL(16) söz diziminde decimal base ve precision bilgisini parse ettiğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL RATE FLOAT DECIMAL(16);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Kind Float, Base Decimal ve Precision 16 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithFloatDecimalDeclaration_ShouldCreateFloatingTypeWithDecimalBase()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL RATE FLOAT DECIMAL(16);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
-        Assert.Equal(Pl1FloatingBase.Decimal, dataType.Base);
-        Assert.Equal(16, dataType.Precision);
-    }
-
-    /// <summary>
-    /// FLOAT BIN precision bilgisinin Pl1FloatingType üzerinde korunduğunu doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın FLOAT BIN(53) söz diziminde binary base ve precision bilgisini parse ettiğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL RATE FLOAT BIN(53);
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Kind Float, Base Binary ve Precision 53 olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithFloatBinaryDeclaration_ShouldCreateFloatingTypeWithBinaryBase()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL RATE FLOAT BIN(53);").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
-        Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
-        Assert.Equal(53, dataType.Precision);
-    }
-
-    /// <summary>
-    /// REAL veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın REAL keyword'ünü floating type ailesi içinde ayrı kind olarak modellediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL RATE REAL;
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Kind Real, Base Unspecified ve Precision null olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithRealDeclaration_ShouldCreateFloatingType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL RATE REAL;").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.Real, dataType.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
-        Assert.Null(dataType.Precision);
-    }
-
-    /// <summary>
-    /// DOUBLE PRECISION veri tipinin Pl1FloatingType olarak parse edildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Parser'ın DOUBLE PRECISION keyword ikilisini DoublePrecision kind olarak modellediğini doğrular.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL RATE DOUBLE PRECISION;
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Kind DoublePrecision, Base Unspecified ve Precision null olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Parse_WithDoublePrecisionDeclaration_ShouldCreateFloatingType()
-    {
-        // Arrange
-        var tokens = new Pl1Lexer("DCL RATE DOUBLE PRECISION;").Tokenize();
-        var parser = new Pl1Parser(tokens);
-
-        // Act
-        var result = parser.Parse();
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-
-        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
-        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
-
-        var dataType = Assert.IsType<Pl1FloatingType>(variableDeclaration.DataType);
-        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, dataType.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
-        Assert.Null(dataType.Precision);
     }
 }

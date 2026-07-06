@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,18 +19,15 @@ public sealed class BitTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithBitOne_ShouldCreateBitType()
     {
-        var tokens = new Pl1Lexer("BIT(1);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new BitTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateBitTypeParser(
+            "BIT(1);",
+            out var context);
 
         var result = parser.Parse();
 
-        Assert.NotNull(result.Value);
-        Assert.Equal(1, result.Value!.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1BitType>(result.Value);
+        Assert.Equal(1, dataType.Length);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -51,17 +45,14 @@ public sealed class BitTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithBitEight_ShouldCreateBitType()
     {
-        var tokens = new Pl1Lexer("BIT(8);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new BitTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateBitTypeParser(
+            "BIT(8);",
+            out var context);
 
         var result = parser.Parse();
 
-        Assert.NotNull(result.Value);
-        Assert.Equal(8, result.Value!.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1BitType>(result.Value);
+        Assert.Equal(8, dataType.Length);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

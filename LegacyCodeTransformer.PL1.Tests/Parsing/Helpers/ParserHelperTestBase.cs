@@ -6,7 +6,19 @@ namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
 public abstract class ParserHelperTestBase
 {
-    protected static ParseContext CreateContext(string source)
+    /// <summary>
+    /// Parser helper testlerinde kullanılacak ortak ParseContext modelini oluşturur.
+    ///
+    /// Bu test altyapısı neyi çözer?
+    /// Helper parser testlerinde tekrar eden lexer, token listesi ve DiagnosticBag oluşturma kodlarını tek noktada toplar.
+    ///
+    /// Hangi input'u test eder?
+    /// Verilen source string değerini Pl1Lexer ile tokenize eder.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Position 0'dan başlayan ve boş DiagnosticBag içeren ParseContext üretilmelidir.
+    /// </summary>
+    private protected static ParseContext CreateContext(string source)
     {
         var tokens = new Pl1Lexer(source).Tokenize();
 
@@ -16,7 +28,7 @@ public abstract class ParserHelperTestBase
             new DiagnosticBag());
     }
 
-    protected static CharacterTypeParser CreateCharacterTypeParser(
+    private protected static CharacterTypeParser CreateCharacterTypeParser(
         string source,
         out ParseContext context)
     {
@@ -25,7 +37,7 @@ public abstract class ParserHelperTestBase
         return new CharacterTypeParser(context);
     }
 
-    protected static BitTypeParser CreateBitTypeParser(
+    private protected static BitTypeParser CreateBitTypeParser(
         string source,
         out ParseContext context)
     {
@@ -34,7 +46,7 @@ public abstract class ParserHelperTestBase
         return new BitTypeParser(context);
     }
 
-    protected static NumericTypeParser CreateNumericTypeParser(
+    private protected static NumericTypeParser CreateNumericTypeParser(
         string source,
         out ParseContext context)
     {
@@ -43,7 +55,7 @@ public abstract class ParserHelperTestBase
         return new NumericTypeParser(context);
     }
 
-    protected static FloatingTypeParser CreateFloatingTypeParser(
+    private protected static FloatingTypeParser CreateFloatingTypeParser(
         string source,
         out ParseContext context)
     {
@@ -52,7 +64,7 @@ public abstract class ParserHelperTestBase
         return new FloatingTypeParser(context);
     }
 
-    protected static DataTypeParser CreateDataTypeParser(
+    private protected static DataTypeParser CreateDataTypeParser(
         string source,
         out ParseContext context)
     {
@@ -61,7 +73,7 @@ public abstract class ParserHelperTestBase
         return new DataTypeParser(context);
     }
 
-    protected static InitialValueParser CreateInitialValueParser(
+    private protected static InitialValueParser CreateInitialValueParser(
         string source,
         out ParseContext context)
     {
@@ -70,7 +82,7 @@ public abstract class ParserHelperTestBase
         return new InitialValueParser(context);
     }
 
-    protected static DimensionParser CreateDimensionParser(
+    private protected static DimensionParser CreateDimensionParser(
         string source,
         out ParseContext context)
     {
@@ -79,7 +91,7 @@ public abstract class ParserHelperTestBase
         return new DimensionParser(context);
     }
 
-    protected static VariableDeclarationParser CreateVariableDeclarationParser(
+    private protected static VariableDeclarationParser CreateVariableDeclarationParser(
         string source,
         out ParseContext context)
     {
@@ -88,7 +100,7 @@ public abstract class ParserHelperTestBase
         return new VariableDeclarationParser(context);
     }
 
-    protected static StructureParser CreateStructureParser(
+    private protected static StructureParser CreateStructureParser(
         string source,
         out ParseContext context)
     {
@@ -97,7 +109,7 @@ public abstract class ParserHelperTestBase
         return new StructureParser(context);
     }
 
-    protected static DeclarationParser CreateDeclarationParser(
+    private protected static DeclarationParser CreateDeclarationParser(
         string source,
         out ParseContext context)
     {
@@ -106,7 +118,7 @@ public abstract class ParserHelperTestBase
         return new DeclarationParser(context);
     }
 
-    protected static IReadOnlyList<Diagnostic> GetDiagnostics(ParseContext context)
+    private protected static IReadOnlyList<Diagnostic> GetDiagnostics(ParseContext context)
     {
         return context.Diagnostics.Diagnostics;
     }

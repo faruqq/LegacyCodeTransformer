@@ -1,8 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Declarations;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -23,24 +19,24 @@ public sealed class StructureParserTests : ParserHelperTestBase
     [Fact]
     public void ParseStructureDeclaration_WithBasicStructure_ShouldCreateStructureDeclaration()
     {
-        var tokens = new Pl1Lexer("DCL 1 REC, 5 PARAM CHAR(08);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new StructureParser(tokens, 0, diagnostics);
+        var parser = CreateStructureParser(
+            "DCL 1 REC, 5 PARAM CHAR(08);",
+            out var context);
 
         var result = parser.ParseStructureDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.Equal("REC", result.Declaration!.Name);
-        Assert.Equal(1, result.Declaration.Level);
-        Assert.Null(result.Declaration.ArraySize);
+        Assert.NotNull(result.Value);
+        Assert.Equal("REC", result.Value!.Name);
+        Assert.Equal(1, result.Value.Level);
+        Assert.Null(result.Value.ArraySize);
 
-        var member = Assert.Single(result.Declaration.Members);
+        var member = Assert.Single(result.Value.Members);
         Assert.Equal("PARAM", member.Name);
         Assert.Equal(5, member.Level);
 
         var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
         Assert.Equal(8, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -58,19 +54,19 @@ public sealed class StructureParserTests : ParserHelperTestBase
     [Fact]
     public void ParseStructureDeclaration_WithStructureArray_ShouldSetArraySize()
     {
-        var tokens = new Pl1Lexer("DCL 1 DIZI(6), 3 KOD CHAR(01);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new StructureParser(tokens, 0, diagnostics);
+        var parser = CreateStructureParser(
+            "DCL 1 DIZI(6), 3 KOD CHAR(01);",
+            out var context);
 
         var result = parser.ParseStructureDeclaration();
 
-        Assert.NotNull(result.Declaration);
-        Assert.Equal("DIZI", result.Declaration!.Name);
-        Assert.Equal(6, result.Declaration.ArraySize);
+        Assert.NotNull(result.Value);
+        Assert.Equal("DIZI", result.Value!.Name);
+        Assert.Equal(6, result.Value.ArraySize);
 
-        var member = Assert.Single(result.Declaration.Members);
+        var member = Assert.Single(result.Value.Members);
         Assert.Equal("KOD", member.Name);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -88,21 +84,21 @@ public sealed class StructureParserTests : ParserHelperTestBase
     [Fact]
     public void ParseStructureDeclaration_WithMemberDimension_ShouldSetMemberArraySize()
     {
-        var tokens = new Pl1Lexer("DCL 1 REC, 5 PARAM CHAR(10) DIM(2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new StructureParser(tokens, 0, diagnostics);
+        var parser = CreateStructureParser(
+            "DCL 1 REC, 5 PARAM CHAR(10) DIM(2);",
+            out var context);
 
         var result = parser.ParseStructureDeclaration();
 
-        Assert.NotNull(result.Declaration);
+        Assert.NotNull(result.Value);
 
-        var member = Assert.Single(result.Declaration!.Members);
+        var member = Assert.Single(result.Value!.Members);
         Assert.Equal("PARAM", member.Name);
         Assert.Equal(2, member.ArraySize);
 
         var dataType = Assert.IsType<Pl1CharacterType>(member.DataType);
         Assert.Equal(10, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -120,15 +116,15 @@ public sealed class StructureParserTests : ParserHelperTestBase
     [Fact]
     public void ParseStructureDeclaration_WithNestedGroup_ShouldCreateChildMembers()
     {
-        var tokens = new Pl1Lexer("DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new StructureParser(tokens, 0, diagnostics);
+        var parser = CreateStructureParser(
+            "DCL 1 MUSTERI, 5 ADRES, 10 IL CHAR(02);",
+            out var context);
 
         var result = parser.ParseStructureDeclaration();
 
-        Assert.NotNull(result.Declaration);
+        Assert.NotNull(result.Value);
 
-        var groupMember = Assert.Single(result.Declaration!.Members);
+        var groupMember = Assert.Single(result.Value!.Members);
         Assert.Equal("ADRES", groupMember.Name);
         Assert.True(groupMember.IsGroup);
 
@@ -137,6 +133,6 @@ public sealed class StructureParserTests : ParserHelperTestBase
 
         var dataType = Assert.IsType<Pl1CharacterType>(childMember.DataType);
         Assert.Equal(2, dataType.Length);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,16 +19,16 @@ public sealed class NumericTypeParserTests : ParserHelperTestBase
     [Fact]
     public void ParseFixedBasedType_WithFixedDecimal_ShouldCreateFixedDecimalType()
     {
-        var tokens = new Pl1Lexer("FIXED DECIMAL(15);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new NumericTypeParser(tokens, 0, diagnostics);
+        var parser = CreateNumericTypeParser(
+            "FIXED DECIMAL(15);",
+            out var context);
 
         var result = parser.ParseFixedBasedType();
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Null(dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -49,16 +46,16 @@ public sealed class NumericTypeParserTests : ParserHelperTestBase
     [Fact]
     public void ParseFixedBasedType_WithFixedDecHavingScale_ShouldCreateFixedDecimalType()
     {
-        var tokens = new Pl1Lexer("FIXED DEC(17,2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new NumericTypeParser(tokens, 0, diagnostics);
+        var parser = CreateNumericTypeParser(
+            "FIXED DEC(17,2);",
+            out var context);
 
         var result = parser.ParseFixedBasedType();
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(17, dataType.Precision);
         Assert.Equal(2, dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -76,16 +73,16 @@ public sealed class NumericTypeParserTests : ParserHelperTestBase
     [Fact]
     public void ParseDecimalBasedType_WithDecimalFixed_ShouldCreateFixedDecimalType()
     {
-        var tokens = new Pl1Lexer("DECIMAL FIXED(8);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new NumericTypeParser(tokens, 0, diagnostics);
+        var parser = CreateNumericTypeParser(
+            "DECIMAL FIXED(8);",
+            out var context);
 
         var result = parser.ParseDecimalBasedType();
 
         var dataType = Assert.IsType<Pl1FixedDecimalType>(result.Value);
         Assert.Equal(8, dataType.Precision);
         Assert.Null(dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -103,16 +100,16 @@ public sealed class NumericTypeParserTests : ParserHelperTestBase
     [Fact]
     public void ParseFixedBasedType_WithFixedBin_ShouldCreateFixedBinaryType()
     {
-        var tokens = new Pl1Lexer("FIXED BIN(31);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new NumericTypeParser(tokens, 0, diagnostics);
+        var parser = CreateNumericTypeParser(
+            "FIXED BIN(31);",
+            out var context);
 
         var result = parser.ParseFixedBasedType();
 
         var dataType = Assert.IsType<Pl1FixedBinaryType>(result.Value);
         Assert.Equal(31, dataType.Precision);
         Assert.Null(dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -130,15 +127,15 @@ public sealed class NumericTypeParserTests : ParserHelperTestBase
     [Fact]
     public void ParseBinaryBasedType_WithBinFixedHavingScale_ShouldCreateFixedBinaryType()
     {
-        var tokens = new Pl1Lexer("BIN FIXED(15,0);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new NumericTypeParser(tokens, 0, diagnostics);
+        var parser = CreateNumericTypeParser(
+            "BIN FIXED(15,0);",
+            out var context);
 
         var result = parser.ParseBinaryBasedType();
 
         var dataType = Assert.IsType<Pl1FixedBinaryType>(result.Value);
         Assert.Equal(15, dataType.Precision);
         Assert.Equal(0, dataType.Scale);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

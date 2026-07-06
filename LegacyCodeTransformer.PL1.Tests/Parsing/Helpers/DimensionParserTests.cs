@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Core.Syntax;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
+﻿using LegacyCodeTransformer.Core.Syntax;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,14 +19,14 @@ public sealed class DimensionParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalArraySize_WithParenthesizedSize_ShouldReturnArraySize()
     {
-        var tokens = new Pl1Lexer("(2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DimensionParser(tokens, 0, diagnostics);
+        var parser = CreateDimensionParser(
+            "(2);",
+            out var context);
 
         var result = parser.ParseOptionalArraySize();
 
-        Assert.Equal(2, result.ArraySize);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Equal(2, result.Value);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -47,14 +44,14 @@ public sealed class DimensionParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalDimensionSize_WithDimKeyword_ShouldReturnArraySize()
     {
-        var tokens = new Pl1Lexer("DIM(2);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DimensionParser(tokens, 0, diagnostics);
+        var parser = CreateDimensionParser(
+            "DIM(2);",
+            out var context);
 
         var result = parser.ParseOptionalDimensionSize();
 
-        Assert.Equal(2, result.ArraySize);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Equal(2, result.Value);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -72,14 +69,14 @@ public sealed class DimensionParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalDimensionSize_WithDimensionKeyword_ShouldReturnArraySize()
     {
-        var tokens = new Pl1Lexer("DIMENSION(3);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DimensionParser(tokens, 0, diagnostics);
+        var parser = CreateDimensionParser(
+            "DIMENSION(3);",
+            out var context);
 
         var result = parser.ParseOptionalDimensionSize();
 
-        Assert.Equal(3, result.ArraySize);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.Equal(3, result.Value);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -97,19 +94,21 @@ public sealed class DimensionParserTests : ParserHelperTestBase
     [Fact]
     public void ResolveArraySize_WithBothSources_ShouldReturnNameArraySizeAndDiagnostic()
     {
-        var tokens = new Pl1Lexer(";").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new DimensionParser(tokens, 0, diagnostics);
+        var parser = CreateDimensionParser(
+            ";",
+            out var context);
 
         var result = parser.ResolveArraySize(
             2,
             3,
             SourceLocation.Unknown);
 
+        var diagnostics = GetDiagnostics(context);
+
         Assert.Equal(2, result);
-        Assert.Single(diagnostics.Diagnostics);
+        Assert.Single(diagnostics);
         Assert.Contains(
             "Array boyutu hem isim sonrasında hem de DIM / DIMENSION attribute ile verilemez.",
-            diagnostics.Diagnostics[0].Message);
+            diagnostics[0].Message);
     }
 }

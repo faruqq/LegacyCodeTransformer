@@ -1,7 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-using LegacyCodeTransformer.Pl1.Types;
+﻿using LegacyCodeTransformer.Pl1.Types;
 
 namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
@@ -22,23 +19,17 @@ public sealed class FloatingTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithFloatKeyword_ShouldCreateFloatType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("FLOAT;").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new FloatingTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateFloatingTypeParser(
+            "FLOAT;",
+            out var context);
 
-        // Act
         var result = parser.Parse();
 
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
-        Assert.Null(result.Value.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -56,23 +47,17 @@ public sealed class FloatingTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithFloatDecimalPrecision_ShouldCreateDecimalFloatType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("FLOAT DECIMAL(16);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new FloatingTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateFloatingTypeParser(
+            "FLOAT DECIMAL(16);",
+            out var context);
 
-        // Act
         var result = parser.Parse();
 
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
-        Assert.Equal(Pl1FloatingBase.Decimal, result.Value.Base);
-        Assert.Equal(16, result.Value.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Decimal, dataType.Base);
+        Assert.Equal(16, dataType.Precision);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -90,23 +75,17 @@ public sealed class FloatingTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithFloatBinaryPrecision_ShouldCreateBinaryFloatType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("FLOAT BIN(53);").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new FloatingTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateFloatingTypeParser(
+            "FLOAT BIN(53);",
+            out var context);
 
-        // Act
         var result = parser.Parse();
 
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(Pl1FloatingTypeKind.Float, result.Value!.Kind);
-        Assert.Equal(Pl1FloatingBase.Binary, result.Value.Base);
-        Assert.Equal(53, result.Value.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Float, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Binary, dataType.Base);
+        Assert.Equal(53, dataType.Precision);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -124,23 +103,17 @@ public sealed class FloatingTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithRealKeyword_ShouldCreateRealType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("REAL;").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new FloatingTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateFloatingTypeParser(
+            "REAL;",
+            out var context);
 
-        // Act
         var result = parser.Parse();
 
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(Pl1FloatingTypeKind.Real, result.Value!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
-        Assert.Null(result.Value.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.Real, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -158,22 +131,16 @@ public sealed class FloatingTypeParserTests : ParserHelperTestBase
     [Fact]
     public void Parse_WithDoublePrecisionKeyword_ShouldCreateDoublePrecisionType()
     {
-        // Arrange
-        var tokens = new Pl1Lexer("DOUBLE PRECISION;").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new FloatingTypeParser(
-            tokens,
-            0,
-            diagnostics);
+        var parser = CreateFloatingTypeParser(
+            "DOUBLE PRECISION;",
+            out var context);
 
-        // Act
         var result = parser.Parse();
 
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, result.Value!.Kind);
-        Assert.Equal(Pl1FloatingBase.Unspecified, result.Value.Base);
-        Assert.Null(result.Value.Precision);
-        Assert.Empty(diagnostics.Diagnostics);
+        var dataType = Assert.IsType<Pl1FloatingType>(result.Value);
+        Assert.Equal(Pl1FloatingTypeKind.DoublePrecision, dataType.Kind);
+        Assert.Equal(Pl1FloatingBase.Unspecified, dataType.Base);
+        Assert.Null(dataType.Precision);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

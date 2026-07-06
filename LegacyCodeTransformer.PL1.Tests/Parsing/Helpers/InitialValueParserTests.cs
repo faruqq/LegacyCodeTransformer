@@ -1,8 +1,4 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
-using LegacyCodeTransformer.Pl1.Lexing;
-using LegacyCodeTransformer.Pl1.Parsing.Helpers;
-
-namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
+﻿namespace LegacyCodeTransformer.Pl1.Tests.Parsing.Helpers;
 
 public sealed class InitialValueParserTests : ParserHelperTestBase
 {
@@ -21,17 +17,17 @@ public sealed class InitialValueParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalInitialValue_WithInitLiteral_ShouldCreateInitialValue()
     {
-        var tokens = new Pl1Lexer("INIT('ABCD');").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new InitialValueParser(tokens, 0, diagnostics);
+        var parser = CreateInitialValueParser(
+            "INIT('ABCD');",
+            out var context);
 
         var result = parser.ParseOptionalInitialValue();
 
-        Assert.NotNull(result.InitialValue);
-        Assert.Equal("ABCD", result.InitialValue!.Value);
-        Assert.Null(result.InitialValue.RepeatCount);
-        Assert.False(result.InitialValue.AppliesToAllElements);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.NotNull(result.Value);
+        Assert.Equal("ABCD", result.Value!.Value);
+        Assert.Null(result.Value.RepeatCount);
+        Assert.False(result.Value.AppliesToAllElements);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -49,17 +45,17 @@ public sealed class InitialValueParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalInitialValue_WithInitialKeyword_ShouldCreateInitialValue()
     {
-        var tokens = new Pl1Lexer("INITIAL(';');").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new InitialValueParser(tokens, 0, diagnostics);
+        var parser = CreateInitialValueParser(
+            "INITIAL(';');",
+            out var context);
 
         var result = parser.ParseOptionalInitialValue();
 
-        Assert.NotNull(result.InitialValue);
-        Assert.Equal(";", result.InitialValue!.Value);
-        Assert.Null(result.InitialValue.RepeatCount);
-        Assert.False(result.InitialValue.AppliesToAllElements);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.NotNull(result.Value);
+        Assert.Equal(";", result.Value!.Value);
+        Assert.Null(result.Value.RepeatCount);
+        Assert.False(result.Value.AppliesToAllElements);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -77,17 +73,17 @@ public sealed class InitialValueParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalInitialValue_WithRepeatFactor_ShouldCreateInitialValueWithRepeatCount()
     {
-        var tokens = new Pl1Lexer("INIT((08)' ');").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new InitialValueParser(tokens, 0, diagnostics);
+        var parser = CreateInitialValueParser(
+            "INIT((08)' ');",
+            out var context);
 
         var result = parser.ParseOptionalInitialValue();
 
-        Assert.NotNull(result.InitialValue);
-        Assert.Equal(" ", result.InitialValue!.Value);
-        Assert.Equal(8, result.InitialValue.RepeatCount);
-        Assert.False(result.InitialValue.AppliesToAllElements);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.NotNull(result.Value);
+        Assert.Equal(" ", result.Value!.Value);
+        Assert.Equal(8, result.Value.RepeatCount);
+        Assert.False(result.Value.AppliesToAllElements);
+        Assert.Empty(GetDiagnostics(context));
     }
 
     /// <summary>
@@ -105,16 +101,16 @@ public sealed class InitialValueParserTests : ParserHelperTestBase
     [Fact]
     public void ParseOptionalInitialValue_WithAllElementsFactor_ShouldCreateInitialValueWithAllElements()
     {
-        var tokens = new Pl1Lexer("INIT((*)' ');").Tokenize();
-        var diagnostics = new DiagnosticBag();
-        var parser = new InitialValueParser(tokens, 0, diagnostics);
+        var parser = CreateInitialValueParser(
+            "INIT((*)' ');",
+            out var context);
 
         var result = parser.ParseOptionalInitialValue();
 
-        Assert.NotNull(result.InitialValue);
-        Assert.Equal(" ", result.InitialValue!.Value);
-        Assert.Null(result.InitialValue.RepeatCount);
-        Assert.True(result.InitialValue.AppliesToAllElements);
-        Assert.Empty(diagnostics.Diagnostics);
+        Assert.NotNull(result.Value);
+        Assert.Equal(" ", result.Value!.Value);
+        Assert.Null(result.Value.RepeatCount);
+        Assert.True(result.Value.AppliesToAllElements);
+        Assert.Empty(GetDiagnostics(context));
     }
 }

@@ -78,11 +78,11 @@ internal sealed class DimensionParser : ParserBase
     /// ----------------------
     /// Çok boyutlu name-based array syntax desteklendiğinde bu method genişletilecektir.
     /// </summary>
-    public HelperParseResult<int> ParseOptionalArraySize()
+    public HelperParseResult<int?> ParseOptionalArraySize()
     {
         if (Current.Kind != Pl1TokenKind.OpenParenthesis)
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 null,
                 Position);
         }
@@ -99,14 +99,14 @@ internal sealed class DimensionParser : ParserBase
 
         if (sizeToken is null)
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 null,
                 Position);
         }
 
         if (int.TryParse(sizeToken.Text, out var arraySize))
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 arraySize,
                 Position);
         }
@@ -116,7 +116,7 @@ internal sealed class DimensionParser : ParserBase
                 "Array boyutu sayısal olmalıdır",
                 sizeToken));
 
-        return new HelperParseResult<int>(
+        return new HelperParseResult<int?>(
             null,
             Position);
     }
@@ -147,12 +147,12 @@ internal sealed class DimensionParser : ParserBase
     /// ----------------------
     /// Çok boyutlu DIMENSION ve range syntax desteği bu method üzerinde genişletilebilir.
     /// </summary>
-    public HelperParseResult<int> ParseOptionalDimensionSize()
+    public HelperParseResult<int?> ParseOptionalDimensionSize()
     {
         if (Current.Kind != Pl1TokenKind.DimKeyword &&
             Current.Kind != Pl1TokenKind.DimensionKeyword)
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 null,
                 Position);
         }
@@ -174,14 +174,14 @@ internal sealed class DimensionParser : ParserBase
 
         if (sizeToken is null)
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 null,
                 Position);
         }
 
         if (int.TryParse(sizeToken.Text, out var arraySize))
         {
-            return new HelperParseResult<int>(
+            return new HelperParseResult<int?>(
                 arraySize,
                 Position);
         }
@@ -191,7 +191,7 @@ internal sealed class DimensionParser : ParserBase
                 "DIM / DIMENSION boyutu sayısal olmalıdır",
                 dimensionToken));
 
-        return new HelperParseResult<int>(
+        return new HelperParseResult<int?>(
             null,
             Position);
     }
