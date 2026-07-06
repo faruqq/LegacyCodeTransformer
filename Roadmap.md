@@ -810,6 +810,78 @@ P05.8 — Assignment EGL Generation
 
 ---
 
+## P05.8 — Assignment EGL Generation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+PL/I assignment statement modellerini EGL assignment syntax modeline dönüştürmek ve EGL generator üzerinden kaynak kod çıktısı üretebilmek.
+
+### Tamamlananlar
+
+#### EGL Expression Foundation
+
+* ✅ EglExpression base modeli eklendi.
+* ✅ EglRawExpression modeli eklendi.
+* ✅ PL/I raw expression → EGL raw expression dönüşümü eklendi.
+* ✅ Identifier casing dönüşümü eklendi.
+* ✅ PL/I string literal → EGL string literal quote dönüşümü eklendi.
+
+#### EGL Assignment Statement
+
+* ✅ EglAssignmentStatement modeli eklendi.
+* ✅ Pl1AssignmentStatement → EglAssignmentStatement mapping eklendi.
+* ✅ Assignment target expression dönüşümü eklendi.
+* ✅ Assignment value expression dönüşümü eklendi.
+
+#### Generator
+
+* ✅ EglCodeGenerator statement listesi output desteği eklendi.
+* ✅ EglAssignmentStatement output desteği eklendi.
+* ✅ Declaration + statement output sırası korundu.
+
+#### Testler
+
+* ✅ Assignment statement transpiler testleri
+* ✅ Declaration + assignment transpiler testleri
+* ✅ Identifier expression dönüşüm testleri
+* ✅ Assignment generator testleri
+* ✅ Declaration + assignment generator testleri
+* ✅ Assignment transpile + generate end-to-end testleri
+
+### Desteklenen Örnekler
+
+    PARAM = 'ABC';
+    CUSTOMER_NO = MUST_NO;
+
+EGL output:
+
+    Param = "ABC";
+    CustomerNo = MustNo;
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* CALL EGL generation
+* IF EGL generation
+* DO EGL generation
+* Full expression parser
+* Operator mapping
+* Operator precedence
+* Multi-target assignment
+
+### Başarı Kriteri
+
+Assignment statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+### Sonraki Milestone
+
+P05.9 — CALL EGL Generation
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum

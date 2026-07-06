@@ -1,7 +1,9 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
+using LegacyCodeTransformer.Egl.Expressions;
 using LegacyCodeTransformer.Egl.Generation;
 using LegacyCodeTransformer.Egl.InitialValues;
+using LegacyCodeTransformer.Egl.Statements;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 
@@ -658,5 +660,85 @@ public sealed class EglCodeGeneratorTests
         Assert.Equal(
             "Param char(3) = \"A\\\\B\";" + Environment.NewLine,
             result);
+    }
+
+    /// <summary>
+    /// EGL assignment statement modelinden kaynak kod üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglSyntaxTree.Statements listesinde bulunan EglAssignmentStatement
+    /// modelini EGL assignment statement satırına dönüştürmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// EglAssignmentStatement target Param, value "ABC".
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param = "ABC"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithAssignmentStatement_ShouldGenerateAssignmentStatement()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglAssignmentStatement(
+                target: new EglRawExpression("Param", SourceLocation.Unknown),
+                value: new EglRawExpression("\"ABC\"", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        Assert.Equal(
+            "Param = \"ABC\";" + Environment.NewLine,
+            result);
+    }
+
+    /// <summary>
+    /// EGL declaration ve assignment statement modellerinin aynı çıktıda sırayla üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator, önce Declarations listesini, ardından Statements listesini output'a
+    /// yazmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// Param char(8); declaration ve Param = "ABC"; assignment statement.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declaration satırı önce, assignment satırı sonra gelmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithDeclarationAndAssignmentStatement_ShouldGenerateBothInOrder()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: new[]
+            {
+            new EglVariableDeclaration(
+                "Param",
+                new EglCharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            statements: new[]
+            {
+            new EglAssignmentStatement(
+                target: new EglRawExpression("Param", SourceLocation.Unknown),
+                value: new EglRawExpression("\"ABC\"", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "Param char(8);" + Environment.NewLine +
+            "Param = \"ABC\";" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
     }
 }

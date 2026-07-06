@@ -179,7 +179,9 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             }
 
             var statements = new List<EglStatement>();
-            var statementTranspiler = new StatementTranspiler(_diagnostics);
+            var statementTranspiler = new StatementTranspiler(
+                _diagnostics,
+                _options.NamingOptions.Style);
 
             foreach (var statement in syntaxTree.Statements)
             {

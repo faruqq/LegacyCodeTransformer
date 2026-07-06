@@ -2253,3 +2253,52 @@ Eklenen test kapsamı:
 - Unsupported statement diagnostic davranışı
 
 Bu milestone P05.8 Assignment EGL Generation için foundation oluşturmuştur.
+
+## P05.8 - Assignment EGL Generation
+
+P05.8 kapsamında PL/I assignment statement modellerinin EGL syntax modeline ve EGL source output’a dönüşümü eklendi.
+
+Eklenen production bileşenleri:
+
+- EglExpression
+- EglRawExpression
+- EglAssignmentStatement
+- ExpressionTranspiler
+- EglRawExpressionTextTransformer
+
+Güncellenen production bileşenleri:
+
+- StatementTranspiler
+- Pl1ToEglTranspiler
+- EglCodeGenerator
+
+Assignment statement dönüşüm zinciri aşağıdaki şekilde çalışır hale getirildi:
+
+    Pl1AssignmentStatement
+        ↓
+    EglAssignmentStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL source output
+
+Desteklenen örnekler:
+
+    PARAM = 'ABC';
+    CUSTOMER_NO = MUST_NO;
+
+Üretilen EGL çıktıları:
+
+    Param = "ABC";
+    CustomerNo = MustNo;
+
+Eklenen test kapsamı:
+
+- Assignment statement model-to-model transpiler testleri
+- Declaration + assignment birlikte transpiler testleri
+- Identifier casing dönüşümü testleri
+- Assignment generator output testleri
+- Declaration + assignment generator output testleri
+- Assignment transpile + generate end-to-end testleri
+
+Bu milestone sonunda assignment statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.

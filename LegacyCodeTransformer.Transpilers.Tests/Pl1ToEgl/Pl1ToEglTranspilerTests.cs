@@ -11,6 +11,8 @@ using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
+using LegacyCodeTransformer.Egl.Expressions;
+using LegacyCodeTransformer.Egl.Statements;
 
 namespace LegacyCodeTransformer.Transpilers.Tests.Pl1ToEgl;
 
@@ -2201,22 +2203,21 @@ public sealed class Pl1ToEglTranspilerTests
     }
 
     /// <summary>
-    /// Transpiler'ın statement listesini ana pipeline içinde işlediğini doğrular.
+    /// Transpiler'ın assignment statement modelini EGL assignment statement modeline dönüştürdüğünü doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// P05.7 foundation aşamasında Pl1ToEglTranspiler, Pl1SyntaxTree.Statements
-    /// listesini görmeli ve statement dönüşümünü StatementTranspiler'a yönlendirmelidir.
+    /// P05.8 ile Pl1AssignmentStatement artık unsupported diagnostic üretmemeli,
+    /// EglAssignmentStatement modeline dönüşmelidir.
     ///
     /// Hangi input'u test eder?
     /// Model seviyesinde PARAM = 'ABC'; assignment statement karşılığı.
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Assignment EGL mapping henüz eklenmediği için result başarısız olmalı,
-    /// diagnostic içinde desteklenmeyen Pl1AssignmentStatement mesajı bulunmalı ve
-    /// EglSyntaxTree.Statements listesi boş kalmalıdır.
+    /// EglSyntaxTree.Statements listesinde tek EglAssignmentStatement bulunmalı,
+    /// target Param, value "ABC" olmalıdır.
     /// </summary>
     [Fact]
-    public void Transpile_WithAssignmentStatement_ShouldRouteStatementToStatementTranspiler()
+    public void Transpile_WithAssignmentStatement_ShouldCreateEglAssignmentStatement()
     {
         var pl1SyntaxTree = new Pl1SyntaxTree(
             declarations: null,
@@ -2236,22 +2237,26 @@ public sealed class Pl1ToEglTranspilerTests
 
         var result = transpiler.Transpile(pl1SyntaxTree);
 
-        Assert.False(result.Success);
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
         Assert.NotNull(result.SyntaxTree);
         Assert.Empty(result.SyntaxTree!.Declarations);
-        Assert.Empty(result.SyntaxTree.Statements);
 
-        Assert.Contains(
-            result.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("Desteklenmeyen PL/I statement türü: Pl1AssignmentStatement"));
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
+
+        var target = Assert.IsType<EglRawExpression>(assignmentStatement.Target);
+        var value = Assert.IsType<EglRawExpression>(assignmentStatement.Value);
+
+        Assert.Equal("Param", target.Text);
+        Assert.Equal("\"ABC\"", value.Text);
     }
 
     /// <summary>
-    /// Transpiler'ın declaration ve statement listesini aynı syntax tree üzerinden işlediğini doğrular.
+    /// Transpiler'ın declaration dönüşümünü korurken henüz desteklenmeyen CALL statement için diagnostic ürettiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// Pl1ToEglTranspiler declaration dönüşümünü yaparken aynı kaynak içindeki statement
-    /// listesini de statement pipeline'a yönlendirmelidir.
+    /// Assignment mapping eklenmiş olsa bile CALL statement P05.9'a kadar unsupported kalmalıdır.
     ///
     /// Hangi input'u test eder?
     /// Model seviyesinde DCL PARAM CHAR(08); ve CALL FETCH_CURSOR; karşılığı.
@@ -2296,5 +2301,204 @@ public sealed class Pl1ToEglTranspilerTests
         Assert.Contains(
             result.Diagnostics,
             diagnostic => diagnostic.Message.Contains("Desteklenmeyen PL/I statement türü: Pl1CallStatement"));
+    }
+
+    /// <summary>
+    /// Transpiler'ın declaration ve assignment statement modelini aynı EGL syntax tree içinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspiler declaration dönüşümünü yaparken assignment statement'ı da
+    /// EglAssignmentStatement olarak üretmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DCL PARAM CHAR(08); PARAM = 'ABC'; karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations listesinde Param char(8), Statements listesinde Param = "ABC"
+    /// assignment modeli bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDeclarationAndAssignmentStatement_ShouldCreateDeclarationAndAssignmentModel()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param", variableDeclaration.Name);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
+
+        Assert.Equal("Param", Assert.IsType<EglRawExpression>(assignmentStatement.Target).Text);
+        Assert.Equal("\"ABC\"", Assert.IsType<EglRawExpression>(assignmentStatement.Value).Text);
+    }
+
+    /// <summary>
+    /// Transpiler'ın assignment expression içinde identifier casing dönüşümünü koruduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// ExpressionTranspiler, raw expression içindeki identifier tokenlarını naming strategy
+    /// üzerinden EGL standardına dönüştürmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CUSTOMER_NO = MUST_NO;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Target CustomerNo, value MustNo olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithIdentifierAssignmentExpression_ShouldTransformIdentifierNames()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("CUSTOMER_NO", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("MUST_NO", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
+
+        Assert.Equal("CustomerNo", Assert.IsType<EglRawExpression>(assignmentStatement.Target).Text);
+        Assert.Equal("MustNo", Assert.IsType<EglRawExpression>(assignmentStatement.Value).Text);
+    }
+
+    /// <summary>
+    /// PL/I assignment statement modelinin EGL source output'a kadar üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspiler assignment statement'ı EglAssignmentStatement modeline
+    /// dönüştürmeli ve EglCodeGenerator bu modeli EGL assignment satırı olarak yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde PARAM = 'ABC'; assignment statement karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param = "ABC"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void TranspileAndGenerate_WithAssignmentStatement_ShouldGenerateAssignmentOutput()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var generator = new EglCodeGenerator();
+
+        var transpileResult = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(transpileResult.Success);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var output = generator.Generate(transpileResult.SyntaxTree!);
+
+        Assert.Equal(
+            "Param = \"ABC\";" + Environment.NewLine,
+            output);
+    }
+
+    /// <summary>
+    /// PL/I declaration ve assignment statement modellerinin EGL source output'a kadar üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler declaration ve assignment statement modellerini aynı EglSyntaxTree içinde
+    /// üretmeli; generator da declaration ve assignment satırlarını sırayla yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DCL PARAM CHAR(08); PARAM = 'ABC'; karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(8); ve Param = "ABC"; satırları üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void TranspileAndGenerate_WithDeclarationAndAssignmentStatement_ShouldGenerateBothOutputs()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var generator = new EglCodeGenerator();
+
+        var transpileResult = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(transpileResult.Success);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var output = generator.Generate(transpileResult.SyntaxTree!);
+
+        var expected =
+            "Param char(8);" + Environment.NewLine +
+            "Param = \"ABC\";" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
     }
 }

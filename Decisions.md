@@ -3035,3 +3035,65 @@ Bu davranış P05.8 ve sonrası için güvenli foundation sağlar.
 ### Durum
 
 Kabul edildi.
+
+## Decision 076 - Assignment Statement EGL Generation
+
+### Karar
+
+P05.8 kapsamında PL/I assignment statement modelleri EGL assignment statement modellerine dönüştürülecektir.
+
+Transpiler doğrudan EGL string üretmeyecektir.
+
+Assignment dönüşüm zinciri aşağıdaki gibi olacaktır.
+
+    Pl1AssignmentStatement
+        ↓
+    EglAssignmentStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL assignment source line
+
+Expression alanları P05.8 aşamasında raw expression fallback modeliyle taşınacaktır.
+
+Kullanılan EGL expression modelleri:
+
+- EglExpression
+- EglRawExpression
+
+Kullanılan EGL statement modeli:
+
+- EglAssignmentStatement
+
+### Gerekçe
+
+P05.7 ile statement transpiler foundation kurulmuştur ancak concrete statement mapping yapılmamıştır.
+
+P05.8 ile statement pipeline’ın ilk gerçek uçtan uca dönüşümü assignment statement üzerinden tamamlanır.
+
+Bu yaklaşım parser, transpiler ve generator katmanları arasındaki sorumluluk ayrımını korur.
+
+Desteklenen örnekler:
+
+    PARAM = 'ABC';
+    CUSTOMER_NO = MUST_NO;
+
+EGL output örnekleri:
+
+    Param = "ABC";
+    CustomerNo = MustNo;
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Expressions
+- LegacyCodeTransformer.Egl/Statements
+- LegacyCodeTransformer.Egl/Generation/EglCodeGenerator
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/StatementTranspiler
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/ExpressionTranspiler
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/EglRawExpressionTextTransformer
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests/Generation
+
+### Durum
+
+Kabul edildi.
