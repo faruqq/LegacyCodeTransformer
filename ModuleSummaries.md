@@ -2122,3 +2122,54 @@ Eklenen test kapsamı:
 - Pl1Parser CALL integration testleri
 
 Bu milestone sonunda Pl1Parser, declaration, assignment ve CALL statement modellerini aynı Pl1SyntaxTree içinde taşıyabilir hale gelmiştir.
+
+## P05.4 - IF ve DO Parser Foundation
+
+P05.4 kapsamında PL/I executable statement desteğine control-flow parser foundation eklendi.
+
+Eklenen production bileşenleri:
+
+- IfStatementParser
+- DoStatementParser
+
+Güncellenen production bileşenleri:
+
+- StatementParser
+
+IF parser aşağıdaki temel subset'i destekleyecek şekilde eklendi:
+
+- IF condition THEN CALL
+- IF condition THEN assignment
+- IF condition THEN statement ELSE statement
+- IF condition THEN DO block
+
+DO parser aşağıdaki temel subset'i destekleyecek şekilde eklendi:
+
+- DO block
+- DO WHILE block
+- DO UNTIL block
+- DO body içinde recursive statement parsing
+
+Desteklenen örnekler:
+
+    IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    IF A = B THEN PARAM = 'ABC';
+    IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+    DO; PARAM = 'ABC'; CALL PROC1; END;
+    DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    DO UNTIL(EOF); PARAM = 'ABC'; END;
+    IF A = B THEN DO; CALL PROC1; END;
+
+Condition alanları ExpressionFactory üzerinden Pl1RawExpression olarak taşınmaktadır.
+
+Eklenen test kapsamı:
+
+- StatementParser IF parser testleri
+- StatementParser IF ELSE parser testleri
+- StatementParser DO block parser testleri
+- StatementParser DO WHILE parser testleri
+- StatementParser DO UNTIL parser testleri
+- Pl1Parser IF integration testleri
+- Pl1Parser DO integration testleri
+
+Bu milestone sonunda Pl1Parser declaration, assignment, CALL, IF ve DO statement modellerini aynı Pl1SyntaxTree içinde taşıyebilir hale gelmiştir.

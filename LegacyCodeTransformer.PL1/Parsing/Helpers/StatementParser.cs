@@ -22,12 +22,10 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 ///     PARAM = 'ABC';
 ///     CALL FETCH_CURSOR;
-///     CALL PROC1(A, 'ABC', B);
-///     IF SQLCODE = 0 THEN DO;
+///     IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
 ///     DO WHILE(SQLCODE = 0);
 ///
-/// P05.3 içinde Assignment ve CALL parser gerçek model üretir. IF ve DO parser
-/// davranışları sonraki milestone içinde eklenecektir.
+/// P05.4 içinde IF ve DO parser gerçek model üretir.
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -36,8 +34,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// IfStatementParser ve DoStatementParser bu orchestration sınıfı üzerinden
-/// devreye alınacaktır.
+/// SelectStatementParser ve diğer executable statement parser'lar bu orchestration
+/// sınıfı üzerinden devreye alınacaktır.
 /// </summary>
 internal sealed class StatementParser : ParserBase
 {
@@ -66,15 +64,15 @@ internal sealed class StatementParser : ParserBase
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Mevcut token'ın statement başlangıcı olup olmadığını kontrol eder. Assignment
-    /// başlangıcıysa AssignmentStatementParser'a, CALL başlangıcıysa
-    /// CallStatementParser'a yönlendirir. Henüz desteklenmeyen statement türleri için
-    /// diagnostic ve recovery davranışını korur.
+    /// Mevcut token'ın statement başlangıcı olup olmadığını kontrol eder. Assignment,
+    /// CALL, IF ve DO başlangıçlarını concrete parser'lara yönlendirir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     ///     PARAM = 'ABC';
     ///     CALL FETCH_CURSOR;
+    ///     IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    ///     DO WHILE(SQLCODE = 0);
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -82,8 +80,8 @@ internal sealed class StatementParser : ParserBase
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// IF ve DO parser'ları eklendiğinde bu method aynı dispatcher standardı üzerinden
-    /// ilgili concrete parser'lara yönlenecektir.
+    /// Yeni statement parser'ları eklendiğinde bu method aynı dispatcher standardı
+    /// üzerinden genişletilecektir.
     /// </summary>
     public HelperParseResult<Pl1Statement> ParseStatement()
     {
@@ -98,6 +96,10 @@ internal sealed class StatementParser : ParserBase
             StatementParserKind.Assignment => ParseAssignmentStatement(),
 
             StatementParserKind.Call => ParseCallStatement(),
+
+            StatementParserKind.If => ParseIfStatement(),
+
+            StatementParserKind.Do => ParseDoStatement(),
 
             _ => ParseUnsupportedStatement(parserKind)
         };
@@ -117,6 +119,26 @@ internal sealed class StatementParser : ParserBase
     {
         var parser = new CallStatementParser(Context);
         var result = parser.ParseCallStatement();
+
+        Position = result.Position;
+
+        return result;
+    }
+
+    private HelperParseResult<Pl1Statement> ParseIfStatement()
+    {
+        var parser = new IfStatementParser(Context);
+        var result = parser.ParseIfStatement();
+
+        Position = result.Position;
+
+        return result;
+    }
+
+    private HelperParseResult<Pl1Statement> ParseDoStatement()
+    {
+        var parser = new DoStatementParser(Context);
+        var result = parser.ParseDoStatement();
 
         Position = result.Position;
 

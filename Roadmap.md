@@ -544,72 +544,73 @@ P05.4 — IF / DO Parser
 
 ### Durum
 
-⏳ Planlandı
+✅ Tamamlandı
 
 ### Amaç
 
-Kontrol akışı oluşturan statement yapılarını parse ederek syntax tree üzerinde
-temsil etmek.
+Kontrol akışı oluşturan statement yapılarını parse ederek syntax tree üzerinde temsil etmek.
 
-### Kapsam
+### Tamamlananlar
 
-* IF parser
-* ELSE parser
-* DO parser
-* DO WHILE parser
-* DO UNTIL parser
-* Block parser
-* Nested block parser
-* Recursive statement parsing
+#### IF Parser
 
-### Tamamlanacak Özellikler
+* ✅ IfStatementParser
+* ✅ IF condition THEN CALL desteği
+* ✅ IF condition THEN assignment desteği
+* ✅ IF condition THEN statement ELSE statement desteği
+* ✅ IF condition THEN DO block desteği
+* ✅ Condition alanının Pl1RawExpression olarak taşınması
+* ✅ THEN / ELSE kollarının Pl1Statement olarak modellenmesi
 
-#### IF
+#### DO Parser
 
-    IF A = B THEN
-        CALL PROC;
+* ✅ DoStatementParser
+* ✅ DO block desteği
+* ✅ DO WHILE(condition) desteği
+* ✅ DO UNTIL(condition) desteği
+* ✅ DO body içinde recursive statement parsing
+* ✅ DO body'nin Pl1BlockStatement olarak modellenmesi
 
-#### IF ELSE
+#### Testler
 
-    IF A = B THEN
-        CALL PROC1;
-    ELSE
-        CALL PROC2;
+* ✅ StatementParser IF parser testleri
+* ✅ StatementParser IF ELSE parser testleri
+* ✅ StatementParser IF THEN DO parser testleri
+* ✅ StatementParser DO block parser testleri
+* ✅ StatementParser DO WHILE parser testleri
+* ✅ StatementParser DO UNTIL parser testleri
+* ✅ Pl1Parser IF integration testleri
+* ✅ Pl1Parser DO integration testleri
 
-#### IF THEN DO
+### Desteklenen Örnekler
 
-    IF SQLCODE = 0 THEN DO;
-        ...
-    END;
+    IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    IF A = B THEN PARAM = 'ABC';
+    IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+    DO; PARAM = 'ABC'; CALL PROC1; END;
+    DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    DO UNTIL(EOF); PARAM = 'ABC'; END;
+    IF A = B THEN DO; CALL PROC1; END;
 
-#### Nested IF
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
 
-    IF A THEN
-        IF B THEN
-            ...
-
-#### DO
-
-    DO;
-        ...
-    END;
-
-#### DO WHILE
-
-    DO WHILE(SQLCODE = 0);
-        ...
-    END;
-
-#### DO UNTIL
-
-    DO UNTIL(EOF);
-        ...
-    END;
+* Tam expression parser
+* Operator precedence
+* ELSE DO için ayrı ek test seti
+* Nested function call condition parsing
+* Sayaçlı DO parsing
+* SELECT / WHEN parser
+* EGL statement output
 
 ### Başarı Kriteri
 
-Parser nested executable statement bloklarını doğru syntax hiyerarşisiyle
-oluşturabilmelidir.
+Parser IF, IF ELSE, DO block, DO WHILE ve DO UNTIL statement modellerini syntax tree üzerinde semantic olarak temsil edebilir hale gelmiştir.
+
+Pl1Parser declaration, assignment, CALL, IF ve DO statement modellerini aynı Pl1SyntaxTree içinde taşıyabilmektedir.
+
+### Sonraki Milestone
+
+P05.5 — Statement Integration & Tests
 
 ---
 

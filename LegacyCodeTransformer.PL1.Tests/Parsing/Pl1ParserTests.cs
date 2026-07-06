@@ -1679,4 +1679,150 @@ public sealed class Pl1ParserTests
         Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
         Assert.Empty(callStatement.Arguments);
     }
+
+    /// <summary>
+    /// Parser'ın top-level IF statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, IF statement'ı StatementParser'a yönlendirmeli ve üretilen
+    /// Pl1IfStatement modelini SyntaxTree.Statements listesine eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Statements tek elemanlı olmalı; condition SQLCODE = 0, then statement
+    /// FETCH_CURSOR procedure adına sahip Pl1CallStatement olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithIfThenCallStatement_ShouldAddIfStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "IF SQLCODE = 0 THEN CALL FETCH_CURSOR;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var ifStatement = Assert.IsType<Pl1IfStatement>(statement);
+
+        var condition = Assert.IsType<Pl1RawExpression>(ifStatement.Condition);
+        var thenStatement = Assert.IsType<Pl1CallStatement>(ifStatement.ThenStatement);
+
+        Assert.Equal("SQLCODE = 0", condition.Text);
+        Assert.Equal("FETCH_CURSOR", thenStatement.ProcedureName);
+        Assert.Null(ifStatement.ElseStatement);
+    }
+
+    /// <summary>
+    /// Parser'ın IF THEN ELSE statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, IF statement içerisindeki THEN ve ELSE kollarını child statement
+    /// olarak parse edip Pl1IfStatement üzerinde taşımalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ThenStatement PROC1, ElseStatement PROC2 procedure adına sahip Pl1CallStatement
+    /// olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithIfThenElseCallStatements_ShouldAddIfElseStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "IF A = B THEN CALL PROC1; ELSE CALL PROC2;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var ifStatement = Assert.IsType<Pl1IfStatement>(statement);
+
+        var condition = Assert.IsType<Pl1RawExpression>(ifStatement.Condition);
+        var thenStatement = Assert.IsType<Pl1CallStatement>(ifStatement.ThenStatement);
+        var elseStatement = Assert.IsType<Pl1CallStatement>(ifStatement.ElseStatement);
+
+        Assert.Equal("A = B", condition.Text);
+        Assert.Equal("PROC1", thenStatement.ProcedureName);
+        Assert.Equal("PROC2", elseStatement.ProcedureName);
+    }
+
+    /// <summary>
+    /// Parser'ın top-level DO WHILE statement modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, DO WHILE block statement'ı StatementParser'a yönlendirmeli ve
+    /// Pl1DoStatement modelini SyntaxTree.Statements listesine eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind While, condition SQLCODE = 0 ve body içinde FETCH_CURSOR CALL statement
+    /// bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithDoWhileStatement_ShouldAddDoStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var doStatement = Assert.IsType<Pl1DoStatement>(statement);
+
+        var condition = Assert.IsType<Pl1RawExpression>(doStatement.Condition);
+        var bodyStatement = Assert.Single(doStatement.Body.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(bodyStatement);
+
+        Assert.Equal(Pl1DoStatementKind.While, doStatement.Kind);
+        Assert.Equal("SQLCODE = 0", condition.Text);
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+    }
+
+    /// <summary>
+    /// Parser'ın IF THEN DO block modelini syntax tree üzerinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, IF statement'ın THEN kolunda gelen DO block statement'ı nested
+    /// Pl1DoStatement olarak taşımalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN DO; CALL PROC1; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// IF condition A = B olmalı; ThenStatement Pl1DoStatement olmalı ve DO body
+    /// içinde PROC1 CALL statement bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithIfThenDoBlock_ShouldAddNestedDoStatementToSyntaxTree()
+    {
+        var result = ParseSource(
+            "IF A = B THEN DO; CALL PROC1; END;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var ifStatement = Assert.IsType<Pl1IfStatement>(statement);
+
+        var condition = Assert.IsType<Pl1RawExpression>(ifStatement.Condition);
+        var thenDoStatement = Assert.IsType<Pl1DoStatement>(ifStatement.ThenStatement);
+        var bodyStatement = Assert.Single(thenDoStatement.Body.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(bodyStatement);
+
+        Assert.Equal("A = B", condition.Text);
+        Assert.Equal(Pl1DoStatementKind.Block, thenDoStatement.Kind);
+        Assert.Equal("PROC1", callStatement.ProcedureName);
+        Assert.Null(ifStatement.ElseStatement);
+    }
 }

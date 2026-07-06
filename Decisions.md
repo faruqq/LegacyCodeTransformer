@@ -2654,3 +2654,94 @@ Bu yapı P05.4 IF / DO parser geliştirmeleri için de ortak foundation sağlar.
 ### Durum
 
 Kabul edildi.
+
+## Decision 068 - P05 IF ve DO Parser Foundation
+
+### Karar
+
+P05.4 kapsamında IF / THEN / ELSE ve DO / DO WHILE / DO UNTIL statement parsing desteği eklenecektir.
+
+IF parser ilk aşamada aşağıdaki yapıları destekleyecektir:
+
+- IF condition THEN assignment;
+- IF condition THEN CALL;
+- IF condition THEN statement; ELSE statement;
+- IF condition THEN DO; ... END;
+
+DO parser ilk aşamada aşağıdaki yapıları destekleyecektir:
+
+- DO; ... END;
+- DO WHILE(condition); ... END;
+- DO UNTIL(condition); ... END;
+
+IF condition ve DO condition alanları P05.4 aşamasında Pl1RawExpression olarak taşınacaktır.
+
+IF THEN ve ELSE kolları Pl1Statement olarak modellenecektir.
+
+DO body, Pl1BlockStatement olarak modellenecektir.
+
+### Gerekçe
+
+Assignment ve CALL statement desteğinden sonra PL/I executable statement parsing için ilk control-flow yapıları IF ve DO statement türleridir.
+
+Bu yapıların parser seviyesinde desteklenmesi, ileride EGL if/else ve loop/block output üretimi için temel oluşturur.
+
+IF ve DO parser'ları recursive statement parsing gerektirir. Bu nedenle child statement parsing işlemi yine StatementParser üzerinden yürütülecektir.
+
+Expression parser henüz tamamlanmadığı için condition expression içerikleri Pl1RawExpression olarak korunacaktır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Parsing/Helpers/IfStatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/DoStatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/StatementParser
+- LegacyCodeTransformer.PL1/Statements/Pl1IfStatement
+- LegacyCodeTransformer.PL1/Statements/Pl1DoStatement
+- LegacyCodeTransformer.PL1/Statements/Pl1BlockStatement
+- LegacyCodeTransformer.PL1.Tests/Parsing/Helpers/StatementParserTests
+- LegacyCodeTransformer.PL1.Tests/Parsing/Pl1ParserTests
+
+### Durum
+
+Kabul edildi.
+
+## Decision 069 - Minimal Extensible Architecture Standard
+
+### Karar
+
+Proje mimarisi eklenebilir ve sürdürülebilir olacak şekilde tasarlanacaktır; ancak spekülatif veya erken soyutlama yapılmayacaktır.
+
+Yeni abstraction, helper, factory veya dispatcher yalnızca aşağıdaki şartlardan en az biri sağlandığında eklenecektir:
+
+1. Aynı davranış en az iki farklı production yerde tekrar etmeye başlamışsa.
+2. Yeni özellik eklenirken mevcut sınıfın sorumluluğu belirgin şekilde bozuluyorsa.
+3. Yakın roadmap milestone'unda doğrudan kullanılacak net bir ihtiyaç varsa.
+4. Test edilebilirliği veya hata recovery davranışını anlamlı şekilde iyileştiriyorsa.
+
+Aşağıdaki gerekçeler tek başına yeni abstraction eklemek için yeterli değildir:
+
+- İleride belki lazım olur.
+- Daha soyut görünür.
+- Design pattern kullanmış oluruz.
+- Her şeyi şimdiden genişletilebilir yapalım.
+
+### Gerekçe
+
+LegacyCodeTransformer uzun vadede büyüyecek bir dönüşüm platformudur. Bu nedenle mimarinin eklenebilir olması gerekir.
+
+Ancak erken soyutlama ve gereksiz helper/factory katmanları kodun okunabilirliğini azaltır, geliştirme hızını düşürür ve bakım maliyetini artırır.
+
+Bu yüzden proje, gerçek ihtiyaç çıktıkça genişleyen fakat gereksiz genelleştirme yapmayan bir mimari disiplinle ilerleyecektir.
+
+### Etkilediği Modüller
+
+- Tüm production kodları
+- Parser helper mimarisi
+- Transpiler helper mimarisi
+- Generator helper mimarisi
+- Test yazım standardı
+- Geliştirme süreci
+
+### Durum
+
+Kabul edildi.
