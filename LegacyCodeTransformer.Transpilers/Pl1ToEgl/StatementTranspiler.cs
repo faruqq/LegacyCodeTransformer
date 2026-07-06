@@ -1,4 +1,5 @@
-﻿using LegacyCodeTransformer.Core.Diagnostics;
+﻿using System.Text;
+using LegacyCodeTransformer.Core.Diagnostics;
 using LegacyCodeTransformer.Egl.Statements;
 using LegacyCodeTransformer.Pl1.Statements;
 using LegacyCodeTransformer.Transpilers.Naming;
@@ -26,7 +27,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///
     /// EGL syntax model:
     ///
-    ///     EglAssignmentStatement
+    ///     EglAssignmentStatement(Target: Param, Value: "ABC")
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -41,16 +42,14 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     internal sealed class StatementTranspiler
     {
         private readonly DiagnosticBag _diagnostics;
-        private readonly ExpressionTranspiler _expressionTranspiler;
+        private readonly IdentifierNamingStyle _namingStyle;
 
         public StatementTranspiler(
             DiagnosticBag diagnostics,
             IdentifierNamingStyle namingStyle)
         {
             _diagnostics = diagnostics;
-            _expressionTranspiler = new ExpressionTranspiler(
-                diagnostics,
-                namingStyle);
+            _namingStyle = namingStyle;
         }
 
         /// <summary>
@@ -99,8 +98,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Assignment target ve value expression modellerini ExpressionTranspiler üzerinden
-        /// EGL expression modellerine dönüştürür ve EglAssignmentStatement üretir.
+        /// Assignment target ve value raw expression metinlerini EGL output standardına
+        /// uygun hale getirir ve EglAssignmentStatement üretir.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
@@ -119,8 +118,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Çoklu assignment veya gerçek expression tree desteği geldiğinde bu method
-        /// genişletilecektir.
+        /// Full expression parser geldiğinde bu method expression model mapping'e
+        /// taşınabilir.
         /// </summary>
         private EglStatement? TranspileAssignmentStatement(Pl1AssignmentStatement statement)
         {
@@ -136,18 +135,128 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 return null;
             }
 
-            var eglTarget = _expressionTranspiler.TranspileExpression(target);
-            var eglValue = _expressionTranspiler.TranspileExpression(statement.Value);
-
-            if (eglTarget is null || eglValue is null)
-            {
-                return null;
-            }
+            var targetText = TranspileExpressionText(target);
+            var valueText = TranspileExpressionText(statement.Value);
 
             return new EglAssignmentStatement(
-                eglTarget,
-                eglValue,
+                targetText,
+                valueText,
                 statement.Location);
+        }
+
+        private string TranspileExpressionText(Pl1Expression expression)
+        {
+            return expression switch
+            {
+                Pl1RawExpression rawExpression => TransformRawExpressionText(rawExpression.Text),
+                _ => CreateUnsupportedExpressionDiagnostic(expression)
+            };
+        }
+
+        private string CreateUnsupportedExpressionDiagnostic(Pl1Expression expression)
+        {
+            _diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Desteklenmeyen PL/I expression türü: {expression.GetType().Name}",
+                expression.Location));
+
+            return string.Empty;
+        }
+
+        private string TransformRawExpressionText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder();
+            var index = 0;
+
+            while (index < text.Length)
+            {
+                var current = text[index];
+
+                if (current == '\'')
+                {
+                    index = AppendStringLiteral(text, index, builder);
+                    continue;
+                }
+
+                if (IsIdentifierStart(current))
+                {
+                    index = AppendIdentifier(text, index, builder);
+                    continue;
+                }
+
+                builder.Append(current);
+                index++;
+            }
+
+            return builder.ToString();
+        }
+
+        private static int AppendStringLiteral(
+            string text,
+            int startIndex,
+            StringBuilder builder)
+        {
+            builder.Append('"');
+
+            var index = startIndex + 1;
+
+            while (index < text.Length && text[index] != '\'')
+            {
+                var current = text[index];
+
+                if (current == '"' || current == '\\')
+                {
+                    builder.Append('\\');
+                }
+
+                builder.Append(current);
+                index++;
+            }
+
+            builder.Append('"');
+
+            return index < text.Length
+                ? index + 1
+                : index;
+        }
+
+        private int AppendIdentifier(
+            string text,
+            int startIndex,
+            StringBuilder builder)
+        {
+            var index = startIndex;
+
+            while (index < text.Length && IsIdentifierPart(text[index]))
+            {
+                index++;
+            }
+
+            var identifier = text.Substring(
+                startIndex,
+                index - startIndex);
+
+            builder.Append(
+                IdentifierNameTransformer.Transform(
+                    identifier,
+                    _namingStyle));
+
+            return index;
+        }
+
+        private static bool IsIdentifierStart(char value)
+        {
+            return char.IsLetter(value) || value == '_';
+        }
+
+        private static bool IsIdentifierPart(char value)
+        {
+            return char.IsLetterOrDigit(value) || value == '_';
         }
 
         private EglStatement? TranspileUnsupportedStatement(Pl1Statement statement)

@@ -2203,56 +2203,6 @@ public sealed class Pl1ToEglTranspilerTests
     }
 
     /// <summary>
-    /// Transpiler'ın assignment statement modelini EGL assignment statement modeline dönüştürdüğünü doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// P05.8 ile Pl1AssignmentStatement artık unsupported diagnostic üretmemeli,
-    /// EglAssignmentStatement modeline dönüşmelidir.
-    ///
-    /// Hangi input'u test eder?
-    /// Model seviyesinde PARAM = 'ABC'; assignment statement karşılığı.
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// EglSyntaxTree.Statements listesinde tek EglAssignmentStatement bulunmalı,
-    /// target Param, value "ABC" olmalıdır.
-    /// </summary>
-    [Fact]
-    public void Transpile_WithAssignmentStatement_ShouldCreateEglAssignmentStatement()
-    {
-        var pl1SyntaxTree = new Pl1SyntaxTree(
-            declarations: null,
-            statements: new[]
-            {
-            new Pl1AssignmentStatement(
-                targets: new[]
-                {
-                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
-                },
-                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
-                location: SourceLocation.Unknown)
-            },
-            location: SourceLocation.Unknown);
-
-        var transpiler = new Pl1ToEglTranspiler();
-
-        var result = transpiler.Transpile(pl1SyntaxTree);
-
-        Assert.True(result.Success);
-        Assert.Empty(result.Diagnostics);
-        Assert.NotNull(result.SyntaxTree);
-        Assert.Empty(result.SyntaxTree!.Declarations);
-
-        var statement = Assert.Single(result.SyntaxTree.Statements);
-        var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
-
-        var target = Assert.IsType<EglRawExpression>(assignmentStatement.Target);
-        var value = Assert.IsType<EglRawExpression>(assignmentStatement.Value);
-
-        Assert.Equal("Param", target.Text);
-        Assert.Equal("\"ABC\"", value.Text);
-    }
-
-    /// <summary>
     /// Transpiler'ın declaration dönüşümünü korurken henüz desteklenmeyen CALL statement için diagnostic ürettiğini doğrular.
     ///
     /// Bu test neyi doğrular?
@@ -2304,6 +2254,53 @@ public sealed class Pl1ToEglTranspilerTests
     }
 
     /// <summary>
+    /// Transpiler'ın assignment statement modelini EGL assignment statement modeline dönüştürdüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// P05.8 ile Pl1AssignmentStatement artık unsupported diagnostic üretmemeli,
+    /// EglAssignmentStatement modeline dönüşmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde PARAM = 'ABC'; assignment statement karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// EglSyntaxTree.Statements listesinde tek EglAssignmentStatement bulunmalı,
+    /// Target Param, Value "ABC" olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithAssignmentStatement_ShouldCreateEglAssignmentStatement()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
+
+        Assert.Equal("Param", assignmentStatement.Target);
+        Assert.Equal("\"ABC\"", assignmentStatement.Value);
+    }
+
+    /// <summary>
     /// Transpiler'ın declaration ve assignment statement modelini aynı EGL syntax tree içinde taşıdığını doğrular.
     ///
     /// Bu test neyi doğrular?
@@ -2314,7 +2311,7 @@ public sealed class Pl1ToEglTranspilerTests
     /// Model seviyesinde DCL PARAM CHAR(08); PARAM = 'ABC'; karşılığı.
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Declarations listesinde Param char(8), Statements listesinde Param = "ABC"
+    /// Declarations listesinde Param declaration, Statements listesinde Param = "ABC"
     /// assignment modeli bulunmalıdır.
     /// </summary>
     [Fact]
@@ -2356,22 +2353,22 @@ public sealed class Pl1ToEglTranspilerTests
         var statement = Assert.Single(result.SyntaxTree.Statements);
         var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
 
-        Assert.Equal("Param", Assert.IsType<EglRawExpression>(assignmentStatement.Target).Text);
-        Assert.Equal("\"ABC\"", Assert.IsType<EglRawExpression>(assignmentStatement.Value).Text);
+        Assert.Equal("Param", assignmentStatement.Target);
+        Assert.Equal("\"ABC\"", assignmentStatement.Value);
     }
 
     /// <summary>
     /// Transpiler'ın assignment expression içinde identifier casing dönüşümünü koruduğunu doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// ExpressionTranspiler, raw expression içindeki identifier tokenlarını naming strategy
+    /// StatementTranspiler, raw expression içindeki identifier tokenlarını naming strategy
     /// üzerinden EGL standardına dönüştürmelidir.
     ///
     /// Hangi input'u test eder?
     /// CUSTOMER_NO = MUST_NO;
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Target CustomerNo, value MustNo olmalıdır.
+    /// Target CustomerNo, Value MustNo olmalıdır.
     /// </summary>
     [Fact]
     public void Transpile_WithIdentifierAssignmentExpression_ShouldTransformIdentifierNames()
@@ -2400,8 +2397,8 @@ public sealed class Pl1ToEglTranspilerTests
         var statement = Assert.Single(result.SyntaxTree!.Statements);
         var assignmentStatement = Assert.IsType<EglAssignmentStatement>(statement);
 
-        Assert.Equal("CustomerNo", Assert.IsType<EglRawExpression>(assignmentStatement.Target).Text);
-        Assert.Equal("MustNo", Assert.IsType<EglRawExpression>(assignmentStatement.Value).Text);
+        Assert.Equal("CustomerNo", assignmentStatement.Target);
+        Assert.Equal("MustNo", assignmentStatement.Value);
     }
 
     /// <summary>

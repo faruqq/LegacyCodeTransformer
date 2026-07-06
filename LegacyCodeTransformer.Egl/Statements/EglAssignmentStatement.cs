@@ -1,5 +1,4 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
-using LegacyCodeTransformer.Egl.Expressions;
 
 namespace LegacyCodeTransformer.Egl.Statements
 {
@@ -13,8 +12,8 @@ namespace LegacyCodeTransformer.Egl.Statements
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Assignment target ve value expression alanlarını final string output yerine EGL
-    /// syntax modeli olarak temsil eder.
+    /// Assignment target ve value alanlarını EGL statement modeli üzerinde taşır.
+    /// Bu aşamada expression AST üretilmez; çünkü full expression parser henüz yoktur.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -22,7 +21,7 @@ namespace LegacyCodeTransformer.Egl.Statements
     ///
     ///     PARAM = 'ABC';
     ///
-    /// EGL model karşılığı:
+    /// EGL model:
     ///
     ///     Target: Param
     ///     Value: "ABC"
@@ -34,18 +33,18 @@ namespace LegacyCodeTransformer.Egl.Statements
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Çoklu assignment, compound assignment veya expression tree tabanlı assignment
-    /// üretimleri bu model üzerinden genişletilecektir.
+    /// Full expression parser geldiğinde Target ve Value alanları string yerine
+    /// expression modeliyle revize edilebilir.
     /// </summary>
     public sealed class EglAssignmentStatement : EglStatement
     {
-        public EglExpression Target { get; }
+        public string Target { get; }
 
-        public EglExpression Value { get; }
+        public string Value { get; }
 
         public EglAssignmentStatement(
-            EglExpression target,
-            EglExpression value,
+            string target,
+            string value,
             SourceLocation location)
             : base(location)
         {

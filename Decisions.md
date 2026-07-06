@@ -3097,3 +3097,50 @@ EGL output örnekleri:
 ### Durum
 
 Kabul edildi.
+
+## Decision 077 - Tek Kullanım Noktalı Abstraction Ertelenecektir
+
+### Karar
+
+Yeni abstraction, helper, factory, mapper, transformer veya base model yalnızca mevcut milestone içinde gerçek ve somut bir ihtiyaç varsa eklenecektir.
+
+Genel kural olarak bir abstraction aşağıdaki şartlardan en az birini sağlamalıdır:
+
+1. Mevcut milestone içinde en az iki farklı production kullanım noktasına sahip olmalıdır.
+2. Aynı davranış iki veya daha fazla production sınıfta tekrar etmeye başlamış olmalıdır.
+3. Mevcut sınıfın sorumluluğu belirgin şekilde bozuluyorsa bu sorumluluğu ayırmalıdır.
+4. Test edilebilirlik, diagnostic üretimi veya recovery davranışı açısından net fayda sağlamalıdır.
+
+Tek kullanım noktası olan abstraction'lar, gerçek ikinci kullanım ihtiyacı oluşana kadar eklenmeyecektir.
+
+Aşağıdaki gerekçeler tek başına yeni abstraction eklemek için yeterli değildir:
+
+- İleride lazım olabilir.
+- Daha temiz görünür.
+- Design pattern uygulanmış olur.
+- Gelecekte expression parser gelince kullanılır.
+- Şimdiden genişletilebilir olsun.
+
+### Gerekçe
+
+LegacyCodeTransformer uzun vadeli ve büyüyen bir dönüşüm projesidir.
+
+Mimari eklenebilir olmalıdır; ancak erken abstraction projeyi gereksiz büyütür, okunabilirliği azaltır ve bakım maliyetini artırır.
+
+Özellikle parser, transpiler ve generator katmanlarında henüz tek kullanım noktası olan abstraction'lar ileride gerçek ihtiyaç şekillenmeden eklenirse yanlış yönde sabitlenmiş mimari kararlara dönüşebilir.
+
+Bu nedenle abstraction kararları mevcut milestone ihtiyacına göre verilecek, gelecekteki belirsiz ihtiyaçlar için erken modelleme yapılmayacaktır.
+
+### Etkilediği Modüller
+
+- Tüm production kodları
+- Parser helper mimarisi
+- Transpiler helper mimarisi
+- Generator helper mimarisi
+- EGL syntax model tasarımı
+- Test yazım standardı
+- Geliştirme süreci
+
+### Durum
+
+Kabul edildi.

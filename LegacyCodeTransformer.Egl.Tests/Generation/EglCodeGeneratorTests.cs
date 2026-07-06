@@ -670,7 +670,7 @@ public sealed class EglCodeGeneratorTests
     /// modelini EGL assignment statement satırına dönüştürmelidir.
     ///
     /// Hangi input'u test eder?
-    /// EglAssignmentStatement target Param, value "ABC".
+    /// EglAssignmentStatement Target Param, Value "ABC".
     ///
     /// Beklenen temel model/çıktı nedir?
     /// Param = "ABC"; çıktısı üretilmelidir.
@@ -683,8 +683,8 @@ public sealed class EglCodeGeneratorTests
             statements: new[]
             {
             new EglAssignmentStatement(
-                target: new EglRawExpression("Param", SourceLocation.Unknown),
-                value: new EglRawExpression("\"ABC\"", SourceLocation.Unknown),
+                target: "Param",
+                value: "\"ABC\"",
                 location: SourceLocation.Unknown)
             },
             location: SourceLocation.Unknown);
@@ -725,8 +725,8 @@ public sealed class EglCodeGeneratorTests
             statements: new[]
             {
             new EglAssignmentStatement(
-                target: new EglRawExpression("Param", SourceLocation.Unknown),
-                value: new EglRawExpression("\"ABC\"", SourceLocation.Unknown),
+                target: "Param",
+                value: "\"ABC\"",
                 location: SourceLocation.Unknown)
             },
             location: SourceLocation.Unknown);

@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using LegacyCodeTransformer.Egl.Declarations;
-using LegacyCodeTransformer.Egl.Expressions;
 using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Statements;
 using LegacyCodeTransformer.Egl.Syntax;
@@ -105,31 +104,6 @@ public sealed class EglCodeGenerator
         };
     }
 
-    /// <summary>
-    /// EGL statement modelinden kaynak kod karşılığını üretir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// EglSyntaxTree artık executable statement listesi taşıyabilmektedir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Statement türüne göre doğru generator methoduna yönlendirme yapar.
-    /// P05.8 kapsamında EglAssignmentStatement desteklenir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     Param = "ABC";
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// Generate ana akışı içerisinde.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// EglCallStatement, EglIfStatement ve EglDoStatement eklendiğinde dispatch
-    /// davranışı burada genişletilecektir.
-    /// </summary>
     private static string GenerateStatement(EglStatement statement)
     {
         return statement switch
@@ -139,35 +113,9 @@ public sealed class EglCodeGenerator
         };
     }
 
-    /// <summary>
-    /// EGL assignment statement modelinden kaynak kod satırı üretir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Assignment statement modeli doğrudan string değildir. Generator aşamasında gerçek
-    /// EGL kaynak kodu satırına çevrilmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Target ve value expression modellerini EGL assignment syntax'ına uygun şekilde
-    /// yazdırır.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     Param = "ABC";
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// GenerateStatement içinde EglAssignmentStatement branch'inde kullanılır.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Compound assignment veya expression formatting kuralları gerektiğinde bu method
-    /// genişletilecektir.
-    /// </summary>
     private static string GenerateAssignmentStatement(EglAssignmentStatement statement)
     {
-        return $"{GenerateExpression(statement.Target)} = {GenerateExpression(statement.Value)};";
+        return $"{statement.Target} = {statement.Value};";
     }
 
     private static string GenerateRecordDeclaration(
@@ -224,42 +172,6 @@ public sealed class EglCodeGenerator
     private static string GenerateInitialValue(EglInitialValue initialValue)
     {
         return $"\"{EscapeStringLiteral(initialValue.Value)}\"";
-    }
-
-    /// <summary>
-    /// EGL expression modelinden kaynak kod karşılığını üretir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Statement modelleri expression alanlarını string olarak değil EGL expression
-    /// syntax modeli olarak taşır.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Expression türüne göre doğru kaynak kod karşılığını üretir.
-    /// P05.8 kapsamında EglRawExpression desteklenir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     Param
-    ///     "ABC"
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// Assignment statement output üretiminde.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// EglIdentifierExpression, EglLiteralExpression ve EglBinaryExpression gibi
-    /// expression modelleri geldiğinde dispatch davranışı burada genişletilecektir.
-    /// </summary>
-    private static string GenerateExpression(EglExpression expression)
-    {
-        return expression switch
-        {
-            EglRawExpression rawExpression => rawExpression.Text,
-            _ => string.Empty
-        };
     }
 
     private static string EscapeStringLiteral(string value)
