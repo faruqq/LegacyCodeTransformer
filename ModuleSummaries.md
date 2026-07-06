@@ -2173,3 +2173,27 @@ Eklenen test kapsamı:
 - Pl1Parser DO integration testleri
 
 Bu milestone sonunda Pl1Parser declaration, assignment, CALL, IF ve DO statement modellerini aynı Pl1SyntaxTree içinde taşıyebilir hale gelmiştir.
+
+## P05.5 - Statement Integration ve Recursive Control Flow Tests
+
+P05.5 kapsamında P05 statement parser entegrasyonu testlerle sağlamlaştırıldı.
+
+Bu milestone’da yeni production abstraction eklenmedi.
+
+Eklenen test kapsamı:
+
+- Nested DO block parsing
+- IF THEN DO ELSE DO parsing
+- Declaration + Assignment + CALL + IF + DO mixed source parsing
+- Nested control-flow hierarchy parsing
+- IF THEN DO içinde DO WHILE parsing
+
+Doğrulanan temel davranışlar:
+
+- Statement sırası syntax tree üzerinde korunur.
+- Nested control-flow hiyerarşisi kaybolmadan taşınır.
+- DO body içindeki child statement’lar recursive olarak parse edilir.
+- IF THEN ve ELSE kolları child Pl1Statement olarak temsil edilir.
+- Pl1Parser declaration ve executable statement modellerini aynı Pl1SyntaxTree içinde taşıyabilir.
+
+P05 sonunda parser declaration dışındaki ilk executable statement ailesini destekleyecek seviyeye ulaşmıştır.

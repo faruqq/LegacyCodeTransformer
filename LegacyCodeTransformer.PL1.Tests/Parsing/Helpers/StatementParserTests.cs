@@ -693,6 +693,76 @@ public sealed class StatementParserTests
             diagnostic => diagnostic.Message.Contains("END bekleniyordu"));
     }
 
+    /// <summary>
+    /// Nested DO block parse davranışını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// DoStatementParser, DO body içinde tekrar DO statement geldiğinde recursive
+    /// StatementParser akışıyla nested Pl1DoStatement üretebilmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DO; DO; CALL PROC1; END; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Dış DO body içinde bir iç DO bulunmalı, iç DO body içinde PROC1 CALL statement bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithNestedDoBlock_ShouldReturnNestedDoStatement()
+    {
+        var tokens = Tokenize("DO; DO; CALL PROC1; END; END;");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        var outerDoStatement = Assert.IsType<Pl1DoStatement>(result.Value);
+        var innerStatement = Assert.Single(outerDoStatement.Body.Statements);
+        var innerDoStatement = Assert.IsType<Pl1DoStatement>(innerStatement);
+        var innerBodyStatement = Assert.Single(innerDoStatement.Body.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(innerBodyStatement);
+
+        Assert.Equal(Pl1DoStatementKind.Block, outerDoStatement.Kind);
+        Assert.Equal(Pl1DoStatementKind.Block, innerDoStatement.Kind);
+        Assert.Equal("PROC1", callStatement.ProcedureName);
+        Assert.Empty(diagnostics.Diagnostics);
+    }
+
+    /// <summary>
+    /// IF THEN DO ELSE DO parse davranışını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// IfStatementParser, THEN ve ELSE kollarında DO block statement parse edebilmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN DO; CALL PROC1; END; ELSE DO; CALL PROC2; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ThenStatement ve ElseStatement Pl1DoStatement olmalı; body içinde sırasıyla PROC1 ve PROC2 CALL bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void ParseStatement_WithIfThenDoElseDoBlocks_ShouldReturnIfStatementWithDoBranches()
+    {
+        var tokens = Tokenize("IF A = B THEN DO; CALL PROC1; END; ELSE DO; CALL PROC2; END;");
+        var diagnostics = new DiagnosticBag();
+        var parser = new StatementParser(tokens, 0, diagnostics);
+
+        var result = parser.ParseStatement();
+
+        var ifStatement = Assert.IsType<Pl1IfStatement>(result.Value);
+        var condition = Assert.IsType<Pl1RawExpression>(ifStatement.Condition);
+
+        var thenDoStatement = Assert.IsType<Pl1DoStatement>(ifStatement.ThenStatement);
+        var elseDoStatement = Assert.IsType<Pl1DoStatement>(ifStatement.ElseStatement);
+
+        var thenCall = Assert.IsType<Pl1CallStatement>(Assert.Single(thenDoStatement.Body.Statements));
+        var elseCall = Assert.IsType<Pl1CallStatement>(Assert.Single(elseDoStatement.Body.Statements));
+
+        Assert.Equal("A = B", condition.Text);
+        Assert.Equal("PROC1", thenCall.ProcedureName);
+        Assert.Equal("PROC2", elseCall.ProcedureName);
+        Assert.Empty(diagnostics.Diagnostics);
+    }
+
     private static IReadOnlyList<Pl1Token> Tokenize(string source)
     {
         return new Pl1Lexer(source).Tokenize();

@@ -2745,3 +2745,44 @@ Bu yüzden proje, gerçek ihtiyaç çıktıkça genişleyen fakat gereksiz genel
 ### Durum
 
 Kabul edildi.
+
+## Decision 070 - P05 Statement Integration ve Recursive Control Flow Test Standardı
+
+### Karar
+
+P05.5 kapsamında statement parser entegrasyonu, mixed statement parsing ve nested control-flow senaryoları testlerle güvence altına alınacaktır.
+
+Bu milestone’da yeni production abstraction açılmayacaktır.
+
+Odak noktası mevcut parser zincirinin aşağıdaki statement türlerini aynı syntax tree içinde doğru sırayla ve doğru hiyerarşiyle taşıdığını doğrulamaktır:
+
+- Declaration
+- Assignment
+- CALL
+- IF
+- DO
+- IF THEN DO
+- IF THEN DO ELSE DO
+- Nested DO
+- DO WHILE
+- DO UNTIL
+
+### Gerekçe
+
+Assignment, CALL, IF ve DO parser’ları ayrı ayrı çalışsa bile gerçek PL/I kaynaklarında bu statement türleri birlikte ve nested şekilde bulunur.
+
+P05.5’in amacı yeni parser türü eklemek değil, mevcut statement parser altyapısının integration seviyesinde güvenilir olduğunu kanıtlamaktır.
+
+Bu yaklaşım over engineering riskini azaltır ve mevcut davranışı testlerle sağlamlaştırır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Parsing/Helpers/StatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/IfStatementParser
+- LegacyCodeTransformer.PL1/Parsing/Helpers/DoStatementParser
+- LegacyCodeTransformer.PL1.Tests/Parsing/Helpers/StatementParserTests
+- LegacyCodeTransformer.PL1.Tests/Parsing/Pl1ParserTests
+
+### Durum
+
+Kabul edildi.

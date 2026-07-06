@@ -618,48 +618,74 @@ P05.5 — Statement Integration & Tests
 
 ### Durum
 
-⏳ Planlandı
+✅ Tamamlandı
 
 ### Amaç
 
-Statement parser'ın declaration parser ile tamamen entegre edilmesi ve gerçek
-PL/I programlarının parser tarafından uçtan uca okunabilmesi.
+Statement parser'ın declaration parser ile tamamen entegre edilmesi ve gerçek PL/I programlarında birlikte görülen executable statement türlerinin aynı syntax tree içinde doğrulanması.
 
-### Kapsam
-
-* Parser orchestration güncellemesi
-* Statement dispatcher entegrasyonu
-* Visitor genişletmeleri
-* Walker genişletmeleri
-* Parser integration testleri
-* Büyük örnek PL/I dosyaları
-* Regression testleri
-
-### Tamamlanacak Özellikler
+### Tamamlananlar
 
 #### Integration
 
-* Declaration + Statement birlikte parse
+* ✅ Declaration + Statement birlikte parse
+* ✅ Mixed source parsing
+* ✅ Assignment + CALL + IF + DO birlikte parse
+* ✅ Recursive DO block parsing
+* ✅ IF THEN DO parsing
+* ✅ IF THEN DO ELSE DO parsing
+* ✅ Nested control-flow hierarchy parsing
+* ✅ Statement sırası koruma testleri
 
-* Mixed source parsing
+#### Testler
 
-* Recursive block parsing
+* ✅ StatementParser nested DO block testleri
+* ✅ StatementParser IF THEN DO ELSE DO testleri
+* ✅ Pl1Parser mixed declaration + statement integration testleri
+* ✅ Pl1Parser nested control-flow integration testleri
 
-* Visitor integration
+### Desteklenen Entegre Örnekler
 
-* Walker integration
+    DCL PARAM CHAR(08);
+    PARAM = 'ABC';
+    CALL PROC1;
+    IF A = B THEN CALL PROC2;
+    DO;
+        CALL PROC3;
+    END;
 
-* Statement traversal testleri
+    IF A = B THEN DO;
+        DO WHILE(SQLCODE = 0);
+            CALL FETCH_CURSOR;
+        END;
+    END;
+
+    IF A = B THEN DO;
+        CALL PROC1;
+    END;
+    ELSE DO;
+        CALL PROC2;
+    END;
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* Procedure parser
+* EXEC SQL parser
+* SELECT / WHEN parser
+* RETURN parser
+* GOTO parser
+* Full expression parser
+* EGL statement output
 
 ### Başarı Kriteri
 
-Parser declaration ve executable statement'ları tek syntax tree içerisinde
-eksiksiz temsil edebilmelidir.
+Parser declaration ve executable statement'ları tek syntax tree içerisinde eksiksiz temsil edebilir hale gelmiştir.
 
-P05 sonunda transpiler katmanı statement desteğini kullanabilecek seviyeye
-hazırlanmış olacaktır.
+Nested IF / DO control-flow yapıları syntax tree üzerinde hiyerarşik olarak korunmaktadır.
 
-## Sonraki Faz
+P05 sonunda transpiler katmanı statement desteğini kullanabilecek seviyeye hazırlanmıştır.
+
+### Sonraki Faz
 
 P06 — Procedure Desteği
 

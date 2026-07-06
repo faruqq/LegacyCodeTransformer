@@ -1825,4 +1825,83 @@ public sealed class Pl1ParserTests
         Assert.Equal("PROC1", callStatement.ProcedureName);
         Assert.Null(ifStatement.ElseStatement);
     }
+
+    /// <summary>
+    /// Parser'ın declaration, assignment, CALL, IF ve DO modellerini aynı syntax tree içinde taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, P05 sonunda desteklenen statement türlerini aynı kaynak içinde sırayla parse edebilmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(08); PARAM = 'ABC'; CALL PROC1; IF A = B THEN CALL PROC2; DO; CALL PROC3; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declarations tek elemanlı, Statements dört elemanlı olmalı ve statement sırası korunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithMixedDeclarationAndStatements_ShouldPreserveStatementOrder()
+    {
+        var result = ParseSource(
+            "DCL PARAM CHAR(08); PARAM = 'ABC'; CALL PROC1; IF A = B THEN CALL PROC2; DO; CALL PROC3; END;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<Pl1VariableDeclaration>(declaration);
+
+        Assert.Equal("PARAM", variableDeclaration.Name);
+        Assert.Equal(4, result.SyntaxTree.Statements.Count);
+
+        Assert.IsType<Pl1AssignmentStatement>(result.SyntaxTree.Statements[0]);
+
+        var callStatement = Assert.IsType<Pl1CallStatement>(result.SyntaxTree.Statements[1]);
+        var ifStatement = Assert.IsType<Pl1IfStatement>(result.SyntaxTree.Statements[2]);
+        var doStatement = Assert.IsType<Pl1DoStatement>(result.SyntaxTree.Statements[3]);
+
+        Assert.Equal("PROC1", callStatement.ProcedureName);
+        Assert.IsType<Pl1CallStatement>(ifStatement.ThenStatement);
+        Assert.Single(doStatement.Body.Statements);
+    }
+
+    /// <summary>
+    /// Parser'ın nested control-flow yapısını syntax tree üzerinde koruduğunu doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1Parser, IF THEN DO içinde DO WHILE gibi nested control-flow statement'ları kaybetmeden taşımalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN DO; DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Top-level statement Pl1IfStatement olmalı; THEN branch içinde block DO, onun içinde DO WHILE bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Parse_WithNestedControlFlowStatements_ShouldPreserveStatementHierarchy()
+    {
+        var result = ParseSource(
+            "IF A = B THEN DO; DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END; END;");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(result.SyntaxTree);
+
+        var topLevelStatement = Assert.Single(result.SyntaxTree!.Statements);
+        var ifStatement = Assert.IsType<Pl1IfStatement>(topLevelStatement);
+
+        var thenDoStatement = Assert.IsType<Pl1DoStatement>(ifStatement.ThenStatement);
+        var nestedStatement = Assert.Single(thenDoStatement.Body.Statements);
+        var nestedDoStatement = Assert.IsType<Pl1DoStatement>(nestedStatement);
+
+        var nestedCondition = Assert.IsType<Pl1RawExpression>(nestedDoStatement.Condition);
+        var nestedBodyStatement = Assert.Single(nestedDoStatement.Body.Statements);
+        var callStatement = Assert.IsType<Pl1CallStatement>(nestedBodyStatement);
+
+        Assert.Equal("A = B", Assert.IsType<Pl1RawExpression>(ifStatement.Condition).Text);
+        Assert.Equal(Pl1DoStatementKind.Block, thenDoStatement.Kind);
+        Assert.Equal(Pl1DoStatementKind.While, nestedDoStatement.Kind);
+        Assert.Equal("SQLCODE = 0", nestedCondition.Text);
+        Assert.Equal("FETCH_CURSOR", callStatement.ProcedureName);
+    }
 }
