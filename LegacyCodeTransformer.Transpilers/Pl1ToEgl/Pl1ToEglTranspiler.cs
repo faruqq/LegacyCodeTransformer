@@ -2,6 +2,7 @@
 using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
 using LegacyCodeTransformer.Egl.InitialValues;
+using LegacyCodeTransformer.Egl.Statements;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 using LegacyCodeTransformer.Pl1.Declarations;
@@ -154,35 +155,6 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             _options = options ?? Pl1ToEglTranspilerOptions.Default;
         }
 
-        /// <summary>
-        /// PL/I syntax tree modelini EGL syntax tree modeline dönüştürür.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// Parser çıktısı olan Pl1SyntaxTree doğrudan EGL kaynak koduna
-        /// yazdırılamaz.
-        ///
-        /// Önce PL/I modellerinin EGL modellerine dönüştürülmesi gerekir.
-        ///
-        /// Bu method syntax tree içindeki declaration listesini gezer ve
-        /// her declaration türünü uygun EGL declaration türüne dönüştürür.
-        ///
-        /// Desteklenen declaration dönüşümleri:
-        ///
-        /// - Pl1VariableDeclaration -> EglVariableDeclaration
-        /// - Pl1StructureDeclaration -> EglRecordDeclaration
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// - ConversionService içerisinde
-        /// - Transpiler unit testlerinde
-        /// - Application uçtan uca dönüşüm testlerinde
-        ///
-        /// Gelecekte ne işe yarayacak?
-        /// ----------------------
-        /// Yeni PL/I declaration türleri eklendikçe TranspileDeclaration
-        /// dispatch methodu genişletilecektir.
-        /// </summary>
         public Pl1ToEglTranspilationResult Transpile(Pl1SyntaxTree syntaxTree)
         {
             if (syntaxTree is null)
@@ -206,8 +178,22 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 }
             }
 
+            var statements = new List<EglStatement>();
+            var statementTranspiler = new StatementTranspiler(_diagnostics);
+
+            foreach (var statement in syntaxTree.Statements)
+            {
+                var eglStatement = statementTranspiler.TranspileStatement(statement);
+
+                if (eglStatement is not null)
+                {
+                    statements.Add(eglStatement);
+                }
+            }
+
             var eglSyntaxTree = new EglSyntaxTree(
                 declarations,
+                statements,
                 syntaxTree.Location);
 
             return new Pl1ToEglTranspilationResult(

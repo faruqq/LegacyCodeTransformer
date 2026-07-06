@@ -6,6 +6,7 @@ using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
 using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.InitialValues;
+using LegacyCodeTransformer.Pl1.Statements;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
@@ -2197,5 +2198,103 @@ public sealed class Pl1ToEglTranspilerTests
         Assert.Contains(
             "FLOAT DECIMAL veri tipi için EGL mapping henüz desteklenmiyor. Kind: Float, Base: Decimal, Precision: 16",
             result.Diagnostics[0].Message);
+    }
+
+    /// <summary>
+    /// Transpiler'ın statement listesini ana pipeline içinde işlediğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// P05.7 foundation aşamasında Pl1ToEglTranspiler, Pl1SyntaxTree.Statements
+    /// listesini görmeli ve statement dönüşümünü StatementTranspiler'a yönlendirmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde PARAM = 'ABC'; assignment statement karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Assignment EGL mapping henüz eklenmediği için result başarısız olmalı,
+    /// diagnostic içinde desteklenmeyen Pl1AssignmentStatement mesajı bulunmalı ve
+    /// EglSyntaxTree.Statements listesi boş kalmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithAssignmentStatement_ShouldRouteStatementToStatementTranspiler()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+        Assert.Empty(result.SyntaxTree!.Declarations);
+        Assert.Empty(result.SyntaxTree.Statements);
+
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("Desteklenmeyen PL/I statement türü: Pl1AssignmentStatement"));
+    }
+
+    /// <summary>
+    /// Transpiler'ın declaration ve statement listesini aynı syntax tree üzerinden işlediğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspiler declaration dönüşümünü yaparken aynı kaynak içindeki statement
+    /// listesini de statement pipeline'a yönlendirmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DCL PARAM CHAR(08); ve CALL FETCH_CURSOR; karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declaration başarıyla EGL declaration'a dönüşmeli, CALL statement için unsupported
+    /// diagnostic üretilmeli ve EglSyntaxTree.Statements listesi boş kalmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDeclarationAndCallStatement_ShouldKeepDeclarationAndReportUnsupportedStatement()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            statements: new[]
+            {
+            new Pl1CallStatement(
+                procedureName: "FETCH_CURSOR",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.SyntaxTree);
+
+        var declaration = Assert.Single(result.SyntaxTree!.Declarations);
+        var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
+
+        Assert.Equal("Param", variableDeclaration.Name);
+        Assert.Empty(result.SyntaxTree.Statements);
+
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("Desteklenmeyen PL/I statement türü: Pl1CallStatement"));
     }
 }

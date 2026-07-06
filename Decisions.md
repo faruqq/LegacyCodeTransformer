@@ -2926,3 +2926,112 @@ Bu nedenle yeni VisitorBase, StatementWalker veya ekstra abstraction eklemek ove
 ### Durum
 
 Kabul edildi.
+
+## Decision 074 - Transpiler Katmanı EGL Syntax Modeli Üretecektir
+
+### Karar
+
+LegacyCodeTransformer içerisinde Transpiler katmanı hiçbir zaman doğrudan EGL kaynak kodu (string) üretmeyecektir.
+
+Transpiler katmanının tek sorumluluğu PL/I syntax modellerini EGL syntax modellerine dönüştürmektir.
+
+EGL kaynak kodunun üretilmesi yalnızca Generator katmanının sorumluluğunda olacaktır.
+
+Statement pipeline aşağıdaki katmanlardan oluşacaktır.
+
+    PL/I Source
+        ↓
+    PL/I Lexer
+        ↓
+    PL/I Parser
+        ↓
+    PL/I Syntax Tree
+        ↓
+    Transpiler
+        ↓
+    EGL Syntax Tree
+        ↓
+    EGL Generator
+        ↓
+    EGL Source Code
+
+Bu mimari hem declaration hem de executable statement dönüşümleri için ortak standart olacaktır.
+
+P05.7 ile başlayan statement transpiler çalışmaları ve ileride eklenecek procedure, expression ve program transpiler bileşenleri de aynı pipeline'ı kullanacaktır.
+
+### Gerekçe
+
+Parser, Transpiler ve Generator katmanlarının sorumlulukları birbirinden açık şekilde ayrılmalıdır.
+
+Eğer Transpiler doğrudan string üretirse;
+
+- dönüşüm mantısı ile formatlama davranışı aynı sınıfta toplanır,
+- unit testler gereksiz şekilde string karşılaştırmalarına bağımlı hale gelir,
+- EGL formatlama kurallarındaki değişiklikler transpiler kodunu etkiler,
+- gelecekte yapılacak optimizasyon ve refactoring çalışmaları zorlaşır.
+
+EGL Syntax Tree'nin ara model olarak kullanılması ise;
+
+- dönüşüm mantısını formatlama mantısından tamamen ayırır,
+- güçlü tipli (strongly typed) EGL modelleri üzerinden çalışılmasını sağlar,
+- Generator katmanının tek sorumluluğunun kod üretmek olmasını sağlar,
+- farklı generator stratejilerinin eklenmesini kolaylaştırır,
+- syntax analizi, semantic analiz, optimizasyon ve code formatting gibi ileri seviye geliştirmelere altyapı hazırlar.
+
+Bu nedenle Transpiler katmanı yalnızca EGL syntax modeli üretmeli, kaynak kod üretimi ise tamamen Generator katmanına bırakılmalıdır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Transpilers
+- LegacyCodeTransformer.Egl
+- LegacyCodeTransformer.Generators
+- Declaration Transpiler
+- Statement Transpiler
+- Procedure Transpiler
+- Expression Transpiler
+- EGL Code Generator
+- Roadmap.md
+- Geliştirme standartları
+
+### Durum
+
+Kabul edildi.
+
+## Decision 075 - Statement Transpiler Foundation
+
+### Karar
+
+P05.7 kapsamında statement transpiler foundation eklenecektir.
+
+Transpiler katmanı PL/I statement modellerini doğrudan string'e çevirmeyecek, EGL statement syntax modelleri üretecektir.
+
+Bu milestone’da concrete assignment, CALL, IF veya DO EGL mapping yapılmayacaktır.
+
+İlk foundation bileşenleri:
+
+- EglStatement
+- EglSyntaxTree.Statements
+- StatementTranspiler
+- Pl1ToEglTranspiler statement routing entegrasyonu
+
+### Gerekçe
+
+P05 parser tarafında Assignment, CALL, IF ve DO statement modelleri üretilmiştir.
+
+Bu modellerin dönüşüm pipeline içinde kullanılabilmesi için EGL syntax tree’nin statement listesi taşıması ve transpiler’ın PL/I statement listesini işlemeye başlaması gerekir.
+
+Concrete mapping henüz eklenmediği için statement türleri diagnostic üretir.
+
+Bu davranış P05.8 ve sonrası için güvenli foundation sağlar.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Statements
+- LegacyCodeTransformer.Egl/Syntax/EglSyntaxTree
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests/Syntax
+
+### Durum
+
+Kabul edildi.

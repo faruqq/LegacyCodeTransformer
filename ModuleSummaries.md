@@ -2222,3 +2222,34 @@ Eklenen test kapsamı:
 - CALL argument expression traversal verification
 
 Bu milestone sonunda statement transpiler foundation öncesinde visitor/walker altyapısının yeterli olduğu doğrulanmıştır.
+
+## P05.7 - Statement Transpiler Foundation
+
+P05.7 kapsamında statement transpiler foundation eklendi.
+
+Eklenen production bileşenleri:
+
+- EglStatement
+- StatementTranspiler
+
+Güncellenen production bileşenleri:
+
+- EglSyntaxTree
+- Pl1ToEglTranspiler
+
+EglSyntaxTree artık declaration listesine ek olarak statement listesi de taşıyabilir.
+
+Pl1ToEglTranspiler, Pl1SyntaxTree.Statements listesini StatementTranspiler üzerinden işlemeye başlamıştır.
+
+Concrete statement EGL mapping henüz eklenmemiştir.
+
+Bu nedenle P05.7 aşamasında Assignment, CALL, IF ve DO statement türleri için desteklenmeyen statement diagnostic’i üretilir.
+
+Eklenen test kapsamı:
+
+- Statement listesinin EglSyntaxTree üzerinde taşınması
+- Assignment statement’ın StatementTranspiler’a yönlenmesi
+- Declaration ve statement’ın aynı transpiler pipeline içinde işlenmesi
+- Unsupported statement diagnostic davranışı
+
+Bu milestone P05.8 Assignment EGL Generation için foundation oluşturmuştur.

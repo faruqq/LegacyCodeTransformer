@@ -757,6 +757,59 @@ P05.7 — Statement Transpiler Foundation
 
 ---
 
+## P05.7 — Statement Transpiler Foundation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+PL/I statement modellerinin transpiler pipeline içinde işlenmeye başlamasını ve EGL syntax tree tarafında statement modellerinin taşınabilmesini sağlamak.
+
+### Tamamlananlar
+
+#### EGL Syntax Foundation
+
+* ✅ EglStatement base modeli eklendi.
+* ✅ EglSyntaxTree statement listesi taşıyacak şekilde genişletildi.
+* ✅ Declaration + statement root model yapısı oluşturuldu.
+
+#### Transpiler Foundation
+
+* ✅ StatementTranspiler eklendi.
+* ✅ Pl1ToEglTranspiler statement routing entegrasyonu eklendi.
+* ✅ Unsupported statement diagnostic davranışı eklendi.
+* ✅ Concrete statement mapping sonraki milestone’lara bırakıldı.
+
+#### Testler
+
+* ✅ EglSyntaxTree statement listesi testleri
+* ✅ Assignment statement routing testleri
+* ✅ Declaration + statement transpiler pipeline testleri
+* ✅ Unsupported statement diagnostic testleri
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* Assignment EGL mapping
+* CALL EGL mapping
+* IF EGL mapping
+* DO EGL mapping
+* EGL statement generator output
+* End-to-end statement output testleri
+
+### Başarı Kriteri
+
+Transpiler pipeline PL/I statement listesini görüp statement transpiler’a yönlendirebilmektedir.
+
+EGL syntax tree statement listesi taşıyabilir hale gelmiştir.
+
+### Sonraki Milestone
+
+P05.8 — Assignment EGL Generation
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum
