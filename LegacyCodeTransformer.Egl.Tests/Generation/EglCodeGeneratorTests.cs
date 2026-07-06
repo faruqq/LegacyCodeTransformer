@@ -1,6 +1,5 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
-using LegacyCodeTransformer.Egl.Expressions;
 using LegacyCodeTransformer.Egl.Generation;
 using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Statements;

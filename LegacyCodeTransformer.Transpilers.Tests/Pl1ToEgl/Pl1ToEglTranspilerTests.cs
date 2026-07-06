@@ -11,7 +11,6 @@ using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
-using LegacyCodeTransformer.Egl.Expressions;
 using LegacyCodeTransformer.Egl.Statements;
 
 namespace LegacyCodeTransformer.Transpilers.Tests.Pl1ToEgl;

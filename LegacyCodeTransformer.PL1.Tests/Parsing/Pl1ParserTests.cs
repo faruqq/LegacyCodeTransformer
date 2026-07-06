@@ -1156,19 +1156,22 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// Desteklenmeyen top-level token için diagnostic üretildiğini doğrular.
+    /// Identifier ile başlayan fakat assignment formatında olmayan top-level statement için diagnostic üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// Parser'ın DCL dışında başlayan token akışını syntax tree'ye eklemeden diagnostic ürettiğini doğrular.
+    /// P05 statement desteğinden sonra top-level Identifier tokenı executable statement
+    /// başlangıcı olarak kabul edilir. Ancak assignment statement olabilmesi için '='
+    /// operatörü bulunmalıdır.
     ///
     /// Hangi input'u test eder?
     /// PARAM CHAR(08);
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Parse başarısız olmalı ve beklenmeyen token diagnostic mesajı üretilmelidir.
+    /// Parse başarısız olmalı ve assignment parser tarafından '=' bekleniyordu diagnostic'i
+    /// üretilmelidir.
     /// </summary>
     [Fact]
-    public void Parse_WithUnexpectedTopLevelToken_ShouldReturnDiagnostic()
+    public void Parse_WithIdentifierStatementMissingEquals_ShouldReturnAssignmentDiagnostic()
     {
         var result = ParseSource(
             "PARAM CHAR(08);");
@@ -1177,7 +1180,7 @@ public sealed class Pl1ParserTests
         Assert.NotEmpty(result.Diagnostics);
         Assert.Contains(
             result.Diagnostics,
-            x => x.Message.Contains("Beklenmeyen token: PARAM. Beklenen: DCL."));
+            diagnostic => diagnostic.Message.Contains("'=' bekleniyordu"));
     }
 
     /// <summary>

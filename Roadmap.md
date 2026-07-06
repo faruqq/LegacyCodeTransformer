@@ -822,20 +822,14 @@ PL/I assignment statement modellerini EGL assignment syntax modeline dönüştü
 
 ### Tamamlananlar
 
-#### EGL Expression Foundation
-
-* ✅ EglExpression base modeli eklendi.
-* ✅ EglRawExpression modeli eklendi.
-* ✅ PL/I raw expression → EGL raw expression dönüşümü eklendi.
-* ✅ Identifier casing dönüşümü eklendi.
-* ✅ PL/I string literal → EGL string literal quote dönüşümü eklendi.
-
 #### EGL Assignment Statement
 
 * ✅ EglAssignmentStatement modeli eklendi.
 * ✅ Pl1AssignmentStatement → EglAssignmentStatement mapping eklendi.
-* ✅ Assignment target expression dönüşümü eklendi.
-* ✅ Assignment value expression dönüşümü eklendi.
+* ✅ Assignment target text dönüşümü eklendi.
+* ✅ Assignment value text dönüşümü eklendi.
+* ✅ PL/I string literal → EGL string literal quote dönüşümü eklendi.
+* ✅ Identifier casing dönüşümü eklendi.
 
 #### Generator
 
@@ -864,6 +858,9 @@ EGL output:
 
 ### Bilinçli Olarak Kapsam Dışı Bırakılanlar
 
+* EglExpression abstraction
+* EglRawExpression abstraction
+* ExpressionTranspiler
 * CALL EGL generation
 * IF EGL generation
 * DO EGL generation

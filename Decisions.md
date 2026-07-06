@@ -3054,16 +3054,9 @@ Assignment dönüşüm zinciri aşağıdaki gibi olacaktır.
         ↓
     EGL assignment source line
 
-Expression alanları P05.8 aşamasında raw expression fallback modeliyle taşınacaktır.
+P05.8 aşamasında full expression parser bulunmadığı için EglAssignmentStatement, Target ve Value alanlarını string olarak taşıyacaktır.
 
-Kullanılan EGL expression modelleri:
-
-- EglExpression
-- EglRawExpression
-
-Kullanılan EGL statement modeli:
-
-- EglAssignmentStatement
+Ayrı bir EGL expression modeli bu milestone kapsamında eklenmeyecektir.
 
 ### Gerekçe
 
@@ -3071,7 +3064,9 @@ P05.7 ile statement transpiler foundation kurulmuştur ancak concrete statement 
 
 P05.8 ile statement pipeline’ın ilk gerçek uçtan uca dönüşümü assignment statement üzerinden tamamlanır.
 
-Bu yaklaşım parser, transpiler ve generator katmanları arasındaki sorumluluk ayrımını korur.
+Full expression parser henüz bulunmadığı için EglExpression, EglRawExpression veya ExpressionTranspiler gibi abstraction’lar bu aşamada erken soyutlama olur.
+
+Bu nedenle assignment mapping için gerekli raw expression text dönüşümü StatementTranspiler içinde sınırlı tutulacaktır.
 
 Desteklenen örnekler:
 
@@ -3085,12 +3080,10 @@ EGL output örnekleri:
 
 ### Etkilediği Modüller
 
-- LegacyCodeTransformer.Egl/Expressions
-- LegacyCodeTransformer.Egl/Statements
+- LegacyCodeTransformer.Egl/Statements/EglAssignmentStatement
 - LegacyCodeTransformer.Egl/Generation/EglCodeGenerator
 - LegacyCodeTransformer.Transpilers/Pl1ToEgl/StatementTranspiler
-- LegacyCodeTransformer.Transpilers/Pl1ToEgl/ExpressionTranspiler
-- LegacyCodeTransformer.Transpilers/Pl1ToEgl/EglRawExpressionTextTransformer
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/Pl1ToEglTranspiler
 - LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
 - LegacyCodeTransformer.Egl.Tests/Generation
 

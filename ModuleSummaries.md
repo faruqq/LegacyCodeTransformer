@@ -2260,11 +2260,7 @@ P05.8 kapsamında PL/I assignment statement modellerinin EGL syntax modeline ve 
 
 Eklenen production bileşenleri:
 
-- EglExpression
-- EglRawExpression
 - EglAssignmentStatement
-- ExpressionTranspiler
-- EglRawExpressionTextTransformer
 
 Güncellenen production bileşenleri:
 
@@ -2281,6 +2277,12 @@ Assignment statement dönüşüm zinciri aşağıdaki şekilde çalışır hale 
     EglCodeGenerator
         ↓
     EGL source output
+
+P05.8 kapsamında ayrı bir EGL expression abstraction eklenmedi.
+
+EglAssignmentStatement, Target ve Value alanlarını string olarak taşır.
+
+Raw expression text dönüşümü StatementTranspiler içinde sınırlı tutuldu.
 
 Desteklenen örnekler:
 
