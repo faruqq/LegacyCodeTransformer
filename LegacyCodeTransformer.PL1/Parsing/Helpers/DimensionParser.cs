@@ -16,7 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// Name-based array size, DIM / DIMENSION attribute size ve iki kaynak arasındaki
 /// conflict resolve davranışını Pl1Parser dışına taşır. Ortak token okuma davranışını
-/// ParserBase üzerinden kullanır.
+/// ParserBase üzerinden kullanır. Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -78,11 +78,11 @@ internal sealed class DimensionParser : ParserBase
     /// ----------------------
     /// Çok boyutlu name-based array syntax desteklendiğinde bu method genişletilecektir.
     /// </summary>
-    public DimensionParseResult ParseOptionalArraySize()
+    public HelperParseResult<int> ParseOptionalArraySize()
     {
         if (Current.Kind != Pl1TokenKind.OpenParenthesis)
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 null,
                 Position);
         }
@@ -99,14 +99,14 @@ internal sealed class DimensionParser : ParserBase
 
         if (sizeToken is null)
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 null,
                 Position);
         }
 
         if (int.TryParse(sizeToken.Text, out var arraySize))
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 arraySize,
                 Position);
         }
@@ -116,7 +116,7 @@ internal sealed class DimensionParser : ParserBase
                 "Array boyutu sayısal olmalıdır",
                 sizeToken));
 
-        return new DimensionParseResult(
+        return new HelperParseResult<int>(
             null,
             Position);
     }
@@ -147,12 +147,12 @@ internal sealed class DimensionParser : ParserBase
     /// ----------------------
     /// Çok boyutlu DIMENSION ve range syntax desteği bu method üzerinde genişletilebilir.
     /// </summary>
-    public DimensionParseResult ParseOptionalDimensionSize()
+    public HelperParseResult<int> ParseOptionalDimensionSize()
     {
         if (Current.Kind != Pl1TokenKind.DimKeyword &&
             Current.Kind != Pl1TokenKind.DimensionKeyword)
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 null,
                 Position);
         }
@@ -174,14 +174,14 @@ internal sealed class DimensionParser : ParserBase
 
         if (sizeToken is null)
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 null,
                 Position);
         }
 
         if (int.TryParse(sizeToken.Text, out var arraySize))
         {
-            return new DimensionParseResult(
+            return new HelperParseResult<int>(
                 arraySize,
                 Position);
         }
@@ -191,7 +191,7 @@ internal sealed class DimensionParser : ParserBase
                 "DIM / DIMENSION boyutu sayısal olmalıdır",
                 dimensionToken));
 
-        return new DimensionParseResult(
+        return new HelperParseResult<int>(
             null,
             Position);
     }
@@ -241,20 +241,5 @@ internal sealed class DimensionParser : ParserBase
         }
 
         return nameArraySize ?? dimensionArraySize;
-    }
-}
-
-internal sealed class DimensionParseResult
-{
-    public int? ArraySize { get; }
-
-    public int Position { get; }
-
-    public DimensionParseResult(
-        int? arraySize,
-        int position)
-    {
-        ArraySize = arraySize;
-        Position = position;
     }
 }

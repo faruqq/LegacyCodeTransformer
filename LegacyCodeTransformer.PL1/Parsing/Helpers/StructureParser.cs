@@ -21,6 +21,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// Root structure, structure array, member listesi, nested group, member array, DIM / DIMENSION
 /// ve INIT / INITIAL parsing akışlarını tek structure parser içinde koordine eder.
 /// Ortak token okuma davranışını ParserBase üzerinden kullanır.
+/// Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -83,7 +84,7 @@ internal sealed class StructureParser : ParserBase
     /// ----------------------
     /// Structure parser davranışı Pl1Parser büyütülmeden bu sınıfta genişletilebilir.
     /// </summary>
-    public StructureParseResult ParseStructureDeclaration()
+    public HelperParseResult<Pl1StructureDeclaration> ParseStructureDeclaration()
     {
         var dclToken = Consume(
             Pl1TokenKind.DclKeyword,
@@ -105,7 +106,7 @@ internal sealed class StructureParser : ParserBase
 
         if (dclToken is null || levelToken is null || nameToken is null)
         {
-            return new StructureParseResult(
+            return new HelperParseResult<Pl1StructureDeclaration>(
                 null,
                 Position);
         }
@@ -117,7 +118,7 @@ internal sealed class StructureParser : ParserBase
                     "Structure seviye numarası sayısal olmalıdır",
                     levelToken));
 
-            return new StructureParseResult(
+            return new HelperParseResult<Pl1StructureDeclaration>(
                 null,
                 Position);
         }
@@ -128,7 +129,7 @@ internal sealed class StructureParser : ParserBase
             Pl1TokenKind.Semicolon,
             "';' bekleniyordu.");
 
-        return new StructureParseResult(
+        return new HelperParseResult<Pl1StructureDeclaration>(
             new Pl1StructureDeclaration(
                 level,
                 nameToken.Text,
@@ -389,7 +390,7 @@ internal sealed class StructureParser : ParserBase
         var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalArraySize();
 
-        return result.ArraySize;
+        return result.Value;
     }
 
     /// <summary>
@@ -421,7 +422,7 @@ internal sealed class StructureParser : ParserBase
         var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalDimensionSize();
 
-        return result.ArraySize;
+        return result.Value;
     }
 
     /// <summary>
@@ -494,21 +495,6 @@ internal sealed class StructureParser : ParserBase
         var parser = new InitialValueParser(Context);
         var result = parser.ParseOptionalInitialValue();
 
-        return result.InitialValue;
-    }
-}
-
-internal sealed class StructureParseResult
-{
-    public Pl1StructureDeclaration? Declaration { get; }
-
-    public int Position { get; }
-
-    public StructureParseResult(
-        Pl1StructureDeclaration? declaration,
-        int position)
-    {
-        Declaration = declaration;
-        Position = position;
+        return result.Value;
     }
 }

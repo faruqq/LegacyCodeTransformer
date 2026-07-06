@@ -20,6 +20,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// Top-level variable declaration parsing davranışını Pl1Parser dışına taşır.
 /// Ortak token okuma davranışını ParserBase üzerinden kullanır.
+/// Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -87,7 +88,7 @@ internal sealed class VariableDeclarationParser : ParserBase
     /// Multiple declaration ve attribute-rich declaration parsing davranışları bu method
     /// üzerinde genişletilecektir.
     /// </summary>
-    public VariableDeclarationParseResult ParseVariableDeclaration()
+    public HelperParseResult<Pl1VariableDeclaration> ParseVariableDeclaration()
     {
         var dclToken = Consume(
             Pl1TokenKind.DclKeyword,
@@ -114,12 +115,12 @@ internal sealed class VariableDeclarationParser : ParserBase
 
         if (dclToken is null || identifierToken is null || dataType is null)
         {
-            return new VariableDeclarationParseResult(
+            return new HelperParseResult<Pl1VariableDeclaration>(
                 null,
                 Position);
         }
 
-        return new VariableDeclarationParseResult(
+        return new HelperParseResult<Pl1VariableDeclaration>(
             new Pl1VariableDeclaration(
                 identifierToken.Text,
                 dataType,
@@ -157,7 +158,7 @@ internal sealed class VariableDeclarationParser : ParserBase
         var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalArraySize();
 
-        return result.ArraySize;
+        return result.Value;
     }
 
     /// <summary>
@@ -225,7 +226,7 @@ internal sealed class VariableDeclarationParser : ParserBase
         var parser = new DimensionParser(Context);
         var result = parser.ParseOptionalDimensionSize();
 
-        return result.ArraySize;
+        return result.Value;
     }
 
     /// <summary>
@@ -298,21 +299,6 @@ internal sealed class VariableDeclarationParser : ParserBase
         var parser = new InitialValueParser(Context);
         var result = parser.ParseOptionalInitialValue();
 
-        return result.InitialValue;
-    }
-}
-
-internal sealed class VariableDeclarationParseResult
-{
-    public Pl1VariableDeclaration? Declaration { get; }
-
-    public int Position { get; }
-
-    public VariableDeclarationParseResult(
-        Pl1VariableDeclaration? declaration,
-        int position)
-    {
-        Declaration = declaration;
-        Position = position;
+        return result.Value;
     }
 }

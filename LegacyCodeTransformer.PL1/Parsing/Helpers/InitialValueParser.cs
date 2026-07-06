@@ -16,6 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// INIT, INITIAL, repeat factor ve (*) all-elements initialization parsing sorumluluğunu
 /// Pl1Parser dışına taşır. Ortak token okuma davranışını ParserBase üzerinden kullanır.
+/// Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -82,12 +83,12 @@ internal sealed class InitialValueParser : ParserBase
     /// EGL default value üretimi, repeat factor expansion ve array initialization
     /// davranışları bu model üzerinden geliştirilebilir.
     /// </summary>
-    public InitialValueParseResult ParseOptionalInitialValue()
+    public HelperParseResult<Pl1InitialValue> ParseOptionalInitialValue()
     {
         if (Current.Kind != Pl1TokenKind.InitKeyword &&
             Current.Kind != Pl1TokenKind.InitialKeyword)
         {
-            return new InitialValueParseResult(
+            return new HelperParseResult<Pl1InitialValue>(
                 null,
                 Position);
         }
@@ -123,12 +124,12 @@ internal sealed class InitialValueParser : ParserBase
 
         if (valueToken is null)
         {
-            return new InitialValueParseResult(
+            return new HelperParseResult<Pl1InitialValue>(
                 null,
                 Position);
         }
 
-        return new InitialValueParseResult(
+        return new HelperParseResult<Pl1InitialValue>(
             new Pl1InitialValue(
                 valueToken.Text,
                 repeatInfo.RepeatCount,
@@ -200,8 +201,8 @@ internal sealed class InitialValueParser : ParserBase
         }
         else
         {
-            Diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
+            Diagnostics.Add(new Core.Diagnostics.Diagnostic(
+                Core.Diagnostics.DiagnosticSeverity.Error,
                 $"INIT tekrar faktörü için sayı veya '*' bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
         }
@@ -213,21 +214,6 @@ internal sealed class InitialValueParser : ParserBase
         return new InitialRepeatInfo(
             repeatCount,
             appliesToAllElements);
-    }
-}
-
-internal sealed class InitialValueParseResult
-{
-    public Pl1InitialValue? InitialValue { get; }
-
-    public int Position { get; }
-
-    public InitialValueParseResult(
-        Pl1InitialValue? initialValue,
-        int position)
-    {
-        InitialValue = initialValue;
-        Position = position;
     }
 }
 

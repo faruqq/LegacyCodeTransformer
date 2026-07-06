@@ -179,7 +179,7 @@ public sealed class Pl1Parser
 
         _position = result.Position;
 
-        return result.Declaration;
+        return result.Value;
     }
 
     /// <summary>

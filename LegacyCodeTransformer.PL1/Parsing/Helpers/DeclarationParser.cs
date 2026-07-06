@@ -16,7 +16,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// DCL sonrasında Number görülürse StructureParser'a, Identifier görülürse
 /// VariableDeclarationParser'a yönlendirir. Ortak token okuma davranışını
-/// ParserBase üzerinden kullanır.
+/// ParserBase üzerinden kullanır. Parse sonucu generic HelperParseResult modeli ile döner.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -76,7 +76,7 @@ internal sealed class DeclarationParser : ParserBase
     /// Yeni declaration türleri eklendiğinde Pl1Parser değişmeden bu dispatch methodu
     /// genişletilebilir.
     /// </summary>
-    public DeclarationParseResult ParseDeclaration()
+    public HelperParseResult<Pl1Declaration> ParseDeclaration()
     {
         if (Current.Kind != Pl1TokenKind.DclKeyword)
         {
@@ -85,7 +85,7 @@ internal sealed class DeclarationParser : ParserBase
                 $"DCL bekleniyordu. Gelen token: {Current.Text}",
                 Current.Location));
 
-            return new DeclarationParseResult(
+            return new HelperParseResult<Pl1Declaration>(
                 null,
                 Position);
         }
@@ -97,8 +97,8 @@ internal sealed class DeclarationParser : ParserBase
             var parser = new StructureParser(Context);
             var result = parser.ParseStructureDeclaration();
 
-            return new DeclarationParseResult(
-                result.Declaration,
+            return new HelperParseResult<Pl1Declaration>(
+                result.Value,
                 Position);
         }
 
@@ -107,8 +107,8 @@ internal sealed class DeclarationParser : ParserBase
             var parser = new VariableDeclarationParser(Context);
             var result = parser.ParseVariableDeclaration();
 
-            return new DeclarationParseResult(
-                result.Declaration,
+            return new HelperParseResult<Pl1Declaration>(
+                result.Value,
                 Position);
         }
 
@@ -117,23 +117,8 @@ internal sealed class DeclarationParser : ParserBase
             $"DCL sonrasında değişken adı veya structure seviye numarası bekleniyordu. Gelen token: {nextToken.Text}",
             nextToken.Location));
 
-        return new DeclarationParseResult(
+        return new HelperParseResult<Pl1Declaration>(
             null,
             Position);
-    }
-}
-
-internal sealed class DeclarationParseResult
-{
-    public Pl1Declaration? Declaration { get; }
-
-    public int Position { get; }
-
-    public DeclarationParseResult(
-        Pl1Declaration? declaration,
-        int position)
-    {
-        Declaration = declaration;
-        Position = position;
     }
 }
