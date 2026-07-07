@@ -2497,4 +2497,190 @@ public sealed class Pl1ToEglTranspilerTests
 
         Assert.Equal(expected, output);
     }
+
+    /// <summary>
+    /// Transpiler'ın CALL statement modelini EGL CALL statement modeline dönüştürdüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1CallStatement artık unsupported diagnostic üretmemeli, EglCallStatement modeline dönüşmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ProcedureName FetchCursor olmalı, Arguments boş olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithCallStatement_ShouldCreateEglCallStatement()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1CallStatement(
+                procedureName: "FETCH_CURSOR",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var callStatement = Assert.IsType<EglCallStatement>(statement);
+
+        Assert.Equal("FetchCursor", callStatement.ProcedureName);
+        Assert.Empty(callStatement.Arguments);
+    }
+
+    /// <summary>
+    /// Transpiler'ın CALL argument listesini EGL CALL statement modeline taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CALL argument expression metinleri naming ve literal dönüşümü uygulanarak taşınmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// CALL PROC1(CUSTOMER_NO, 'ABC');
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// ProcedureName Proc1, Arguments CustomerNo ve "ABC" olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithCallArguments_ShouldCreateEglCallStatementWithArguments()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1CallStatement(
+                procedureName: "PROC1",
+                arguments: new[]
+                {
+                    new Pl1RawExpression("CUSTOMER_NO", SourceLocation.Unknown),
+                    new Pl1RawExpression("'ABC'", SourceLocation.Unknown)
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var callStatement = Assert.IsType<EglCallStatement>(statement);
+
+        Assert.Equal("Proc1", callStatement.ProcedureName);
+        Assert.Equal(2, callStatement.Arguments.Count);
+        Assert.Equal("CustomerNo", callStatement.Arguments[0]);
+        Assert.Equal("\"ABC\"", callStatement.Arguments[1]);
+    }
+
+    /// <summary>
+    /// PL/I CALL statement modelinin EGL source output'a kadar üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspiler CALL statement'ı EglCallStatement modeline dönüştürmeli ve
+    /// EglCodeGenerator bu modeli EGL call satırı olarak yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde CALL FETCH_CURSOR; karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// call FetchCursor(); çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void TranspileAndGenerate_WithCallStatement_ShouldGenerateCallOutput()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1CallStatement(
+                procedureName: "FETCH_CURSOR",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var generator = new EglCodeGenerator();
+
+        var transpileResult = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(transpileResult.Success);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var output = generator.Generate(transpileResult.SyntaxTree!);
+
+        Assert.Equal(
+            "call FetchCursor();" + Environment.NewLine,
+            output);
+    }
+
+    /// <summary>
+    /// PL/I declaration, assignment ve CALL statement modellerinin aynı EGL output içinde üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Transpiler declaration, assignment ve CALL statement modellerini aynı EglSyntaxTree
+    /// içinde üretmeli; generator da sıralı şekilde output'a yazmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// Model seviyesinde DCL PARAM CHAR(08); PARAM = 'ABC'; CALL FETCH_CURSOR; karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(8);, Param = "ABC"; ve call FetchCursor(); satırları üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void TranspileAndGenerate_WithDeclarationAssignmentAndCall_ShouldGenerateAllOutputs()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: new[]
+            {
+            new Pl1VariableDeclaration(
+                "PARAM",
+                new Pl1CharacterType(8, SourceLocation.Unknown),
+                SourceLocation.Unknown)
+            },
+            statements: new Pl1Statement[]
+            {
+            new Pl1AssignmentStatement(
+                targets: new[]
+                {
+                    new Pl1RawExpression("PARAM", SourceLocation.Unknown)
+                },
+                value: new Pl1RawExpression("'ABC'", SourceLocation.Unknown),
+                location: SourceLocation.Unknown),
+            new Pl1CallStatement(
+                procedureName: "FETCH_CURSOR",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var generator = new EglCodeGenerator();
+
+        var transpileResult = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(transpileResult.Success);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var output = generator.Generate(transpileResult.SyntaxTree!);
+
+        var expected =
+            "Param char(8);" + Environment.NewLine +
+            "Param = \"ABC\";" + Environment.NewLine +
+            "call FetchCursor();" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
 }

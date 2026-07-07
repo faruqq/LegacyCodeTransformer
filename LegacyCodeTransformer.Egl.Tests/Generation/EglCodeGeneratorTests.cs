@@ -740,4 +740,78 @@ public sealed class EglCodeGeneratorTests
 
         Assert.Equal(expected, result);
     }
+
+    /// <summary>
+    /// EGL CALL statement modelinden parametresiz CALL çıktısı üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglCallStatement modelini EGL call satırına dönüştürmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// EglCallStatement ProcedureName FetchCursor, Arguments boş.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// call FetchCursor(); çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithCallStatement_ShouldGenerateCallStatement()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglCallStatement(
+                procedureName: "FetchCursor",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        Assert.Equal(
+            "call FetchCursor();" + Environment.NewLine,
+            result);
+    }
+
+    /// <summary>
+    /// EGL CALL statement modelinden argument listesiyle CALL çıktısı üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator, CALL argument listesini virgül ve boşluk standardıyla yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// EglCallStatement ProcedureName Proc1, Arguments CustomerNo ve "ABC".
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// call Proc1(CustomerNo, "ABC"); çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithCallArguments_ShouldGenerateCallStatementWithArguments()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglCallStatement(
+                procedureName: "Proc1",
+                arguments: new[]
+                {
+                    "CustomerNo",
+                    "\"ABC\""
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        Assert.Equal(
+            "call Proc1(CustomerNo, \"ABC\");" + Environment.NewLine,
+            result);
+    }
 }

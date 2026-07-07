@@ -2304,3 +2304,50 @@ Eklenen test kapsamı:
 - Assignment transpile + generate end-to-end testleri
 
 Bu milestone sonunda assignment statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+## P05.9 - CALL EGL Generation
+
+P05.9 kapsamında PL/I CALL statement modellerinin EGL syntax modeline ve EGL source output'a dönüşümü eklendi.
+
+Eklenen production bileşenleri:
+
+- EglCallStatement
+
+Güncellenen production bileşenleri:
+
+- StatementTranspiler
+- EglCodeGenerator
+
+CALL statement dönüşüm zinciri aşağıdaki şekilde çalışır hale getirildi:
+
+    Pl1CallStatement
+        ↓
+    EglCallStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL source output
+
+P05.9 kapsamında yeni expression abstraction eklenmedi.
+
+ProcedureName ve Arguments alanları string olarak taşınır.
+
+Desteklenen örnekler:
+
+    CALL FETCH_CURSOR;
+    CALL PROC1(CUSTOMER_NO, 'ABC');
+
+Üretilen EGL çıktıları:
+
+    call FetchCursor();
+    call Proc1(CustomerNo, "ABC");
+
+Eklenen test kapsamı:
+
+- CALL statement model-to-model transpiler testleri
+- CALL argument dönüşüm testleri
+- CALL generator output testleri
+- CALL transpile + generate end-to-end testleri
+- Declaration + assignment + CALL output sırası testleri
+
+Bu milestone sonunda CALL statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.

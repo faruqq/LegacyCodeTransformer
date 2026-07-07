@@ -3137,3 +3137,53 @@ Bu nedenle abstraction kararları mevcut milestone ihtiyacına göre verilecek, 
 ### Durum
 
 Kabul edildi.
+
+## Decision 078 - CALL Statement EGL Generation
+
+### Karar
+
+P05.9 kapsamında PL/I CALL statement modelleri EGL CALL statement modellerine dönüştürülecektir.
+
+CALL dönüşüm zinciri aşağıdaki gibi olacaktır.
+
+    Pl1CallStatement
+        ↓
+    EglCallStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL call source line
+
+P05.9 kapsamında yeni expression abstraction eklenmeyecektir.
+
+ProcedureName ve Arguments alanları string olarak taşınacaktır.
+
+### Gerekçe
+
+Parser tarafında CALL statement modeli zaten üretilmektedir.
+
+P05.9'un amacı yeni parser davranışı eklemek değil, mevcut Pl1CallStatement modelini transpiler ve generator katmanına bağlamaktır.
+
+Bu yaklaşım P05.8 Assignment pipeline ile aynı sade mimariyi korur.
+
+Desteklenen örnekler:
+
+    CALL FETCH_CURSOR;
+    CALL PROC1(CUSTOMER_NO, 'ABC');
+
+EGL output örnekleri:
+
+    call FetchCursor();
+    call Proc1(CustomerNo, "ABC");
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Statements/EglCallStatement
+- LegacyCodeTransformer.Egl/Generation/EglCodeGenerator
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/StatementTranspiler
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests/Generation
+
+### Durum
+
+Kabul edildi.

@@ -879,6 +879,71 @@ P05.9 — CALL EGL Generation
 
 ---
 
+## P05.9 — CALL EGL Generation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+PL/I CALL statement modellerini EGL CALL syntax modeline dönüştürmek ve EGL generator üzerinden kaynak kod çıktısı üretebilmek.
+
+### Tamamlananlar
+
+#### EGL CALL Statement
+
+* ✅ EglCallStatement modeli eklendi.
+* ✅ Pl1CallStatement → EglCallStatement mapping eklendi.
+* ✅ ProcedureName casing dönüşümü eklendi.
+* ✅ CALL argument text dönüşümü eklendi.
+* ✅ PL/I string literal → EGL string literal quote dönüşümü korundu.
+* ✅ Identifier casing dönüşümü argument tarafında korundu.
+
+#### Generator
+
+* ✅ EglCodeGenerator EglCallStatement output desteği eklendi.
+* ✅ Parametresiz CALL output desteği eklendi.
+* ✅ Parametreli CALL output desteği eklendi.
+* ✅ Declaration + assignment + CALL output sırası korundu.
+
+#### Testler
+
+* ✅ CALL statement transpiler testleri
+* ✅ CALL argument transpiler testleri
+* ✅ CALL generator testleri
+* ✅ CALL transpile + generate end-to-end testleri
+* ✅ Declaration + assignment + CALL output sırası testleri
+
+### Desteklenen Örnekler
+
+    CALL FETCH_CURSOR;
+    CALL PROC1(CUSTOMER_NO, 'ABC');
+
+EGL output:
+
+    call FetchCursor();
+    call Proc1(CustomerNo, "ABC");
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* IF EGL generation
+* DO EGL generation
+* Full expression parser
+* Named argument mapping
+* OUT / INOUT parameter semantic analysis
+* Service invocation mapping
+
+### Başarı Kriteri
+
+CALL statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+### Sonraki Milestone
+
+P05.10 — IF EGL Generation
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum

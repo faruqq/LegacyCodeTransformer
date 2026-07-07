@@ -17,15 +17,15 @@ namespace LegacyCodeTransformer.Egl.Generation;
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// EGL declaration, data type ve P05.8 itibarıyla assignment statement modellerini
+/// EGL declaration, data type, assignment statement ve CALL statement modellerini
 /// kurum EGL output standardına uygun string çıktıya dönüştürür.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - Param char(10);
-/// - Param char(4) = "ABCD";
-/// - record CustomerInfo type basicRecord
 /// - Param = "ABC";
+/// - call FetchCursor();
+/// - call Proc1(A, B);
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -35,43 +35,11 @@ namespace LegacyCodeTransformer.Egl.Generation;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// EGL desteği genişledikçe function, record metadata, service, CALL, IF, DO ve
-/// expression üretimi bu sınıfta geliştirilecektir.
+/// EGL desteği genişledikçe function, record metadata, service, IF, DO ve expression
+/// üretimi bu sınıfta geliştirilecektir.
 /// </summary>
 public sealed class EglCodeGenerator
 {
-    /// <summary>
-    /// Verilen EglSyntaxTree modelini EGL kaynak koduna dönüştürür.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// Generator'ın dışarıya açılan ana methodudur.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Syntax tree üzerindeki declaration ve statement listelerini sırayla EGL kaynak
-    /// koduna çevirir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    /// Declaration:
-    ///
-    ///     Param char(8);
-    ///
-    /// Statement:
-    ///
-    ///     Param = "ABC";
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// - ConversionService içinde
-    /// - Generator unit testlerinde
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// Program, function, service ve statement seviyesinde EGL output üretimi bu method
-    /// üzerinden genişletilebilir.
-    /// </summary>
     public string Generate(EglSyntaxTree syntaxTree)
     {
         if (syntaxTree is null)
@@ -104,11 +72,38 @@ public sealed class EglCodeGenerator
         };
     }
 
+    /// <summary>
+    /// EGL statement modelinden kaynak kod karşılığını üretir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// EglSyntaxTree executable statement listesi taşıyabilmektedir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Statement türüne göre doğru generator methoduna yönlendirme yapar.
+    /// P05.9 kapsamında EglAssignmentStatement ve EglCallStatement desteklenir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    ///     Param = "ABC";
+    ///     call FetchCursor();
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// Generate ana akışı içerisinde.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// EglIfStatement ve EglDoStatement eklendiğinde dispatch davranışı burada
+    /// genişletilecektir.
+    /// </summary>
     private static string GenerateStatement(EglStatement statement)
     {
         return statement switch
         {
             EglAssignmentStatement assignmentStatement => GenerateAssignmentStatement(assignmentStatement) + Environment.NewLine,
+            EglCallStatement callStatement => GenerateCallStatement(callStatement) + Environment.NewLine,
             _ => string.Empty
         };
     }
@@ -116,6 +111,39 @@ public sealed class EglCodeGenerator
     private static string GenerateAssignmentStatement(EglAssignmentStatement statement)
     {
         return $"{statement.Target} = {statement.Value};";
+    }
+
+    /// <summary>
+    /// EGL CALL statement modelinden kaynak kod satırı üretir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// P05.9 kapsamında CALL statement modeli gerçek EGL kaynak kodu satırına
+    /// çevrilmelidir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Procedure adı ve argument listesini EGL call syntax standardına göre yazdırır.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    ///     call FetchCursor();
+    ///     call Proc1(A, B);
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// GenerateStatement içinde EglCallStatement branch'inde kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Named argument veya service invocation output standardı gerektiğinde bu method
+    /// genişletilebilir.
+    /// </summary>
+    private static string GenerateCallStatement(EglCallStatement statement)
+    {
+        var arguments = string.Join(", ", statement.Arguments);
+
+        return $"call {statement.ProcedureName}({arguments});";
     }
 
     private static string GenerateRecordDeclaration(

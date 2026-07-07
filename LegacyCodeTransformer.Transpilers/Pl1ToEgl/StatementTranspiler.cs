@@ -17,17 +17,16 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I statement modellerini hedef EGL statement modellerine dönüştürür.
-    /// P05.8 kapsamında assignment statement mapping desteği eklenmiştir.
+    /// P05.8 kapsamında assignment, P05.9 kapsamında CALL statement mapping desteği
+    /// eklenmiştir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// PL/I:
     ///
     ///     PARAM = 'ABC';
-    ///
-    /// EGL syntax model:
-    ///
-    ///     EglAssignmentStatement(Target: Param, Value: "ABC")
+    ///     CALL FETCH_CURSOR;
+    ///     CALL PROC1(A, B);
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -36,8 +35,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// CALL, IF ve DO EGL generation milestone'larında concrete EGL statement
-    /// modelleri bu sınıf üzerinden üretilecektir.
+    /// IF ve DO EGL generation milestone'larında concrete EGL statement modelleri
+    /// bu sınıf üzerinden üretilecektir.
     /// </summary>
     internal sealed class StatementTranspiler
     {
@@ -62,13 +61,12 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Ne çözüyor?
         /// ----------------------
         /// Desteklenen PL/I statement türlerini EGL statement modeline dönüştürür.
-        /// P05.8 kapsamında Pl1AssignmentStatement desteklenir.
+        /// P05.9 kapsamında Pl1AssignmentStatement ve Pl1CallStatement desteklenir.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         ///     PARAM = 'ABC';
-        ///
-        /// Bu input EglAssignmentStatement modeline dönüşür.
+        ///     CALL FETCH_CURSOR;
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -76,51 +74,18 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// P05.9 ile CALL, P05.10 ile IF ve P05.11 ile DO mapping bu method üzerinden
-        /// genişletilecektir.
+        /// P05.10 ile IF ve P05.11 ile DO mapping bu method üzerinden genişletilecektir.
         /// </summary>
         public EglStatement? TranspileStatement(Pl1Statement statement)
         {
             return statement switch
             {
                 Pl1AssignmentStatement assignmentStatement => TranspileAssignmentStatement(assignmentStatement),
+                Pl1CallStatement callStatement => TranspileCallStatement(callStatement),
                 _ => TranspileUnsupportedStatement(statement)
             };
         }
 
-        /// <summary>
-        /// PL/I assignment statement modelini EGL assignment statement modeline dönüştürür.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// P05.8 kapsamında statement pipeline'ın ilk concrete EGL mapping davranışı
-        /// assignment statement için sağlanmalıdır.
-        ///
-        /// Ne çözüyor?
-        /// ----------------------
-        /// Assignment target ve value raw expression metinlerini EGL output standardına
-        /// uygun hale getirir ve EglAssignmentStatement üretir.
-        ///
-        /// Hangi örneği destekliyor?
-        /// ----------------------
-        /// PL/I:
-        ///
-        ///     PARAM = 'ABC';
-        ///
-        /// EGL model:
-        ///
-        ///     Target: Param
-        ///     Value: "ABC"
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// TranspileStatement dispatch methodu içinde kullanılır.
-        ///
-        /// Gelecekte neye temel olur?
-        /// ----------------------
-        /// Full expression parser geldiğinde bu method expression model mapping'e
-        /// taşınabilir.
-        /// </summary>
         private EglStatement? TranspileAssignmentStatement(Pl1AssignmentStatement statement)
         {
             var target = statement.Targets.FirstOrDefault();
@@ -141,6 +106,59 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             return new EglAssignmentStatement(
                 targetText,
                 valueText,
+                statement.Location);
+        }
+
+        /// <summary>
+        /// PL/I CALL statement modelini EGL CALL statement modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// P05.9 kapsamında statement pipeline'ın ikinci concrete EGL mapping davranışı
+        /// CALL statement için sağlanmalıdır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Procedure adını identifier naming standardına göre dönüştürür, argument
+        /// expression metinlerini EGL text standardına çevirir ve EglCallStatement üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// PL/I:
+        ///
+        ///     CALL FETCH_CURSOR;
+        ///     CALL PROC1(A, 'ABC');
+        ///
+        /// EGL model:
+        ///
+        ///     ProcedureName: FetchCursor
+        ///     Arguments: []
+        ///
+        ///     ProcedureName: Proc1
+        ///     Arguments: [A, "ABC"]
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// TranspileStatement dispatch methodu içinde kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Full expression parser geldiğinde argument mapping expression model mapping'e
+        /// taşınabilir.
+        /// </summary>
+        private EglStatement TranspileCallStatement(Pl1CallStatement statement)
+        {
+            var procedureName = IdentifierNameTransformer.Transform(
+                statement.ProcedureName,
+                _namingStyle);
+
+            var arguments = statement.Arguments
+                .Select(TranspileExpressionText)
+                .ToList();
+
+            return new EglCallStatement(
+                procedureName,
+                arguments,
                 statement.Location);
         }
 
