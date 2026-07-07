@@ -9,34 +9,6 @@ namespace LegacyCodeTransformer.Egl.Generation;
 
 /// <summary>
 /// EglSyntaxTree modelinden EGL kaynak kodu üretir.
-///
-/// Neden var?
-/// ----------------------
-/// Transpiler yalnızca hedef dil modeli olan EglSyntaxTree üretir.
-/// Gerçek .egl kaynak kodunu yazdırma sorumluluğu bu sınıfa aittir.
-///
-/// Ne çözüyor?
-/// ----------------------
-/// EGL declaration, data type, assignment statement, CALL statement ve IF statement
-/// modellerini kurum EGL output standardına uygun string çıktıya dönüştürür.
-///
-/// Hangi örneği destekliyor?
-/// ----------------------
-/// - Param char(10);
-/// - Param = "ABC";
-/// - call FetchCursor();
-/// - if (A = B)
-///
-/// Nerede kullanılır?
-/// ----------------------
-/// - Application pipeline içerisinde
-/// - PL/I → EGL dönüşümünün son aşamasında
-/// - Gelecekte CLI, GUI veya IDE entegrasyonlarında
-///
-/// Gelecekte neye temel olur?
-/// ----------------------
-/// EGL desteği genişledikçe function, record metadata, service, DO ve expression
-/// üretimi bu sınıfta geliştirilecektir.
 /// </summary>
 public sealed class EglCodeGenerator
 {
@@ -81,6 +53,7 @@ public sealed class EglCodeGenerator
             EglAssignmentStatement assignmentStatement => GenerateAssignmentStatement(assignmentStatement, indentationLevel) + Environment.NewLine,
             EglCallStatement callStatement => GenerateCallStatement(callStatement, indentationLevel) + Environment.NewLine,
             EglIfStatement ifStatement => GenerateIfStatement(ifStatement, indentationLevel),
+            EglDoStatement doStatement => GenerateDoStatement(doStatement, indentationLevel),
             _ => string.Empty
         };
     }
@@ -101,36 +74,6 @@ public sealed class EglCodeGenerator
         return $"{GetStatementIndentation(indentationLevel)}call {statement.ProcedureName}({arguments});";
     }
 
-    /// <summary>
-    /// EGL IF statement modelinden kaynak kod bloğu üretir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// P05.10 kapsamında IF statement modeli gerçek EGL kaynak kodu bloğuna
-    /// çevrilmelidir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// IF condition, THEN statement ve optional ELSE statement alanlarını indentation
-    /// standardıyla EGL output'a yazar.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     if (A = B)
-    ///         call Proc1();
-    ///     else
-    ///         call Proc2();
-    ///     end
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// GenerateStatement içinde EglIfStatement branch'inde kullanılır.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// DO block output ve nested control-flow formatting bu methodla aynı indentation
-    /// standardını kullanacaktır.
-    /// </summary>
     private static string GenerateIfStatement(
         EglIfStatement statement,
         int indentationLevel)
@@ -150,6 +93,72 @@ public sealed class EglCodeGenerator
         builder.AppendLine($"{indentation}end");
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// EGL DO / loop statement modelinden kaynak kod bloğu üretir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// P05.11 kapsamında DO statement modeli gerçek EGL kaynak kodu bloğuna
+    /// çevrilmelidir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Block, While ve Until DO türlerini ortak indentation standardıyla output'a yazar.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    ///     do
+    ///         call Proc1();
+    ///     end
+    ///
+    ///     while (Sqlcode = 0)
+    ///         call FetchCursor();
+    ///     end
+    ///
+    ///     while (!(Eof))
+    ///         call CloseCursor();
+    ///     end
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// GenerateStatement içinde EglDoStatement branch'inde kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Nested DO, IF THEN DO, ELSE DO ve daha gelişmiş loop formatting davranışları
+    /// bu method üzerinden genişletilecektir.
+    /// </summary>
+    private static string GenerateDoStatement(
+        EglDoStatement statement,
+        int indentationLevel)
+    {
+        var builder = new StringBuilder();
+        var indentation = GetStatementIndentation(indentationLevel);
+
+        builder.AppendLine(GenerateDoHeader(statement, indentation));
+
+        foreach (var childStatement in statement.Statements)
+        {
+            builder.Append(GenerateStatement(childStatement, indentationLevel + 1));
+        }
+
+        builder.AppendLine($"{indentation}end");
+
+        return builder.ToString();
+    }
+
+    private static string GenerateDoHeader(
+        EglDoStatement statement,
+        string indentation)
+    {
+        return statement.Kind switch
+        {
+            EglDoStatementKind.While => $"{indentation}while ({statement.Condition})",
+            EglDoStatementKind.Until => $"{indentation}while (!({statement.Condition}))",
+            _ => $"{indentation}do"
+        };
     }
 
     private static string GenerateRecordDeclaration(

@@ -2407,3 +2407,66 @@ Eklenen test kapsamı:
 - IF transpile + generate end-to-end testleri
 
 Bu milestone sonunda IF statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+## P05.11 - DO EGL Generation
+
+P05.11 kapsamında PL/I DO statement modellerinin EGL syntax modeline ve EGL source output'a dönüşümü eklendi.
+
+Eklenen production bileşenleri:
+
+- EglDoStatement
+- EglDoStatementKind
+
+Güncellenen production bileşenleri:
+
+- StatementTranspiler
+- EglCodeGenerator
+
+DO statement dönüşüm zinciri aşağıdaki şekilde çalışır hale getirildi:
+
+    Pl1DoStatement
+        ↓
+    EglDoStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL source output
+
+P05.11 kapsamında yeni expression abstraction eklenmedi.
+
+Condition alanı string olarak taşınır.
+
+DO body child statement listesi EglStatement listesi olarak taşınır.
+
+Desteklenen örnekler:
+
+    DO; CALL PROC1; END;
+    DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    DO UNTIL(EOF); CALL CLOSE_CURSOR; END;
+    IF A = B THEN DO; CALL PROC1; END;
+
+Üretilen EGL çıktıları:
+
+    do
+        call Proc1();
+    end
+
+    while (Sqlcode = 0)
+        call FetchCursor();
+    end
+
+    while (!(Eof))
+        call CloseCursor();
+    end
+
+Eklenen test kapsamı:
+
+- Block DO transpiler testleri
+- DO WHILE transpiler testleri
+- Block DO generator output testleri
+- DO WHILE generator output testleri
+- DO UNTIL generator output testleri
+- DO WHILE transpile + generate end-to-end testleri
+- IF THEN DO nested output testleri
+
+Bu milestone sonunda DO statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.

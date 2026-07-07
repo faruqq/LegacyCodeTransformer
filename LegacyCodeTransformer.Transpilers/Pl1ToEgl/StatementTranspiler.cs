@@ -17,8 +17,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I statement modellerini hedef EGL statement modellerine dönüştürür.
-    /// P05.8 kapsamında assignment, P05.9 kapsamında CALL, P05.10 kapsamında IF
-    /// statement mapping desteği eklenmiştir.
+    /// P05.8 kapsamında assignment, P05.9 kapsamında CALL, P05.10 kapsamında IF,
+    /// P05.11 kapsamında DO statement mapping desteği eklenmiştir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -27,6 +27,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///     PARAM = 'ABC';
     ///     CALL FETCH_CURSOR;
     ///     IF A = B THEN CALL PROC1;
+    ///     DO; CALL PROC2; END;
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -35,8 +36,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// DO EGL generation milestone'unda concrete EGL block statement mapping bu sınıf
-    /// üzerinden üretilecektir.
+    /// SELECT, RETURN, EXEC SQL ve procedure body statement mapping çalışmaları bu
+    /// sınıf üzerinden genişletilecektir.
     /// </summary>
     internal sealed class StatementTranspiler
     {
@@ -61,22 +62,22 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         /// Ne çözüyor?
         /// ----------------------
         /// Desteklenen PL/I statement türlerini EGL statement modeline dönüştürür.
-        /// P05.10 kapsamında Pl1AssignmentStatement, Pl1CallStatement ve Pl1IfStatement
-        /// desteklenir.
+        /// P05.11 kapsamında Pl1AssignmentStatement, Pl1CallStatement, Pl1IfStatement
+        /// ve Pl1DoStatement desteklenir.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         ///     PARAM = 'ABC';
         ///     CALL FETCH_CURSOR;
         ///     IF A = B THEN CALL PROC1;
+        ///     DO; CALL PROC2; END;
         ///
         /// Nerede kullanılır?
         /// ----------------------
         /// Pl1ToEglTranspiler.Transpile içerisinde kullanılır.
         ///
         /// Gelecekte neye temel olur?
-        /// ----------------------
-        /// P05.11 ile DO mapping bu method üzerinden genişletilecektir.
+        /// Yeni statement mapping türleri bu dispatch methodu üzerinden eklenecektir.
         /// </summary>
         public EglStatement? TranspileStatement(Pl1Statement statement)
         {
@@ -85,6 +86,7 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 Pl1AssignmentStatement assignmentStatement => TranspileAssignmentStatement(assignmentStatement),
                 Pl1CallStatement callStatement => TranspileCallStatement(callStatement),
                 Pl1IfStatement ifStatement => TranspileIfStatement(ifStatement),
+                Pl1DoStatement doStatement => TranspileDoStatement(doStatement),
                 _ => TranspileUnsupportedStatement(statement)
             };
         }
@@ -128,40 +130,6 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 statement.Location);
         }
 
-        /// <summary>
-        /// PL/I IF statement modelini EGL IF statement modeline dönüştürür.
-        ///
-        /// Neden var?
-        /// ----------------------
-        /// P05.10 kapsamında statement pipeline'ın üçüncü concrete EGL mapping davranışı
-        /// IF statement için sağlanmalıdır.
-        ///
-        /// Ne çözüyor?
-        /// ----------------------
-        /// IF condition raw expression metnini EGL text standardına çevirir, THEN ve
-        /// optional ELSE child statement modellerini recursive olarak EGL statement
-        /// modellerine dönüştürür.
-        ///
-        /// Hangi örneği destekliyor?
-        /// ----------------------
-        /// PL/I:
-        ///
-        ///     IF A = B THEN CALL PROC1;
-        ///     IF A = B THEN CALL PROC1; ELSE CALL PROC2;
-        ///
-        /// EGL model:
-        ///
-        ///     EglIfStatement
-        ///
-        /// Nerede kullanılır?
-        /// ----------------------
-        /// TranspileStatement dispatch methodu içinde kullanılır.
-        ///
-        /// Gelecekte neye temel olur?
-        /// ----------------------
-        /// P05.11 DO mapping eklendiğinde IF THEN DO ve ELSE DO dönüşümleri de aynı
-        /// recursive child statement mapping üzerinden çalışacaktır.
-        /// </summary>
         private EglStatement? TranspileIfStatement(Pl1IfStatement statement)
         {
             var condition = TranspileExpressionText(statement.Condition);
@@ -189,6 +157,80 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 thenStatement,
                 elseStatement,
                 statement.Location);
+        }
+
+        /// <summary>
+        /// PL/I DO statement modelini EGL DO statement modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// P05.11 kapsamında statement pipeline'ın dördüncü concrete EGL mapping
+        /// davranışı DO statement için sağlanmalıdır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// DO kind bilgisini EGL DO kind modeline map eder, optional condition text
+        /// değerini dönüştürür ve body içindeki child statement modellerini recursive
+        /// olarak EGL statement modellerine dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// PL/I:
+        ///
+        ///     DO;
+        ///         CALL PROC1;
+        ///     END;
+        ///
+        ///     DO WHILE(SQLCODE = 0);
+        ///         CALL FETCH_CURSOR;
+        ///     END;
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// TranspileStatement dispatch methodu içinde kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// IF THEN DO, ELSE DO ve nested DO output zinciri bu recursive mapping ile
+        /// çalışacaktır.
+        /// </summary>
+        private EglStatement? TranspileDoStatement(Pl1DoStatement statement)
+        {
+            var kind = TranspileDoStatementKind(statement.Kind);
+            var condition = statement.Condition is not null
+                ? TranspileExpressionText(statement.Condition)
+                : null;
+
+            var statements = new List<EglStatement>();
+
+            foreach (var childStatement in statement.Body.Statements)
+            {
+                var eglStatement = TranspileStatement(childStatement);
+
+                if (eglStatement is null)
+                {
+                    return null;
+                }
+
+                statements.Add(eglStatement);
+            }
+
+            return new EglDoStatement(
+                kind,
+                condition,
+                statements,
+                statement.Location);
+        }
+
+        private static EglDoStatementKind TranspileDoStatementKind(Pl1DoStatementKind kind)
+        {
+            return kind switch
+            {
+                Pl1DoStatementKind.Block => EglDoStatementKind.Block,
+                Pl1DoStatementKind.While => EglDoStatementKind.While,
+                Pl1DoStatementKind.Until => EglDoStatementKind.Until,
+                _ => EglDoStatementKind.Block
+            };
         }
 
         private string TranspileExpressionText(Pl1Expression expression)

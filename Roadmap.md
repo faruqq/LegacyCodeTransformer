@@ -1016,6 +1016,85 @@ P05.11 — DO EGL Generation
 
 ---
 
+## P05.11 — DO EGL Generation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+PL/I DO, DO WHILE ve DO UNTIL statement modellerini EGL DO / loop syntax modeline dönüştürmek ve EGL generator üzerinden kaynak kod çıktısı üretebilmek.
+
+### Tamamlananlar
+
+#### EGL DO Statement
+
+* ✅ EglDoStatement modeli eklendi.
+* ✅ EglDoStatementKind enum modeli eklendi.
+* ✅ Pl1DoStatement → EglDoStatement mapping eklendi.
+* ✅ DO kind mapping eklendi.
+* ✅ DO condition text dönüşümü eklendi.
+* ✅ DO body recursive statement dönüşümü eklendi.
+* ✅ Identifier casing dönüşümü condition tarafında korundu.
+
+#### Generator
+
+* ✅ EglCodeGenerator EglDoStatement output desteği eklendi.
+* ✅ Block DO output desteği eklendi.
+* ✅ DO WHILE output desteği eklendi.
+* ✅ DO UNTIL → negated while output desteği eklendi.
+* ✅ Nested child statement indentation standardı korundu.
+
+#### Testler
+
+* ✅ Block DO transpiler testleri
+* ✅ DO WHILE transpiler testleri
+* ✅ Block DO generator testleri
+* ✅ DO WHILE generator testleri
+* ✅ DO UNTIL generator testleri
+* ✅ DO WHILE transpile + generate end-to-end testleri
+* ✅ IF THEN DO nested output testleri
+
+### Desteklenen Örnekler
+
+    DO; CALL PROC1; END;
+    DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    DO UNTIL(EOF); CALL CLOSE_CURSOR; END;
+    IF A = B THEN DO; CALL PROC1; END;
+
+EGL output:
+
+    do
+        call Proc1();
+    end
+
+    while (Sqlcode = 0)
+        call FetchCursor();
+    end
+
+    while (!(Eof))
+        call CloseCursor();
+    end
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* Sayaçlı DO generation
+* SELECT / WHEN generation
+* Full expression parser
+* Boolean condition semantic mapping
+* Complex loop optimization
+
+### Başarı Kriteri
+
+DO statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+### Sonraki Milestone
+
+P05.12 — Statement End-to-End Tests
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum

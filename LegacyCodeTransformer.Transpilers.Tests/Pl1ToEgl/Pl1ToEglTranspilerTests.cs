@@ -2782,4 +2782,162 @@ public sealed class Pl1ToEglTranspilerTests
         Assert.Equal("Proc1", thenCallStatement.ProcedureName);
         Assert.Equal("Proc2", elseCallStatement.ProcedureName);
     }
+
+    /// <summary>
+    /// Transpiler'ın block DO statement modelini EGL DO statement modeline dönüştürdüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1DoStatement artık unsupported diagnostic üretmemeli, EglDoStatement modeline dönüşmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// DO; CALL PROC1; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind Block, Condition null olmalı ve body içinde Proc1 CALL statement bulunmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithBlockDoStatement_ShouldCreateEglDoStatement()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1DoStatement(
+                kind: Pl1DoStatementKind.Block,
+                condition: null,
+                body: new Pl1BlockStatement(
+                    statements: new[]
+                    {
+                        new Pl1CallStatement(
+                            procedureName: "PROC1",
+                            arguments: null,
+                            location: SourceLocation.Unknown)
+                    },
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var doStatement = Assert.IsType<EglDoStatement>(statement);
+        var bodyStatement = Assert.Single(doStatement.Statements);
+        var callStatement = Assert.IsType<EglCallStatement>(bodyStatement);
+
+        Assert.Equal(EglDoStatementKind.Block, doStatement.Kind);
+        Assert.Null(doStatement.Condition);
+        Assert.Equal("Proc1", callStatement.ProcedureName);
+    }
+
+    /// <summary>
+    /// Transpiler'ın DO WHILE condition bilgisini EGL DO statement modeline taşıdığını doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// DO WHILE statement, Kind While ve dönüştürülmüş condition text değeriyle taşınmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Kind While, Condition Sqlcode = 0 ve body içinde FetchCursor CALL statement olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithDoWhileStatement_ShouldCreateEglDoStatementWithCondition()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1DoStatement(
+                kind: Pl1DoStatementKind.While,
+                condition: new Pl1RawExpression("SQLCODE = 0", SourceLocation.Unknown),
+                body: new Pl1BlockStatement(
+                    statements: new[]
+                    {
+                        new Pl1CallStatement(
+                            procedureName: "FETCH_CURSOR",
+                            arguments: null,
+                            location: SourceLocation.Unknown)
+                    },
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var doStatement = Assert.IsType<EglDoStatement>(statement);
+        var bodyStatement = Assert.Single(doStatement.Statements);
+        var callStatement = Assert.IsType<EglCallStatement>(bodyStatement);
+
+        Assert.Equal(EglDoStatementKind.While, doStatement.Kind);
+        Assert.Equal("Sqlcode = 0", doStatement.Condition);
+        Assert.Equal("FetchCursor", callStatement.ProcedureName);
+    }
+
+    /// <summary>
+    /// PL/I DO WHILE modelinin EGL source output'a kadar üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1ToEglTranspiler DO WHILE statement'ı EglDoStatement modeline dönüştürmeli ve
+    /// EglCodeGenerator bu modeli while/end bloğu olarak yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// while bloğu ve child CALL statement doğru indentation ile üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void TranspileAndGenerate_WithDoWhileStatement_ShouldGenerateWhileBlock()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1DoStatement(
+                kind: Pl1DoStatementKind.While,
+                condition: new Pl1RawExpression("SQLCODE = 0", SourceLocation.Unknown),
+                body: new Pl1BlockStatement(
+                    statements: new[]
+                    {
+                        new Pl1CallStatement(
+                            procedureName: "FETCH_CURSOR",
+                            arguments: null,
+                            location: SourceLocation.Unknown)
+                    },
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var generator = new EglCodeGenerator();
+
+        var transpileResult = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(transpileResult.Success);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var output = generator.Generate(transpileResult.SyntaxTree!);
+
+        var expected =
+            "while (Sqlcode = 0)" + Environment.NewLine +
+            "    call FetchCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
 }

@@ -905,4 +905,139 @@ public sealed class EglCodeGeneratorTests
 
         Assert.Equal(expected, result);
     }
+
+    /// <summary>
+    /// EGL block DO statement modelinden do/end bloğu üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglDoStatement Kind Block modelini do/end bloğu olarak yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// do içinde call Proc1().
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// do satırı, 4 boşluk indentation ile child CALL ve end satırı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithBlockDoStatement_ShouldGenerateDoBlock()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglDoStatement(
+                kind: EglDoStatementKind.Block,
+                condition: null,
+                statements: new[]
+                {
+                    new EglCallStatement(
+                        procedureName: "Proc1",
+                        arguments: null,
+                        location: SourceLocation.Unknown)
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "do" + Environment.NewLine +
+            "    call Proc1();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>
+    /// EGL DO WHILE statement modelinden while/end bloğu üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglDoStatement Kind While modelini while bloğu olarak yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// while (Sqlcode = 0) içinde call FetchCursor().
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// while satırı, 4 boşluk indentation ile child CALL ve end satırı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithDoWhileStatement_ShouldGenerateWhileBlock()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglDoStatement(
+                kind: EglDoStatementKind.While,
+                condition: "Sqlcode = 0",
+                statements: new[]
+                {
+                    new EglCallStatement(
+                        procedureName: "FetchCursor",
+                        arguments: null,
+                        location: SourceLocation.Unknown)
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "while (Sqlcode = 0)" + Environment.NewLine +
+            "    call FetchCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>
+    /// EGL DO UNTIL statement modelinden negated while bloğu üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglDoStatement Kind Until modelini while (!(condition)) formatında yazdırmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DO UNTIL EOF karşılığı.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// while (!(Eof)) bloğu üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithDoUntilStatement_ShouldGenerateNegatedWhileBlock()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglDoStatement(
+                kind: EglDoStatementKind.Until,
+                condition: "Eof",
+                statements: new[]
+                {
+                    new EglCallStatement(
+                        procedureName: "CloseCursor",
+                        arguments: null,
+                        location: SourceLocation.Unknown)
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "while (!(Eof))" + Environment.NewLine +
+            "    call CloseCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
 }

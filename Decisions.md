@@ -3248,3 +3248,74 @@ EGL output örnekleri:
 ### Durum
 
 Kabul edildi.
+
+## Decision 080 - DO Statement EGL Generation
+
+### Karar
+
+P05.11 kapsamında PL/I DO statement modelleri EGL DO / loop statement modellerine dönüştürülecektir.
+
+DO dönüşüm zinciri aşağıdaki gibi olacaktır.
+
+    Pl1DoStatement
+        ↓
+    EglDoStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL do / while source block
+
+P05.11 kapsamında yeni expression abstraction eklenmeyecektir.
+
+Condition alanı string olarak taşınacaktır.
+
+DO body içindeki child statement modelleri EglStatement listesi olarak taşınacaktır.
+
+Desteklenen DO türleri:
+
+- Block
+- While
+- Until
+
+### Gerekçe
+
+Parser tarafında DO, DO WHILE ve DO UNTIL statement modelleri zaten üretilmektedir.
+
+P05.11'in amacı yeni parser davranışı eklemek değil, mevcut Pl1DoStatement modelini transpiler ve generator katmanına bağlamaktır.
+
+DO body recursive child statement içerdiği için StatementTranspiler, body içindeki statement modellerini yine kendi TranspileStatement akışı üzerinden dönüştürecektir.
+
+Bu yapı IF THEN DO, ELSE DO ve nested DO output üretimini destekler.
+
+Desteklenen örnekler:
+
+    DO; CALL PROC1; END;
+    DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    DO UNTIL(EOF); CALL CLOSE_CURSOR; END;
+
+EGL output örnekleri:
+
+    do
+        call Proc1();
+    end
+
+    while (Sqlcode = 0)
+        call FetchCursor();
+    end
+
+    while (!(Eof))
+        call CloseCursor();
+    end
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Statements/EglDoStatement
+- LegacyCodeTransformer.Egl/Statements/EglDoStatementKind
+- LegacyCodeTransformer.Egl/Generation/EglCodeGenerator
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/StatementTranspiler
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests/Generation
+
+### Durum
+
+Kabul edildi.
