@@ -3319,3 +3319,51 @@ EGL output örnekleri:
 ### Durum
 
 Kabul edildi.
+
+## Decision 081 - Statement Pipeline End-to-End Test Standardı
+
+### Karar
+
+P05.12 kapsamında statement pipeline gerçek PL/I source input üzerinden end-to-end testlerle doğrulanacaktır.
+
+Test zinciri aşağıdaki katmanları tek akışta çalıştıracaktır.
+
+    PL/I Source
+        ↓
+    Pl1Lexer
+        ↓
+    Pl1Parser
+        ↓
+    Pl1SyntaxTree
+        ↓
+    Pl1ToEglTranspiler
+        ↓
+    EglSyntaxTree
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL Source Output
+
+P05.12 kapsamında yeni production abstraction eklenmeyecektir.
+
+Production kod yalnızca end-to-end testlerde gerçek eksik veya hata tespit edilirse değiştirilecektir.
+
+### Gerekçe
+
+P05 boyunca declaration, assignment, CALL, IF ve DO statement türleri ayrı ayrı parser, transpiler ve generator katmanlarına bağlanmıştır.
+
+Ancak gerçek dönüşüm başarısı yalnızca model seviyesinde değil, kaynak koddan hedef EGL çıktıya kadar bütün pipeline çalıştırılarak doğrulanmalıdır.
+
+End-to-end testler, ileride yapılacak refactor ve yeni statement eklemelerinde mevcut pipeline’ın bozulmadığını gösteren güvenlik ağı sağlar.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Pl1.Lexing
+- LegacyCodeTransformer.Pl1.Parsing
+- LegacyCodeTransformer.Transpilers.Pl1ToEgl
+- LegacyCodeTransformer.Egl.Generation
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+
+### Durum
+
+Kabul edildi.

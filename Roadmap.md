@@ -1095,6 +1095,67 @@ P05.12 — Statement End-to-End Tests
 
 ---
 
+## P05.12 — Statement End-to-End Tests
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+P05 kapsamında eklenen declaration, assignment, CALL, IF ve DO statement pipeline davranışını gerçek PL/I source input üzerinden uçtan uca doğrulamak.
+
+### Tamamlananlar
+
+#### End-to-End Pipeline
+
+* ✅ PL/I source → Lexer entegrasyonu doğrulandı.
+* ✅ Lexer → Parser entegrasyonu doğrulandı.
+* ✅ Parser → Pl1SyntaxTree entegrasyonu doğrulandı.
+* ✅ Pl1SyntaxTree → Pl1ToEglTranspiler entegrasyonu doğrulandı.
+* ✅ EglSyntaxTree → EglCodeGenerator entegrasyonu doğrulandı.
+* ✅ Final EGL source output doğrulandı.
+
+#### Testler
+
+* ✅ Declaration + assignment end-to-end testleri
+* ✅ Declaration + CALL end-to-end testleri
+* ✅ IF THEN CALL end-to-end testleri
+* ✅ DO WHILE CALL end-to-end testleri
+* ✅ IF THEN DO nested output testleri
+* ✅ Mini program end-to-end output testleri
+
+### Desteklenen Entegre Örnekler
+
+    DCL PARAM CHAR(10);
+    PARAM = 'ABC';
+
+    DCL CUSTOMER_NO CHAR(10);
+    CALL FETCH_CUSTOMER(CUSTOMER_NO);
+
+    DCL SQLCODE FIXED DECIMAL(5);
+    IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+
+    DO WHILE(SQLCODE = 0);
+        CALL FETCH_CURSOR;
+    END;
+
+    IF A = B THEN DO;
+        CALL PROC1;
+    END;
+
+### Başarı Kriteri
+
+PL/I source input, declaration, assignment, CALL, IF ve DO statement türleri için EGL source output’a kadar başarıyla dönüştürülebilmektedir.
+
+P05 statement pipeline parser, transpiler ve generator katmanlarında uçtan uca doğrulanmıştır.
+
+### Sonraki Faz
+
+P06 — Procedure Desteği
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum

@@ -2470,3 +2470,38 @@ Eklenen test kapsamı:
 - IF THEN DO nested output testleri
 
 Bu milestone sonunda DO statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+## P05.12 - Statement End-to-End Tests
+
+P05.12 kapsamında statement pipeline gerçek PL/I source input üzerinden end-to-end testlerle doğrulandı.
+
+Production kodda yeni abstraction eklenmedi.
+
+Doğrulanan pipeline:
+
+    PL/I Source
+        ↓
+    Lexer
+        ↓
+    Parser
+        ↓
+    PL/I Syntax Tree
+        ↓
+    Transpiler
+        ↓
+    EGL Syntax Tree
+        ↓
+    EGL Generator
+        ↓
+    EGL Source Output
+
+Eklenen test kapsamı:
+
+- Declaration + assignment end-to-end output
+- Declaration + CALL end-to-end output
+- IF THEN CALL end-to-end output
+- DO WHILE CALL end-to-end output
+- IF THEN DO nested output
+- Declaration + assignment + CALL + IF THEN DO içeren mini program output
+
+Bu milestone sonunda P05 statement pipeline, declaration, assignment, CALL, IF ve DO statement türleri için kaynak PL/I metninden EGL kaynak çıktıya kadar uçtan uca doğrulanmıştır.

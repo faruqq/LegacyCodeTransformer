@@ -12,6 +12,8 @@ using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
 using LegacyCodeTransformer.Egl.Statements;
+using LegacyCodeTransformer.Pl1.Lexing;
+using LegacyCodeTransformer.Pl1.Parsing;
 
 namespace LegacyCodeTransformer.Transpilers.Tests.Pl1ToEgl;
 
@@ -2939,5 +2941,209 @@ public sealed class Pl1ToEglTranspilerTests
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I declaration ve assignment kodunun EGL çıktıya kadar dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Lexer, parser, transpiler ve generator zinciri declaration + assignment için
+    /// uçtan uca çalışmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL PARAM CHAR(10); PARAM = 'ABC';
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Param char(10); ve Param = "ABC"; çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithDeclarationAndAssignment_ShouldGenerateEglOutput()
+    {
+        var output = ConvertSourceToEgl(
+            "DCL PARAM CHAR(10); PARAM = 'ABC';");
+
+        var expected =
+            "Param char(10);" + Environment.NewLine +
+            "Param = \"ABC\";" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I declaration ve CALL kodunun EGL çıktıya kadar dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// CALL statement parser, transpiler ve generator zinciri gerçek PL/I source üzerinden
+    /// uçtan uca çalışmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL CUSTOMER_NO CHAR(10); CALL FETCH_CUSTOMER(CUSTOMER_NO);
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// CustomerNo declaration ve FetchCustomer CALL çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithDeclarationAndCall_ShouldGenerateEglOutput()
+    {
+        var output = ConvertSourceToEgl(
+            "DCL CUSTOMER_NO CHAR(10); CALL FETCH_CUSTOMER(CUSTOMER_NO);");
+
+        var expected =
+            "CustomerNo char(10);" + Environment.NewLine +
+            "call FetchCustomer(CustomerNo);" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I IF THEN CALL kodunun EGL if bloğuna dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// IF statement gerçek kaynak koddan parse edilip EglIfStatement üzerinden generator
+    /// çıktısına kadar taşınmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL SQLCODE FIXED DECIMAL(5); IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Sqlcode declaration ve if/call/end bloğu üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithIfThenCall_ShouldGenerateEglOutput()
+    {
+        var output = ConvertSourceToEgl(
+            "DCL SQLCODE FIXED DECIMAL(5); IF SQLCODE = 0 THEN CALL FETCH_CURSOR;");
+
+        var expected =
+            "Sqlcode decimal(5);" + Environment.NewLine +
+            "if (Sqlcode = 0)" + Environment.NewLine +
+            "    call FetchCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I DO WHILE kodunun EGL while bloğuna dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// DO WHILE statement gerçek kaynak koddan parse edilip EglDoStatement üzerinden
+    /// generator çıktısına kadar taşınmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// DCL SQLCODE FIXED DECIMAL(5); DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Sqlcode declaration ve while/call/end bloğu üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithDoWhileCall_ShouldGenerateEglOutput()
+    {
+        var output = ConvertSourceToEgl(
+            "DCL SQLCODE FIXED DECIMAL(5); DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;");
+
+        var expected =
+            "Sqlcode decimal(5);" + Environment.NewLine +
+            "while (Sqlcode = 0)" + Environment.NewLine +
+            "    call FetchCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I IF THEN DO kodunun nested EGL if/do bloğuna dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// IF THEN DO yapısı gerçek kaynak koddan parse edilip recursive statement pipeline
+    /// üzerinden nested EGL output'a kadar taşınmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN DO; CALL PROC1; END;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// IF bloğu altında nested do bloğu ve do bloğu içinde CALL statement üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithIfThenDoBlock_ShouldGenerateNestedEglOutput()
+    {
+        var output = ConvertSourceToEgl(
+            "IF A = B THEN DO; CALL PROC1; END;");
+
+        var expected =
+            "if (A = B)" + Environment.NewLine +
+            "    do" + Environment.NewLine +
+            "        call Proc1();" + Environment.NewLine +
+            "    end" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    /// <summary>
+    /// PL/I mini programının declaration, assignment, CALL ve IF THEN DO yapılarıyla EGL çıktıya dönüştüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Lexer, parser, transpiler ve generator zinciri birden fazla declaration ve statement
+    /// içeren gerçekçi bir PL/I kaynak üzerinde uçtan uca çalışmalıdır.
+    ///
+    /// Hangi input'u test eder?
+    /// CUSTOMER_NO declaration, SQLCODE declaration, assignment, CALL ve IF THEN DO içeren mini program.
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Declaration satırları, assignment satırı, CALL satırı ve nested IF/DO/CALL bloğu
+    /// doğru sırayla üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Convert_WithMiniProgram_ShouldGenerateCompleteEglOutput()
+    {
+        var source = string.Join(
+            Environment.NewLine,
+            "DCL CUSTOMER_NO CHAR(10);",
+            "DCL SQLCODE FIXED DECIMAL(5);",
+            "CUSTOMER_NO = 'ABC';",
+            "CALL FETCH_CUSTOMER(CUSTOMER_NO);",
+            "IF SQLCODE = 0 THEN DO;",
+            "CALL PROCESS_CUSTOMER(CUSTOMER_NO);",
+            "END;");
+
+        var output = ConvertSourceToEgl(source);
+
+        var expected =
+            "CustomerNo char(10);" + Environment.NewLine +
+            "Sqlcode decimal(5);" + Environment.NewLine +
+            "CustomerNo = \"ABC\";" + Environment.NewLine +
+            "call FetchCustomer(CustomerNo);" + Environment.NewLine +
+            "if (Sqlcode = 0)" + Environment.NewLine +
+            "    do" + Environment.NewLine +
+            "        call ProcessCustomer(CustomerNo);" + Environment.NewLine +
+            "    end" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, output);
+    }
+
+    private static string ConvertSourceToEgl(string source)
+    {
+        var lexer = new Pl1Lexer(source);
+        var tokens = lexer.Tokenize();
+
+        var parser = new Pl1Parser(tokens);
+        var parseResult = parser.Parse();
+
+        Assert.True(parseResult.Success);
+        Assert.Empty(parseResult.Diagnostics);
+        Assert.NotNull(parseResult.SyntaxTree);
+
+        var transpiler = new Pl1ToEglTranspiler();
+        var transpileResult = transpiler.Transpile(parseResult.SyntaxTree!);
+
+        Assert.True(transpileResult.Success);
+        Assert.Empty(transpileResult.Diagnostics);
+        Assert.NotNull(transpileResult.SyntaxTree);
+
+        var generator = new EglCodeGenerator();
+
+        return generator.Generate(transpileResult.SyntaxTree!);
     }
 }
