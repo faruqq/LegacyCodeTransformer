@@ -2351,3 +2351,59 @@ Eklenen test kapsamı:
 - Declaration + assignment + CALL output sırası testleri
 
 Bu milestone sonunda CALL statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+## P05.10 - IF EGL Generation
+
+P05.10 kapsamında PL/I IF statement modellerinin EGL syntax modeline ve EGL source output'a dönüşümü eklendi.
+
+Eklenen production bileşenleri:
+
+- EglIfStatement
+
+Güncellenen production bileşenleri:
+
+- StatementTranspiler
+- EglCodeGenerator
+
+IF statement dönüşüm zinciri aşağıdaki şekilde çalışır hale getirildi:
+
+    Pl1IfStatement
+        ↓
+    EglIfStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL source output
+
+P05.10 kapsamında yeni expression abstraction eklenmedi.
+
+Condition alanı string olarak taşınır.
+
+THEN ve ELSE kolları EglStatement olarak taşınır.
+
+Desteklenen örnekler:
+
+    IF CUSTOMER_NO = MUST_NO THEN CALL FETCH_CURSOR;
+    IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+
+Üretilen EGL çıktıları:
+
+    if (CustomerNo = MustNo)
+        call FetchCursor();
+    end
+
+    if (A = B)
+        call Proc1();
+    else
+        call Proc2();
+    end
+
+Eklenen test kapsamı:
+
+- IF statement model-to-model transpiler testleri
+- IF THEN ELSE recursive child statement transpiler testleri
+- IF generator output testleri
+- IF ELSE generator output testleri
+- IF transpile + generate end-to-end testleri
+
+Bu milestone sonunda IF statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.

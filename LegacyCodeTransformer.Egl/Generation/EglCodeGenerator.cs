@@ -17,15 +17,15 @@ namespace LegacyCodeTransformer.Egl.Generation;
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// EGL declaration, data type, assignment statement ve CALL statement modellerini
-/// kurum EGL output standardına uygun string çıktıya dönüştürür.
+/// EGL declaration, data type, assignment statement, CALL statement ve IF statement
+/// modellerini kurum EGL output standardına uygun string çıktıya dönüştürür.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - Param char(10);
 /// - Param = "ABC";
 /// - call FetchCursor();
-/// - call Proc1(A, B);
+/// - if (A = B)
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -35,7 +35,7 @@ namespace LegacyCodeTransformer.Egl.Generation;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// EGL desteği genişledikçe function, record metadata, service, IF, DO ve expression
+/// EGL desteği genişledikçe function, record metadata, service, DO ve expression
 /// üretimi bu sınıfta geliştirilecektir.
 /// </summary>
 public sealed class EglCodeGenerator
@@ -56,7 +56,7 @@ public sealed class EglCodeGenerator
 
         foreach (var statement in syntaxTree.Statements)
         {
-            builder.Append(GenerateStatement(statement));
+            builder.Append(GenerateStatement(statement, 0));
         }
 
         return builder.ToString();
@@ -72,78 +72,84 @@ public sealed class EglCodeGenerator
         };
     }
 
-    /// <summary>
-    /// EGL statement modelinden kaynak kod karşılığını üretir.
-    ///
-    /// Neden var?
-    /// ----------------------
-    /// EglSyntaxTree executable statement listesi taşıyabilmektedir.
-    ///
-    /// Ne çözüyor?
-    /// ----------------------
-    /// Statement türüne göre doğru generator methoduna yönlendirme yapar.
-    /// P05.9 kapsamında EglAssignmentStatement ve EglCallStatement desteklenir.
-    ///
-    /// Hangi örneği destekliyor?
-    /// ----------------------
-    ///     Param = "ABC";
-    ///     call FetchCursor();
-    ///
-    /// Nerede kullanılır?
-    /// ----------------------
-    /// Generate ana akışı içerisinde.
-    ///
-    /// Gelecekte neye temel olur?
-    /// ----------------------
-    /// EglIfStatement ve EglDoStatement eklendiğinde dispatch davranışı burada
-    /// genişletilecektir.
-    /// </summary>
-    private static string GenerateStatement(EglStatement statement)
+    private static string GenerateStatement(
+        EglStatement statement,
+        int indentationLevel)
     {
         return statement switch
         {
-            EglAssignmentStatement assignmentStatement => GenerateAssignmentStatement(assignmentStatement) + Environment.NewLine,
-            EglCallStatement callStatement => GenerateCallStatement(callStatement) + Environment.NewLine,
+            EglAssignmentStatement assignmentStatement => GenerateAssignmentStatement(assignmentStatement, indentationLevel) + Environment.NewLine,
+            EglCallStatement callStatement => GenerateCallStatement(callStatement, indentationLevel) + Environment.NewLine,
+            EglIfStatement ifStatement => GenerateIfStatement(ifStatement, indentationLevel),
             _ => string.Empty
         };
     }
 
-    private static string GenerateAssignmentStatement(EglAssignmentStatement statement)
+    private static string GenerateAssignmentStatement(
+        EglAssignmentStatement statement,
+        int indentationLevel)
     {
-        return $"{statement.Target} = {statement.Value};";
+        return $"{GetStatementIndentation(indentationLevel)}{statement.Target} = {statement.Value};";
+    }
+
+    private static string GenerateCallStatement(
+        EglCallStatement statement,
+        int indentationLevel)
+    {
+        var arguments = string.Join(", ", statement.Arguments);
+
+        return $"{GetStatementIndentation(indentationLevel)}call {statement.ProcedureName}({arguments});";
     }
 
     /// <summary>
-    /// EGL CALL statement modelinden kaynak kod satırı üretir.
+    /// EGL IF statement modelinden kaynak kod bloğu üretir.
     ///
     /// Neden var?
     /// ----------------------
-    /// P05.9 kapsamında CALL statement modeli gerçek EGL kaynak kodu satırına
+    /// P05.10 kapsamında IF statement modeli gerçek EGL kaynak kodu bloğuna
     /// çevrilmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Procedure adı ve argument listesini EGL call syntax standardına göre yazdırır.
+    /// IF condition, THEN statement ve optional ELSE statement alanlarını indentation
+    /// standardıyla EGL output'a yazar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    ///     call FetchCursor();
-    ///     call Proc1(A, B);
+    ///     if (A = B)
+    ///         call Proc1();
+    ///     else
+    ///         call Proc2();
+    ///     end
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// GenerateStatement içinde EglCallStatement branch'inde kullanılır.
+    /// GenerateStatement içinde EglIfStatement branch'inde kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Named argument veya service invocation output standardı gerektiğinde bu method
-    /// genişletilebilir.
+    /// DO block output ve nested control-flow formatting bu methodla aynı indentation
+    /// standardını kullanacaktır.
     /// </summary>
-    private static string GenerateCallStatement(EglCallStatement statement)
+    private static string GenerateIfStatement(
+        EglIfStatement statement,
+        int indentationLevel)
     {
-        var arguments = string.Join(", ", statement.Arguments);
+        var builder = new StringBuilder();
+        var indentation = GetStatementIndentation(indentationLevel);
 
-        return $"call {statement.ProcedureName}({arguments});";
+        builder.AppendLine($"{indentation}if ({statement.Condition})");
+        builder.Append(GenerateStatement(statement.ThenStatement, indentationLevel + 1));
+
+        if (statement.ElseStatement is not null)
+        {
+            builder.AppendLine($"{indentation}else");
+            builder.Append(GenerateStatement(statement.ElseStatement, indentationLevel + 1));
+        }
+
+        builder.AppendLine($"{indentation}end");
+
+        return builder.ToString();
     }
 
     private static string GenerateRecordDeclaration(
@@ -181,6 +187,11 @@ public sealed class EglCodeGenerator
         var depth = Math.Max(level / 5, 1);
 
         return new string(' ', depth * 4);
+    }
+
+    private static string GetStatementIndentation(int indentationLevel)
+    {
+        return new string(' ', Math.Max(indentationLevel, 0) * 4);
     }
 
     private static string GenerateVariableDeclaration(

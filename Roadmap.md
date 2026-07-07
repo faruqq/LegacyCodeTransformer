@@ -944,6 +944,78 @@ P05.10 — IF EGL Generation
 
 ---
 
+## P05.10 — IF EGL Generation
+
+### Durum
+
+✅ Tamamlandı
+
+### Amaç
+
+PL/I IF statement modellerini EGL IF syntax modeline dönüştürmek ve EGL generator üzerinden kaynak kod çıktısı üretebilmek.
+
+### Tamamlananlar
+
+#### EGL IF Statement
+
+* ✅ EglIfStatement modeli eklendi.
+* ✅ Pl1IfStatement → EglIfStatement mapping eklendi.
+* ✅ Condition text dönüşümü eklendi.
+* ✅ THEN branch recursive statement dönüşümü eklendi.
+* ✅ ELSE branch recursive statement dönüşümü eklendi.
+* ✅ Identifier casing dönüşümü condition tarafında korundu.
+
+#### Generator
+
+* ✅ EglCodeGenerator EglIfStatement output desteği eklendi.
+* ✅ IF THEN output desteği eklendi.
+* ✅ IF THEN ELSE output desteği eklendi.
+* ✅ Nested child statement indentation standardı eklendi.
+
+#### Testler
+
+* ✅ IF statement transpiler testleri
+* ✅ IF THEN ELSE transpiler testleri
+* ✅ IF generator testleri
+* ✅ IF ELSE generator testleri
+* ✅ IF transpile + generate end-to-end testleri
+
+### Desteklenen Örnekler
+
+    IF CUSTOMER_NO = MUST_NO THEN CALL FETCH_CURSOR;
+    IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+
+EGL output:
+
+    if (CustomerNo = MustNo)
+        call FetchCursor();
+    end
+
+    if (A = B)
+        call Proc1();
+    else
+        call Proc2();
+    end
+
+### Bilinçli Olarak Kapsam Dışı Bırakılanlar
+
+* DO EGL generation
+* IF THEN DO output
+* ELSE DO output
+* Full expression parser
+* Condition operator semantic mapping
+* Complex boolean expression mapping
+
+### Başarı Kriteri
+
+IF statement için parser → transpiler → EGL generator zinciri uçtan uca çalışır hale gelmiştir.
+
+### Sonraki Milestone
+
+P05.11 — DO EGL Generation
+
+---
+
 # P06 — Procedure Desteği
 
 ## Durum

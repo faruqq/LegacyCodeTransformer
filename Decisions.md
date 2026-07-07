@@ -3187,3 +3187,64 @@ EGL output örnekleri:
 ### Durum
 
 Kabul edildi.
+
+## Decision 079 - IF Statement EGL Generation
+
+### Karar
+
+P05.10 kapsamında PL/I IF statement modelleri EGL IF statement modellerine dönüştürülecektir.
+
+IF dönüşüm zinciri aşağıdaki gibi olacaktır.
+
+    Pl1IfStatement
+        ↓
+    EglIfStatement
+        ↓
+    EglCodeGenerator
+        ↓
+    EGL if source block
+
+P05.10 kapsamında yeni expression abstraction eklenmeyecektir.
+
+Condition alanı string olarak taşınacaktır.
+
+THEN ve ELSE kolları EglStatement olarak taşınacaktır.
+
+### Gerekçe
+
+Parser tarafında IF statement modeli zaten üretilmektedir.
+
+P05.10'un amacı yeni parser davranışı eklemek değil, mevcut Pl1IfStatement modelini transpiler ve generator katmanına bağlamaktır.
+
+IF statement recursive child statement içerdiği için StatementTranspiler, THEN ve ELSE kollarını yine kendi TranspileStatement akışı üzerinden dönüştürecektir.
+
+Bu yapı P05.11 DO generation için de temel oluşturur.
+
+Desteklenen örnekler:
+
+    IF CUSTOMER_NO = MUST_NO THEN CALL FETCH_CURSOR;
+    IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+
+EGL output örnekleri:
+
+    if (CustomerNo = MustNo)
+        call FetchCursor();
+    end
+
+    if (A = B)
+        call Proc1();
+    else
+        call Proc2();
+    end
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Statements/EglIfStatement
+- LegacyCodeTransformer.Egl/Generation/EglCodeGenerator
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl/StatementTranspiler
+- LegacyCodeTransformer.Transpilers.Tests/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests/Generation
+
+### Durum
+
+Kabul edildi.

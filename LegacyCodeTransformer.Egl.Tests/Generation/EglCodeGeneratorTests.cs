@@ -814,4 +814,95 @@ public sealed class EglCodeGeneratorTests
             "call Proc1(CustomerNo, \"ABC\");" + Environment.NewLine,
             result);
     }
+
+    /// <summary>
+    /// EGL IF statement modelinden THEN branch içeren kaynak kod üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// EglCodeGenerator, EglIfStatement modelini indentation standardına uygun EGL if bloğuna
+    /// dönüştürmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF condition CustomerNo = MustNo, THEN call FetchCursor().
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// if bloğu, 4 boşluk indentation ile child CALL statement ve end satırı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithIfThenCallStatement_ShouldGenerateIfBlock()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglIfStatement(
+                condition: "CustomerNo = MustNo",
+                thenStatement: new EglCallStatement(
+                    procedureName: "FetchCursor",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                elseStatement: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "if (CustomerNo = MustNo)" + Environment.NewLine +
+            "    call FetchCursor();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>
+    /// EGL IF statement modelinden THEN ELSE içeren kaynak kod üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator, optional ElseStatement bulunduğunda else satırını ve else branch child
+    /// statement'ını output'a eklemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN call Proc1(); ELSE call Proc2();
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// then ve else branch statementları 4 boşluk indentation ile üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithIfThenElseCallStatements_ShouldGenerateIfElseBlock()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglIfStatement(
+                condition: "A = B",
+                thenStatement: new EglCallStatement(
+                    procedureName: "Proc1",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                elseStatement: new EglCallStatement(
+                    procedureName: "Proc2",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        var expected =
+            "if (A = B)" + Environment.NewLine +
+            "    call Proc1();" + Environment.NewLine +
+            "else" + Environment.NewLine +
+            "    call Proc2();" + Environment.NewLine +
+            "end" + Environment.NewLine;
+
+        Assert.Equal(expected, result);
+    }
 }

@@ -2683,4 +2683,103 @@ public sealed class Pl1ToEglTranspilerTests
 
         Assert.Equal(expected, output);
     }
+
+    /// <summary>
+    /// Transpiler'ın IF statement modelini EGL IF statement modeline dönüştürdüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Pl1IfStatement artık unsupported diagnostic üretmemeli, EglIfStatement modeline dönüşmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF CUSTOMER_NO = MUST_NO THEN CALL FETCH_CURSOR;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Condition CustomerNo = MustNo olmalı, ThenStatement EglCallStatement olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithIfThenCallStatement_ShouldCreateEglIfStatement()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1IfStatement(
+                condition: new Pl1RawExpression("CUSTOMER_NO = MUST_NO", SourceLocation.Unknown),
+                thenStatement: new Pl1CallStatement(
+                    procedureName: "FETCH_CURSOR",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                elseStatement: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var ifStatement = Assert.IsType<EglIfStatement>(statement);
+        var thenCallStatement = Assert.IsType<EglCallStatement>(ifStatement.ThenStatement);
+
+        Assert.Equal("CustomerNo = MustNo", ifStatement.Condition);
+        Assert.Equal("FetchCursor", thenCallStatement.ProcedureName);
+        Assert.Empty(thenCallStatement.Arguments);
+        Assert.Null(ifStatement.ElseStatement);
+    }
+
+    /// <summary>
+    /// Transpiler'ın IF THEN ELSE statement modelini EGL IF statement modeline dönüştürdüğünü doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// IF statement içinde THEN ve ELSE child statement modelleri recursive olarak
+    /// EGL statement modellerine dönüştürülmelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// IF A = B THEN CALL PROC1; ELSE CALL PROC2;
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Condition A = B olmalı, ThenStatement Proc1 CALL, ElseStatement Proc2 CALL olmalıdır.
+    /// </summary>
+    [Fact]
+    public void Transpile_WithIfThenElseCallStatements_ShouldCreateEglIfStatementWithElse()
+    {
+        var pl1SyntaxTree = new Pl1SyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new Pl1IfStatement(
+                condition: new Pl1RawExpression("A = B", SourceLocation.Unknown),
+                thenStatement: new Pl1CallStatement(
+                    procedureName: "PROC1",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                elseStatement: new Pl1CallStatement(
+                    procedureName: "PROC2",
+                    arguments: null,
+                    location: SourceLocation.Unknown),
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var transpiler = new Pl1ToEglTranspiler();
+
+        var result = transpiler.Transpile(pl1SyntaxTree);
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
+
+        var statement = Assert.Single(result.SyntaxTree!.Statements);
+        var ifStatement = Assert.IsType<EglIfStatement>(statement);
+
+        var thenCallStatement = Assert.IsType<EglCallStatement>(ifStatement.ThenStatement);
+        var elseCallStatement = Assert.IsType<EglCallStatement>(ifStatement.ElseStatement);
+
+        Assert.Equal("A = B", ifStatement.Condition);
+        Assert.Equal("Proc1", thenCallStatement.ProcedureName);
+        Assert.Equal("Proc2", elseCallStatement.ProcedureName);
+    }
 }
