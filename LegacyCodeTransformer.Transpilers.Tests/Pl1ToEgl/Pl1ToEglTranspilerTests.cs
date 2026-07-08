@@ -2204,20 +2204,21 @@ public sealed class Pl1ToEglTranspilerTests
     }
 
     /// <summary>
-    /// Transpiler'ın declaration dönüşümünü korurken henüz desteklenmeyen CALL statement için diagnostic ürettiğini doğrular.
+    /// Transpiler'ın declaration dönüşümünü korurken CALL statement modelini EGL CALL statement modeline dönüştürdüğünü doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// Assignment mapping eklenmiş olsa bile CALL statement P05.9'a kadar unsupported kalmalıdır.
+    /// P05.9 sonrasında CALL statement unsupported diagnostic üretmemeli, declaration ile
+    /// birlikte aynı EGL syntax tree içinde taşınmalıdır.
     ///
     /// Hangi input'u test eder?
     /// Model seviyesinde DCL PARAM CHAR(08); ve CALL FETCH_CURSOR; karşılığı.
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Declaration başarıyla EGL declaration'a dönüşmeli, CALL statement için unsupported
-    /// diagnostic üretilmeli ve EglSyntaxTree.Statements listesi boş kalmalıdır.
+    /// Declaration başarıyla EGL declaration'a dönüşmeli, CALL statement EglCallStatement
+    /// olarak üretilmeli ve diagnostic listesi boş kalmalıdır.
     /// </summary>
     [Fact]
-    public void Transpile_WithDeclarationAndCallStatement_ShouldKeepDeclarationAndReportUnsupportedStatement()
+    public void Transpile_WithDeclarationAndCallStatement_ShouldCreateDeclarationAndCallStatement()
     {
         var pl1SyntaxTree = new Pl1SyntaxTree(
             declarations: new[]
@@ -2240,18 +2241,20 @@ public sealed class Pl1ToEglTranspilerTests
 
         var result = transpiler.Transpile(pl1SyntaxTree);
 
-        Assert.False(result.Success);
+        Assert.True(result.Success);
+        Assert.Empty(result.Diagnostics);
         Assert.NotNull(result.SyntaxTree);
 
         var declaration = Assert.Single(result.SyntaxTree!.Declarations);
         var variableDeclaration = Assert.IsType<EglVariableDeclaration>(declaration);
 
         Assert.Equal("Param", variableDeclaration.Name);
-        Assert.Empty(result.SyntaxTree.Statements);
 
-        Assert.Contains(
-            result.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("Desteklenmeyen PL/I statement türü: Pl1CallStatement"));
+        var statement = Assert.Single(result.SyntaxTree.Statements);
+        var callStatement = Assert.IsType<EglCallStatement>(statement);
+
+        Assert.Equal("FetchCursor", callStatement.ProcedureName);
+        Assert.Empty(callStatement.Arguments);
     }
 
     /// <summary>
