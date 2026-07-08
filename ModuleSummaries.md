@@ -2546,3 +2546,41 @@ Eklenen test kapsamı:
 - Procedure içindeki CALL statement traversal testi
 
 Bu milestone sonunda PL/I syntax tree root modeli procedure listesini taşıyabilir hale gelmiştir.
+
+## P06.2 - Procedure Parser Foundation
+
+P06.2 kapsamında PL/I procedure parser foundation eklendi.
+
+Eklenen production bileşenleri:
+
+- ProcedureParser
+
+Güncellenen production bileşenleri:
+
+- Pl1TokenKind
+- Pl1Lexer
+- Pl1Parser
+
+ProcedureParser aşağıdaki temel PL/I procedure yapısını parse edebilir hale gelmiştir:
+
+    PROCESS_CURSOR: PROCEDURE;
+        CALL FETCH_CURSOR;
+    END PROCESS_CURSOR;
+
+Ayrıca OPTIONS(MAIN) bilgisi Pl1Procedure.Options listesi üzerinde korunur.
+
+Desteklenen örnek:
+
+    PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
+        CALL INIT_PROCESS;
+    END PROGRAM_NAME;
+
+Bu milestone sonunda Pl1Parser, declaration, top-level statement ve procedure bloklarını aynı Pl1SyntaxTree içinde taşıyabilir hale gelmiştir.
+
+Procedure body içindeki executable statement parsing mevcut StatementParser pipeline üzerinden yapılır.
+
+Eklenen test kapsamı:
+
+- Procedure içinde CALL statement parse testi
+- PROCEDURE OPTIONS(MAIN) parse testi
+- END procedure adı mismatch diagnostic testi

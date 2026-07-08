@@ -16,14 +16,14 @@ namespace LegacyCodeTransformer.Pl1.Lexing
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I kaynak kodunu parser'ın okuyabileceği Pl1Token listesine çevirir.
-    /// Declaration parsing için kullanılan token desteğini korurken P05 statement
-    /// parser için gerekli CALL, IF, THEN, ELSE, DO, END, WHILE, UNTIL keyword'lerini
-    /// ve assignment / comparison / logical operator token'larını üretir.
+    /// Declaration parsing için kullanılan token desteğini korurken statement
+    /// parser ve procedure parser için gerekli keyword/token desteğini üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - DCL PARAM CHAR(08) INIT(' ');
-    /// - PARAM = 'ABC';
+    /// - PROCEDURE_NAME: PROCEDURE;
+    /// - PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
     /// - CALL FETCH_CURSOR;
     /// - IF SQLCODE = 0 THEN DO;
     /// - DO WHILE(SQLCODE ^= 100);
@@ -46,9 +46,6 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         private readonly List<Pl1Token> _tokens = new();
         private int _position;
 
-        /// <summary>
-        /// PL/I lexer instance'ını oluşturur.
-        /// </summary>
         public Pl1Lexer(string source)
         {
             _source = source ?? string.Empty;
@@ -69,12 +66,12 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// PARAM = 'ABC';
+        /// PROCEDURE_NAME: PROCEDURE;
         ///
         /// Bu input için sırasıyla:
         /// - Identifier
-        /// - Equals
-        /// - StringLiteral
+        /// - Colon
+        /// - ProcedureKeyword
         /// - Semicolon
         ///
         /// tokenları üretilir.
@@ -86,7 +83,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// P05 statement parser gerçek kaynak metinden statement modeli üretirken
+        /// P06 procedure parser gerçek kaynak metinden procedure modeli üretirken
         /// bu token akışını kullanacaktır.
         /// </summary>
         public IReadOnlyList<Pl1Token> Tokenize()
@@ -420,6 +417,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// - DCL / DECLARE
         /// - FIXED DECIMAL
         /// - PIC / PICTURE
+        /// - PROCEDURE / PROC
+        /// - OPTIONS
         /// - CALL
         /// - IF / THEN / ELSE
         /// - DO / END
@@ -457,7 +456,6 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "INITIAL" => Pl1TokenKind.InitialKeyword,
 
                 "BIT" => Pl1TokenKind.BitKeyword,
-
                 "DIM" => Pl1TokenKind.DimKeyword,
                 "DIMENSION" => Pl1TokenKind.DimensionKeyword,
 
@@ -465,6 +463,10 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "REAL" => Pl1TokenKind.RealKeyword,
                 "DOUBLE" => Pl1TokenKind.DoubleKeyword,
                 "PRECISION" => Pl1TokenKind.PrecisionKeyword,
+
+                "PROCEDURE" => Pl1TokenKind.ProcedureKeyword,
+                "PROC" => Pl1TokenKind.ProcedureKeyword,
+                "OPTIONS" => Pl1TokenKind.OptionsKeyword,
 
                 "CALL" => Pl1TokenKind.CallKeyword,
                 "IF" => Pl1TokenKind.IfKeyword,

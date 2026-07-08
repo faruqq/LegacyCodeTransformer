@@ -1171,7 +1171,7 @@ Bu nedenle P06 ilk kapsamı sade procedure modelleme ve parser entegrasyonu üze
 ## Milestone Durumu
 
 * ✅ P06.1 — Procedure Syntax Model Foundation
-* ⏳ P06.2 — Procedure Parser Foundation
+* ✅ P06.2 — Procedure Parser Foundation
 * ⏳ P06.3 — Procedure Parser Statement Integration
 * ⏳ P06.4 — Procedure End-to-End Tests
 
@@ -1199,7 +1199,7 @@ Bir PL/I source dosyası procedure seviyesinde parse edilebilmeli, procedure iç
 
 ## Sonraki Milestone
 
-P06.2 — Procedure Parser Foundation
+P06.3 — Procedure Parser Statement Integration
 
 ---
 

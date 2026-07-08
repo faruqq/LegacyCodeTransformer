@@ -4,6 +4,7 @@ using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Parsing.Helpers;
+using LegacyCodeTransformer.Pl1.Procedures;
 using LegacyCodeTransformer.Pl1.Statements;
 using LegacyCodeTransformer.Pl1.Syntax;
 
@@ -11,31 +12,30 @@ namespace LegacyCodeTransformer.Pl1.Parsing;
 
 /// <summary>
 /// PL/I token listesini Pl1SyntaxTree modeline dönüştüren ana parser sınıfıdır.
-/// </summary>
-/// <remarks>
+///
 /// Neden var?
 /// Lexer yalnızca kaynak PL/I metnini token listesine ayırır. Bu token listesinin
-/// declaration ve executable statement modellerine dönüştürülmesi gerekir.
+/// declaration, procedure ve executable statement modellerine dönüştürülmesi gerekir.
 ///
 /// Ne çözüyor?
 /// Parser ana orchestration katmanı olarak çalışır. Declaration detaylarını
-/// DeclarationParser'a, executable statement detaylarını StatementParser'a yönlendirir.
+/// DeclarationParser'a, procedure detaylarını ProcedureParser'a ve executable
+/// statement detaylarını StatementParser'a yönlendirir.
 ///
 /// Hangi örneği destekliyor?
 /// DCL PARAM CHAR(08);
-/// PARAM = 'ABC';
-/// CALL FETCH_CURSOR;
-/// IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
-/// DO; CALL PROC1; END;
+/// PROCESS_CURSOR: PROCEDURE;
+///     CALL FETCH_CURSOR;
+/// END PROCESS_CURSOR;
 ///
 /// Nerede kullanılır?
 /// ConversionService pipeline içinde, parser unit testlerinde ve transpiler öncesinde
 /// PL/I syntax tree oluşturmak için kullanılır.
 ///
 /// Gelecekte neye temel olur?
-/// Procedure parser eklendiğinde declaration ve statement orchestration davranışı aynı
-/// ana parser üzerinden korunacaktır.
-/// </remarks>
+/// Procedure parser statement integration, statement pipeline, semantic analysis ve
+/// transpiler giriş modeli bu orchestration üzerinden ilerleyecektir.
+/// </summary>
 public sealed class Pl1Parser
 {
     private readonly IReadOnlyList<Pl1Token> _tokens;
@@ -56,11 +56,15 @@ public sealed class Pl1Parser
     ///
     /// Ne çözüyor?
     /// DCL / DECLARE gördüğünde declaration parser'a yönlendirir.
+    /// PROCEDURE_NAME: PROCEDURE; gördüğünde procedure parser'a yönlendirir.
     /// Statement başlangıcı gördüğünde statement parser'a yönlendirir.
     /// Desteklenmeyen token gördüğünde diagnostic üretir ve recovery için ilerler.
     ///
     /// Hangi örneği destekliyor?
-    /// DCL PARAM CHAR(08); CALL FETCH_CURSOR;
+    /// DCL PARAM CHAR(08);
+    /// PROCESS_CURSOR: PROCEDURE;
+    ///     CALL FETCH_CURSOR;
+    /// END PROCESS_CURSOR;
     ///
     /// Nerede kullanılır?
     /// ConversionService içinde ve parser unit testlerinde kullanılır.
@@ -72,6 +76,7 @@ public sealed class Pl1Parser
     public ParseResult<Pl1SyntaxTree> Parse()
     {
         var declarations = new List<Pl1Declaration>();
+        var procedures = new List<Pl1Procedure>();
         var statements = new List<Pl1Statement>();
 
         while (!IsAtEnd())
@@ -83,6 +88,18 @@ public sealed class Pl1Parser
                 if (declaration is not null)
                 {
                     declarations.Add(declaration);
+                }
+
+                continue;
+            }
+
+            if (IsProcedureStart())
+            {
+                var procedure = ParseProcedure();
+
+                if (procedure is not null)
+                {
+                    procedures.Add(procedure);
                 }
 
                 continue;
@@ -102,13 +119,14 @@ public sealed class Pl1Parser
 
             AddUnexpectedTokenDiagnostic(
                 Current,
-                "DCL veya executable statement");
+                "DCL, procedure veya executable statement");
 
             Advance();
         }
 
         var syntaxTree = new Pl1SyntaxTree(
             declarations,
+            procedures,
             statements,
             SourceLocation.Unknown);
 
@@ -131,6 +149,21 @@ public sealed class Pl1Parser
         return result.Value;
     }
 
+    private Pl1Procedure? ParseProcedure()
+    {
+        var context = new ParseContext(
+            _tokens,
+            _position,
+            _diagnostics);
+
+        var parser = new ProcedureParser(context);
+        var result = parser.ParseProcedure();
+
+        _position = result.Position;
+
+        return result.Value;
+    }
+
     private Pl1Statement? ParseStatement()
     {
         var parser = new StatementParser(
@@ -143,6 +176,13 @@ public sealed class Pl1Parser
         _position = result.Position;
 
         return result.Value;
+    }
+
+    private bool IsProcedureStart()
+    {
+        return Current.Kind == Pl1TokenKind.Identifier
+            && Peek(1).Kind == Pl1TokenKind.Colon
+            && Peek(2).Kind == Pl1TokenKind.ProcedureKeyword;
     }
 
     private static bool IsStatementStart(Pl1TokenKind tokenKind)
@@ -168,6 +208,18 @@ public sealed class Pl1Parser
         {
             _position++;
         }
+    }
+
+    private Pl1Token Peek(int offset)
+    {
+        var index = _position + offset;
+
+        if (index >= _tokens.Count)
+        {
+            return _tokens[^1];
+        }
+
+        return _tokens[index];
     }
 
     private bool IsAtEnd()

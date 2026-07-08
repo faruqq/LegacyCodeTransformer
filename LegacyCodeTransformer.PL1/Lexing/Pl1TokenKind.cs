@@ -16,7 +16,8 @@
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - DCL PARAM CHAR(08) INIT(' ');
-/// - PARAM = 'ABC';
+/// - PROCEDURE_NAME: PROCEDURE;
+/// - PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
 /// - CALL FETCH_CURSOR;
 /// - IF SQLCODE = 0 THEN DO;
 /// - DO WHILE(SQLCODE ^= 100);
@@ -48,20 +49,28 @@ public enum Pl1TokenKind
     DecKeyword,
     BinaryKeyword,
     BinKeyword,
+
     CharKeyword,
     CharacterKeyword,
     VarcharKeyword,
+
     PicKeyword,
     PictureKeyword,
+
     InitKeyword,
     InitialKeyword,
+
     BitKeyword,
     DimKeyword,
     DimensionKeyword,
+
     FloatKeyword,
     RealKeyword,
     DoubleKeyword,
     PrecisionKeyword,
+
+    ProcedureKeyword,
+    OptionsKeyword,
 
     CallKeyword,
     IfKeyword,
@@ -84,6 +93,7 @@ public enum Pl1TokenKind
     Minus,
     Asterisk,
     Slash,
+
     LessThan,
     GreaterThan,
     LessThanOrEqual,
@@ -91,6 +101,7 @@ public enum Pl1TokenKind
     NotEqual,
     NotLessThan,
     NotGreaterThan,
+
     Ampersand,
     Exclamation,
     Caret
