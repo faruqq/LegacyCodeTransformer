@@ -1402,7 +1402,7 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// Parser'ın desteklenmeyen token için declaration veya statement beklendiğini bildirdiğini doğrular.
+    /// Parser'ın desteklenmeyen token için declaration, procedure veya statement beklendiğini bildirdiğini doğrular.
     ///
     /// Bu test neyi doğrular?
     /// Pl1Parser, statement başlangıcı olmayan unsupported token gördüğünde yeni top-level
@@ -1412,10 +1412,10 @@ public sealed class Pl1ParserTests
     /// %
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Diagnostic içinde DCL veya executable statement bekleniyordu anlamına gelen mesaj bulunmalıdır.
+    /// Diagnostic içinde DCL, procedure veya executable statement bekleniyordu anlamına gelen mesaj bulunmalıdır.
     /// </summary>
     [Fact]
-    public void Parse_WithUnsupportedTopLevelToken_ShouldReturnDeclarationOrStatementDiagnostic()
+    public void Parse_WithUnsupportedTopLevelToken_ShouldReturnDeclarationProcedureOrStatementDiagnostic()
     {
         var result = ParseSource(
             "%");
@@ -1423,11 +1423,12 @@ public sealed class Pl1ParserTests
         Assert.False(result.Success);
         Assert.NotNull(result.SyntaxTree);
         Assert.Empty(result.SyntaxTree!.Declarations);
+        Assert.Empty(result.SyntaxTree.Procedures);
         Assert.Empty(result.SyntaxTree.Statements);
 
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("DCL veya executable statement"));
+            diagnostic => diagnostic.Message.Contains("DCL, procedure veya executable statement"));
     }
 
     /// <summary>

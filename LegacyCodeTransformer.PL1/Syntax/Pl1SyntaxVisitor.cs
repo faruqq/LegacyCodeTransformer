@@ -30,15 +30,16 @@ namespace LegacyCodeTransformer.Pl1.Syntax
     /// Pl1CallStatement
     /// Pl1IfStatement
     /// Pl1DoStatement
+    /// Pl1EmbeddedSqlStatement
     ///
     /// Nerede kullanılır?
     /// SyntaxWalker içinde, ileride semantic analysis katmanında ve visitor tabanlı
     /// transpiler refactor çalışmalarında kullanılır.
     ///
     /// Gelecekte neye temel olur?
-    /// P06 procedure parser ilerledikçe procedure-level semantic analysis,
-    /// call graph extraction, procedure transpiler ve procedure traversal
-    /// davranışları aynı visitor standardı üzerinden genişletilecektir.
+    /// Procedure-level semantic analysis, call graph extraction, embedded SQL
+    /// analysis, SQL dependency extraction ve visitor tabanlı transpiler davranışları
+    /// aynı visitor standardı üzerinden genişletilecektir.
     /// </summary>
     public abstract class Pl1SyntaxVisitor
     {
@@ -261,6 +262,10 @@ namespace LegacyCodeTransformer.Pl1.Syntax
                     Visit(blockStatement);
                     return;
 
+                case Pl1EmbeddedSqlStatement embeddedSqlStatement:
+                    Visit(embeddedSqlStatement);
+                    return;
+
                 default:
                     DefaultVisit(statement);
                     return;
@@ -315,6 +320,16 @@ namespace LegacyCodeTransformer.Pl1.Syntax
             }
 
             VisitBlockStatement(statement);
+        }
+
+        public virtual void Visit(Pl1EmbeddedSqlStatement statement)
+        {
+            if (statement is null)
+            {
+                return;
+            }
+
+            VisitEmbeddedSqlStatement(statement);
         }
 
         public virtual void Visit(Pl1Expression expression)
@@ -430,6 +445,11 @@ namespace LegacyCodeTransformer.Pl1.Syntax
         }
 
         protected virtual void VisitBlockStatement(Pl1BlockStatement statement)
+        {
+            DefaultVisit(statement);
+        }
+
+        protected virtual void VisitEmbeddedSqlStatement(Pl1EmbeddedSqlStatement statement)
         {
             DefaultVisit(statement);
         }

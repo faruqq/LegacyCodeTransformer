@@ -20,7 +20,7 @@ namespace LegacyCodeTransformer.Pl1.Syntax
     /// Hangi örneği destekliyor?
     /// DCL PARAM CHAR(08);
     /// PROCEDURE_NAME: PROCEDURE;
-    ///     CALL FETCH_CURSOR;
+    ///     EXEC SQL INCLUDE SQLCA;
     /// END PROCEDURE_NAME;
     ///
     /// Nerede kullanılır?
@@ -141,6 +141,10 @@ namespace LegacyCodeTransformer.Pl1.Syntax
             {
                 Visit(childStatement);
             }
+        }
+
+        protected override void VisitEmbeddedSqlStatement(Pl1EmbeddedSqlStatement statement)
+        {
         }
 
         protected override void VisitRawExpression(Pl1RawExpression expression)
