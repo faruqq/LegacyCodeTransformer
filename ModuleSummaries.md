@@ -2584,3 +2584,40 @@ Eklenen test kapsamı:
 - Procedure içinde CALL statement parse testi
 - PROCEDURE OPTIONS(MAIN) parse testi
 - END procedure adı mismatch diagnostic testi
+
+## P06.3 - Procedure Parser Statement Integration
+
+P06.3 kapsamında procedure body parsing davranışı mevcut statement pipeline ile net şekilde entegre edildi.
+
+Güncellenen production bileşenleri:
+
+- ProcedureParser
+
+Güncellenen test bileşenleri:
+
+- Pl1ProcedureParserTests
+
+Bu milestone ile ProcedureParser'ın sorumluluğu bilinçli olarak sınırlandırıldı.
+
+ProcedureParser yalnızca aşağıdaki işleri yapar:
+
+- Procedure header parse eder
+- OPTIONS bilgisini okur
+- Procedure body sınırını yönetir
+- END PROCEDURE_NAME; doğrulaması yapar
+
+ProcedureParser artık statement türlerini doğrudan tanımaz.
+
+Procedure body içindeki executable statement parsing tamamen mevcut StatementParser pipeline üzerinden yapılır.
+
+Bu sayede assignment, CALL, IF, DO, DO WHILE ve DO UNTIL statement destekleri procedure içinde aynı pipeline ile çalışır.
+
+Eklenen test kapsamı:
+
+- Procedure içinde assignment + CALL parse testi
+- Procedure içinde IF statement parse testi
+- Procedure içinde DO WHILE parse testi
+- Procedure içinde DO UNTIL parse testi
+- END procedure adı mismatch diagnostic davranışının korunması
+
+Bu milestone sonunda ProcedureParser SRP uyumlu hale getirilmiş ve procedure body parsing mevcut statement parser mimarisiyle hizalanmıştır.

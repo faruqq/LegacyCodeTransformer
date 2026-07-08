@@ -11,8 +11,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// Neden var?
 /// ----------------------
 /// Pl1Parser ana orchestration sınıfı procedure grammar detaylarını doğrudan
-/// bilmemelidir. Procedure header, option listesi, body statement listesi ve
-/// END doğrulama davranışı ayrı parser içinde tutulmalıdır.
+/// bilmemelidir. Procedure header, option listesi, body sınırı ve END doğrulama
+/// davranışı ayrı parser içinde tutulmalıdır.
 ///
 /// Ne çözüyor?
 /// ----------------------
@@ -41,8 +41,6 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// </summary>
 internal sealed class ProcedureParser : ParserBase
 {
-    private readonly StatementDispatcher _statementDispatcher = new();
-
     public ProcedureParser(ParseContext context)
         : base(context)
     {
@@ -120,7 +118,7 @@ internal sealed class ProcedureParser : ParserBase
                 Position);
         }
 
-        var statements = ParseProcedureStatements(procedureName);
+        var statements = ParseProcedureStatements();
 
         if (Current.Kind == Pl1TokenKind.EndKeyword)
         {
@@ -194,33 +192,68 @@ internal sealed class ProcedureParser : ParserBase
         return options;
     }
 
-    private List<Pl1Statement> ParseProcedureStatements(string procedureName)
+    /// <summary>
+    /// Procedure body içindeki executable statement listesini parse eder.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// ProcedureParser yalnızca procedure sınırını yönetmelidir. CALL, IF, DO,
+    /// assignment gibi statement türlerini tanımak ProcedureParser sorumluluğu
+    /// değildir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// END PROCEDURE_NAME; sınırına kadar olan executable statement'ları mevcut
+    /// StatementParser pipeline üzerinden parse eder.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// PROCESS_CURSOR: PROCEDURE;
+    ///     PARAM = 'ABC';
+    ///     IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    ///     DO WHILE(SQLCODE = 0);
+    ///         CALL FETCH_CURSOR;
+    ///     END;
+    /// END PROCESS_CURSOR;
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// ParseProcedure içinde header parse edildikten sonra kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// StatementParser SELECT, READ, WRITE, RETURN, STOP, LEAVE veya EXEC SQL
+    /// desteği kazandığında ProcedureParser değişmeden bu statement'ları
+    /// procedure body içinde destekleyebilir.
+    /// </summary>
+    private List<Pl1Statement> ParseProcedureStatements()
     {
         var statements = new List<Pl1Statement>();
 
-        while (!IsAtEnd() && !IsProcedureEnd(procedureName))
+        while (!IsAtEnd() && !IsProcedureEnd())
         {
-            if (_statementDispatcher.IsStatementStart(Current.Kind))
+            var statementStartPosition = Position;
+            var statementParser = new StatementParser(Context);
+            var result = statementParser.ParseStatement();
+
+            Position = result.Position;
+
+            if (result.Value is not null)
             {
-                var statementParser = new StatementParser(Context);
-                var result = statementParser.ParseStatement();
-
-                Position = result.Position;
-
-                if (result.Value is not null)
-                {
-                    statements.Add(result.Value);
-                }
-
+                statements.Add(result.Value);
                 continue;
             }
 
-            Diagnostics.Add(
-                ParserDiagnosticFactory.UnexpectedToken(
-                    Current,
-                    "procedure executable statement veya END"));
+            if (Position == statementStartPosition)
+            {
+                Diagnostics.Add(
+                    ParserDiagnosticFactory.UnexpectedToken(
+                        Current,
+                        "procedure executable statement veya END procedure"));
 
-            Advance();
+                var recoveryHelper = new StatementRecoveryHelper(Context);
+                recoveryHelper.SkipCurrentStatement();
+            }
         }
 
         return statements;
@@ -257,13 +290,9 @@ internal sealed class ProcedureParser : ParserBase
         Consume(Pl1TokenKind.Semicolon, "';' bekleniyordu.");
     }
 
-    private bool IsProcedureEnd(string procedureName)
+    private bool IsProcedureEnd()
     {
         return Current.Kind == Pl1TokenKind.EndKeyword
-            && Peek(1).Kind == Pl1TokenKind.Identifier
-            && string.Equals(
-                Peek(1).Text,
-                procedureName,
-                StringComparison.OrdinalIgnoreCase);
+            && Peek(1).Kind == Pl1TokenKind.Identifier;
     }
 }
