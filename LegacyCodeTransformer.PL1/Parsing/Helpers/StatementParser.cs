@@ -20,12 +20,11 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
-///     PARAM = 'ABC';
-///     CALL FETCH_CURSOR;
-///     IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
-///     DO WHILE(SQLCODE = 0);
-///
-/// P05.4 içinde IF ve DO parser gerçek model üretir.
+/// PARAM = 'ABC';
+/// CALL FETCH_CURSOR;
+/// IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+/// DO WHILE(SQLCODE = 0);
+/// EXEC SQL INCLUDE SQLCA;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -34,8 +33,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// SelectStatementParser ve diğer executable statement parser'lar bu orchestration
-/// sınıfı üzerinden devreye alınacaktır.
+/// SelectStatementParser, EmbeddedSqlStatementParser ve diğer executable statement
+/// parser'lar bu orchestration sınıfı üzerinden devreye alınacaktır.
 /// </summary>
 internal sealed class StatementParser : ParserBase
 {
@@ -65,18 +64,20 @@ internal sealed class StatementParser : ParserBase
     /// Ne çözüyor?
     /// ----------------------
     /// Mevcut token'ın statement başlangıcı olup olmadığını kontrol eder. Assignment,
-    /// CALL, IF ve DO başlangıçlarını concrete parser'lara yönlendirir.
+    /// CALL, IF, DO ve EXEC SQL başlangıçlarını concrete parser'lara yönlendirir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    ///     PARAM = 'ABC';
-    ///     CALL FETCH_CURSOR;
-    ///     IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
-    ///     DO WHILE(SQLCODE = 0);
+    /// PARAM = 'ABC';
+    /// CALL FETCH_CURSOR;
+    /// IF SQLCODE = 0 THEN CALL FETCH_CURSOR;
+    /// DO WHILE(SQLCODE = 0);
+    /// EXEC SQL INCLUDE SQLCA;
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// Pl1Parser ana orchestration akışında kullanılır.
+    /// Pl1Parser ana orchestration akışında ve ProcedureParser body parsing içinde
+    /// kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
@@ -94,12 +95,10 @@ internal sealed class StatementParser : ParserBase
                 Position),
 
             StatementParserKind.Assignment => ParseAssignmentStatement(),
-
             StatementParserKind.Call => ParseCallStatement(),
-
             StatementParserKind.If => ParseIfStatement(),
-
             StatementParserKind.Do => ParseDoStatement(),
+            StatementParserKind.EmbeddedSql => ParseEmbeddedSqlStatement(),
 
             _ => ParseUnsupportedStatement(parserKind)
         };
@@ -145,7 +144,18 @@ internal sealed class StatementParser : ParserBase
         return result;
     }
 
-    private HelperParseResult<Pl1Statement> ParseUnsupportedStatement(StatementParserKind parserKind)
+    private HelperParseResult<Pl1Statement> ParseEmbeddedSqlStatement()
+    {
+        var parser = new EmbeddedSqlStatementParser(Context);
+        var result = parser.ParseEmbeddedSqlStatement();
+
+        Position = result.Position;
+
+        return result;
+    }
+
+    private HelperParseResult<Pl1Statement> ParseUnsupportedStatement(
+        StatementParserKind parserKind)
     {
         var statementFamilyName = GetStatementFamilyName(parserKind);
 
@@ -155,7 +165,6 @@ internal sealed class StatementParser : ParserBase
                 $"{statementFamilyName} parser henüz eklenmedi"));
 
         var recoveryHelper = new StatementRecoveryHelper(Context);
-
         recoveryHelper.SkipCurrentStatement();
 
         return new HelperParseResult<Pl1Statement>(
@@ -171,6 +180,7 @@ internal sealed class StatementParser : ParserBase
             StatementParserKind.Call => "CALL",
             StatementParserKind.If => "IF",
             StatementParserKind.Do => "DO",
+            StatementParserKind.EmbeddedSql => "EXEC SQL",
             _ => "Unknown"
         };
     }

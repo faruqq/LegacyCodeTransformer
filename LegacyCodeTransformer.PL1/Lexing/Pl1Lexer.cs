@@ -16,17 +16,17 @@ namespace LegacyCodeTransformer.Pl1.Lexing
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I kaynak kodunu parser'ın okuyabileceği Pl1Token listesine çevirir.
-    /// Declaration parsing için kullanılan token desteğini korurken statement
-    /// parser ve procedure parser için gerekli keyword/token desteğini üretir.
+    /// Declaration, statement, procedure ve embedded SQL parser için gerekli
+    /// keyword/token desteğini üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// - DCL PARAM CHAR(08) INIT(' ');
     /// - PROCEDURE_NAME: PROCEDURE;
-    /// - PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
     /// - CALL FETCH_CURSOR;
     /// - IF SQLCODE = 0 THEN DO;
     /// - DO WHILE(SQLCODE ^= 100);
+    /// - EXEC SQL INCLUDE SQLCA;
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -66,12 +66,13 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
-        /// PROCEDURE_NAME: PROCEDURE;
+        /// EXEC SQL INCLUDE SQLCA;
         ///
         /// Bu input için sırasıyla:
+        /// - ExecKeyword
+        /// - SqlKeyword
+        /// - IncludeKeyword
         /// - Identifier
-        /// - Colon
-        /// - ProcedureKeyword
         /// - Semicolon
         ///
         /// tokenları üretilir.
@@ -83,8 +84,8 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// P06 procedure parser gerçek kaynak metinden procedure modeli üretirken
-        /// bu token akışını kullanacaktır.
+        /// P07 embedded SQL parser gerçek kaynak metinden EXEC SQL statement modeli
+        /// üretirken bu token akışını kullanacaktır.
         /// </summary>
         public IReadOnlyList<Pl1Token> Tokenize()
         {
@@ -423,6 +424,7 @@ namespace LegacyCodeTransformer.Pl1.Lexing
         /// - IF / THEN / ELSE
         /// - DO / END
         /// - WHILE / UNTIL
+        /// - EXEC SQL INCLUDE
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -476,6 +478,10 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                 "END" => Pl1TokenKind.EndKeyword,
                 "WHILE" => Pl1TokenKind.WhileKeyword,
                 "UNTIL" => Pl1TokenKind.UntilKeyword,
+
+                "EXEC" => Pl1TokenKind.ExecKeyword,
+                "SQL" => Pl1TokenKind.SqlKeyword,
+                "INCLUDE" => Pl1TokenKind.IncludeKeyword,
 
                 _ => Pl1TokenKind.Identifier
             };

@@ -17,10 +17,10 @@
 /// ----------------------
 /// - DCL PARAM CHAR(08) INIT(' ');
 /// - PROCEDURE_NAME: PROCEDURE;
-/// - PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
 /// - CALL FETCH_CURSOR;
 /// - IF SQLCODE = 0 THEN DO;
 /// - DO WHILE(SQLCODE ^= 100);
+/// - EXEC SQL INCLUDE SQLCA;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -80,6 +80,10 @@ public enum Pl1TokenKind
     EndKeyword,
     WhileKeyword,
     UntilKeyword,
+
+    ExecKeyword,
+    SqlKeyword,
+    IncludeKeyword,
 
     OpenParenthesis,
     CloseParenthesis,

@@ -14,7 +14,7 @@
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
-/// Assignment, CALL, IF ve DO parser seçimleri.
+/// Assignment, CALL, IF, DO ve EXEC SQL parser seçimleri.
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -22,8 +22,7 @@
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// SELECT, RETURN, LEAVE, EXEC SQL gibi parser türleri de bu enum'a
-/// eklenecektir.
+/// SELECT, RETURN, LEAVE ve diğer legacy parser türleri de bu enum'a eklenecektir.
 /// </summary>
 internal enum StatementParserKind
 {
@@ -31,5 +30,6 @@ internal enum StatementParserKind
     Assignment,
     Call,
     If,
-    Do
+    Do,
+    EmbeddedSql
 }

@@ -19,10 +19,11 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
-/// - PARAM = 'ABC';              -> Assignment
-/// - CALL FETCH_CURSOR;          -> CALL
-/// - IF SQLCODE = 0 THEN DO;     -> IF
-/// - DO WHILE(SQLCODE = 0);      -> DO
+/// - PARAM = 'ABC'; -> Assignment
+/// - CALL FETCH_CURSOR; -> CALL
+/// - IF SQLCODE = 0 THEN DO; -> IF
+/// - DO WHILE(SQLCODE = 0); -> DO
+/// - EXEC SQL INCLUDE SQLCA; -> EXEC SQL
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -32,8 +33,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// Gelecekte neye temel olur?
 /// ----------------------
 /// AssignmentStatementParser, CallStatementParser, IfStatementParser,
-/// DoStatementParser ve ileride legacy statement parser modülleri bu dispatcher
-/// üzerinden sisteme eklenecektir.
+/// DoStatementParser, EmbeddedSqlStatementParser ve ileride legacy statement
+/// parser modülleri bu dispatcher üzerinden sisteme eklenecektir.
 /// </summary>
 internal sealed class StatementDispatcher
 {
@@ -55,15 +56,11 @@ internal sealed class StatementDispatcher
     /// ----------------------
     /// Identifier ile başlayan assignment statement:
     ///
-    ///     PARAM = 'ABC';
+    /// PARAM = 'ABC';
     ///
-    /// CALL keyword ile başlayan procedure call:
+    /// EXEC keyword ile başlayan embedded SQL statement:
     ///
-    ///     CALL FETCH_CURSOR;
-    ///
-    /// IF keyword ile başlayan condition:
-    ///
-    ///     IF SQLCODE = 0 THEN DO;
+    /// EXEC SQL INCLUDE SQLCA;
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -84,8 +81,8 @@ internal sealed class StatementDispatcher
     ///
     /// Neden var?
     /// ----------------------
-    /// P05.3 ile birlikte dispatcher yalnızca statement ailesini değil,
-    /// kullanılacak concrete parser türünü de belirlemeye başlayacaktır.
+    /// Dispatcher yalnızca statement ailesini değil, kullanılacak concrete parser
+    /// türünü de belirler.
     ///
     /// Ne çözüyor?
     /// ----------------------
@@ -94,10 +91,11 @@ internal sealed class StatementDispatcher
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - Identifier  -> AssignmentStatementParser
-    /// - CALL        -> CallStatementParser
-    /// - IF          -> IfStatementParser
-    /// - DO          -> DoStatementParser
+    /// - Identifier -> AssignmentStatementParser
+    /// - CALL -> CallStatementParser
+    /// - IF -> IfStatementParser
+    /// - DO -> DoStatementParser
+    /// - EXEC -> EmbeddedSqlStatementParser
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -105,9 +103,8 @@ internal sealed class StatementDispatcher
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// SELECT, READ, WRITE, RETURN, STOP, LEAVE, EXEC SQL gibi yeni statement
-    /// parser modülleri yalnızca bu dispatch tablosuna eklenerek sisteme dahil
-    /// edilecektir.
+    /// SELECT, READ, WRITE, RETURN, STOP, LEAVE gibi yeni statement parser
+    /// modülleri yalnızca bu dispatch tablosuna eklenerek sisteme dahil edilecektir.
     /// </summary>
     public StatementParserKind GetParserKind(Pl1TokenKind tokenKind)
     {
@@ -117,6 +114,7 @@ internal sealed class StatementDispatcher
             Pl1TokenKind.CallKeyword => StatementParserKind.Call,
             Pl1TokenKind.IfKeyword => StatementParserKind.If,
             Pl1TokenKind.DoKeyword => StatementParserKind.Do,
+            Pl1TokenKind.ExecKeyword => StatementParserKind.EmbeddedSql,
             _ => StatementParserKind.Unknown
         };
     }
@@ -135,10 +133,11 @@ internal sealed class StatementDispatcher
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// - Identifier  -> Assignment
+    /// - Identifier -> Assignment
     /// - CallKeyword -> CALL
-    /// - IfKeyword   -> IF
-    /// - DoKeyword   -> DO
+    /// - IfKeyword -> IF
+    /// - DoKeyword -> DO
+    /// - ExecKeyword -> EXEC SQL
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -157,6 +156,7 @@ internal sealed class StatementDispatcher
             StatementParserKind.Call => "CALL",
             StatementParserKind.If => "IF",
             StatementParserKind.Do => "DO",
+            StatementParserKind.EmbeddedSql => "EXEC SQL",
             _ => "Unknown"
         };
     }
