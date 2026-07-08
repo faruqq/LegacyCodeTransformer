@@ -10,17 +10,16 @@
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// Keyword, identifier, sayı, string literal, punctuation ve statement operator gibi
-/// PL/I kaynak parçalarını güçlü tipli enum değerleriyle temsil eder.
+/// Keyword, identifier, sayı, string literal, punctuation, directive prefix ve
+/// statement operator gibi PL/I kaynak parçalarını güçlü tipli enum değerleriyle
+/// temsil eder.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// - DCL PARAM CHAR(08) INIT(' ');
 /// - PROCEDURE_NAME: PROCEDURE;
-/// - CALL FETCH_CURSOR;
-/// - IF SQLCODE = 0 THEN DO;
-/// - DO WHILE(SQLCODE ^= 100);
 /// - EXEC SQL INCLUDE SQLCA;
+/// - %INCLUDE COPYLIB;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -29,9 +28,9 @@
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// Statement parser, expression parser, procedure parser, embedded SQL ve
-/// control-flow parser geliştirmelerinde lexer/parser sözleşmesinin merkezi enum
-/// modeli olarak genişletilir.
+/// Statement parser, expression parser, procedure parser, embedded SQL,
+/// compiler directive parser ve control-flow parser geliştirmelerinde lexer/parser
+/// sözleşmesinin merkezi enum modeli olarak genişletilir.
 /// </summary>
 public enum Pl1TokenKind
 {
@@ -91,6 +90,7 @@ public enum Pl1TokenKind
     Semicolon,
     Dot,
     Colon,
+    Percent,
 
     Equals,
     Plus,

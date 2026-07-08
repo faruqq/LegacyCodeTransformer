@@ -149,6 +149,11 @@ namespace LegacyCodeTransformer.Pl1.Lexing
                         Advance();
                         break;
 
+                    case '%':
+                        AddToken(Pl1TokenKind.Percent, current.ToString());
+                        Advance();
+                        break;
+
                     case '=':
                         AddToken(Pl1TokenKind.Equals, current.ToString());
                         Advance();

@@ -266,10 +266,29 @@ namespace LegacyCodeTransformer.Pl1.Syntax
                     Visit(embeddedSqlStatement);
                     return;
 
+                case Pl1CompilerDirectiveStatement compilerDirectiveStatement:
+                    Visit(compilerDirectiveStatement);
+                    return;
+
                 default:
                     DefaultVisit(statement);
                     return;
             }
+        }
+
+        public virtual void Visit(Pl1CompilerDirectiveStatement statement)
+        {
+            if (statement is null)
+            {
+                return;
+            }
+
+            VisitCompilerDirectiveStatement(statement);
+        }
+
+        protected virtual void VisitCompilerDirectiveStatement(Pl1CompilerDirectiveStatement statement)
+        {
+            DefaultVisit(statement);
         }
 
         public virtual void Visit(Pl1AssignmentStatement statement)

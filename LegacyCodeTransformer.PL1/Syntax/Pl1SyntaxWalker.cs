@@ -147,6 +147,10 @@ namespace LegacyCodeTransformer.Pl1.Syntax
         {
         }
 
+        protected override void VisitCompilerDirectiveStatement(Pl1CompilerDirectiveStatement statement)
+        {
+        }
+
         protected override void VisitRawExpression(Pl1RawExpression expression)
         {
         }

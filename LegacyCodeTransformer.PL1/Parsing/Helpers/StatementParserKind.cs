@@ -14,7 +14,7 @@
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
-/// Assignment, CALL, IF, DO ve EXEC SQL parser seçimleri.
+/// Assignment, CALL, IF, DO, EXEC SQL ve compiler directive parser seçimleri.
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -31,5 +31,6 @@ internal enum StatementParserKind
     Call,
     If,
     Do,
-    EmbeddedSql
+    EmbeddedSql,
+    CompilerDirective
 }

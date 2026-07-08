@@ -99,9 +99,20 @@ internal sealed class StatementParser : ParserBase
             StatementParserKind.If => ParseIfStatement(),
             StatementParserKind.Do => ParseDoStatement(),
             StatementParserKind.EmbeddedSql => ParseEmbeddedSqlStatement(),
+            StatementParserKind.CompilerDirective => ParseCompilerDirectiveStatement(),
 
             _ => ParseUnsupportedStatement(parserKind)
         };
+    }
+
+    private HelperParseResult<Pl1Statement> ParseCompilerDirectiveStatement()
+    {
+        var parser = new CompilerDirectiveStatementParser(Context);
+        var result = parser.ParseCompilerDirectiveStatement();
+
+        Position = result.Position;
+
+        return result;
     }
 
     private HelperParseResult<Pl1Statement> ParseAssignmentStatement()
@@ -181,6 +192,7 @@ internal sealed class StatementParser : ParserBase
             StatementParserKind.If => "IF",
             StatementParserKind.Do => "DO",
             StatementParserKind.EmbeddedSql => "EXEC SQL",
+            StatementParserKind.CompilerDirective => "Compiler Directive",
             _ => "Unknown"
         };
     }

@@ -115,6 +115,7 @@ internal sealed class StatementDispatcher
             Pl1TokenKind.IfKeyword => StatementParserKind.If,
             Pl1TokenKind.DoKeyword => StatementParserKind.Do,
             Pl1TokenKind.ExecKeyword => StatementParserKind.EmbeddedSql,
+            Pl1TokenKind.Percent => StatementParserKind.CompilerDirective,
             _ => StatementParserKind.Unknown
         };
     }
@@ -157,6 +158,7 @@ internal sealed class StatementDispatcher
             StatementParserKind.If => "IF",
             StatementParserKind.Do => "DO",
             StatementParserKind.EmbeddedSql => "EXEC SQL",
+            StatementParserKind.CompilerDirective => "Compiler Directive",
             _ => "Unknown"
         };
     }
