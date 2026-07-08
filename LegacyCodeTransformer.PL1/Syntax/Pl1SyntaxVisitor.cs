@@ -1,5 +1,6 @@
 ﻿using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.InitialValues;
+using LegacyCodeTransformer.Pl1.Procedures;
 using LegacyCodeTransformer.Pl1.Statements;
 using LegacyCodeTransformer.Pl1.Types;
 
@@ -7,12 +8,11 @@ namespace LegacyCodeTransformer.Pl1.Syntax
 {
     /// <summary>
     /// PL/I syntax tree üzerinde tip güvenli ziyaret davranışı sağlayan temel visitor sınıfıdır.
-    /// </summary>
-    /// <remarks>
+    ///
     /// Neden var?
-    /// Parser tarafında declaration, data type, structure, initial value ve statement modelleri
-    /// büyüdükçe transpiler, analyzer ve semantic katmanlarında sürekli switch / if type-check
-    /// yazmak bakım maliyetini artırır.
+    /// Parser tarafında declaration, procedure, data type, structure, initial value
+    /// ve statement modelleri büyüdükçe transpiler, analyzer ve semantic
+    /// katmanlarında sürekli switch / if type-check yazmak bakım maliyetini artırır.
     ///
     /// Ne çözüyor?
     /// PL/I syntax modelini merkezi bir ziyaret altyapısıyla dolaşılabilir hale getirir.
@@ -22,6 +22,7 @@ namespace LegacyCodeTransformer.Pl1.Syntax
     /// Pl1SyntaxTree
     /// Pl1VariableDeclaration
     /// Pl1StructureDeclaration
+    /// Pl1Procedure
     /// Pl1CharacterType
     /// Pl1FixedDecimalType
     /// Pl1PictureType
@@ -35,10 +36,10 @@ namespace LegacyCodeTransformer.Pl1.Syntax
     /// transpiler refactor çalışmalarında kullanılır.
     ///
     /// Gelecekte neye temel olur?
-    /// P05 statement parser ilerledikçe SELECT, READ, WRITE, RETURN, STOP, LEAVE,
-    /// embedded SQL ve procedure body modelleri aynı visitor standardı üzerinden
-    /// genişletilecektir.
-    /// </remarks>
+    /// P06 procedure parser ilerledikçe procedure-level semantic analysis,
+    /// call graph extraction, procedure transpiler ve procedure traversal
+    /// davranışları aynı visitor standardı üzerinden genişletilecektir.
+    /// </summary>
     public abstract class Pl1SyntaxVisitor
     {
         public virtual void Visit(Pl1SyntaxTree syntaxTree)
@@ -100,6 +101,16 @@ namespace LegacyCodeTransformer.Pl1.Syntax
             }
 
             VisitStructureMember(member);
+        }
+
+        public virtual void Visit(Pl1Procedure procedure)
+        {
+            if (procedure is null)
+            {
+                return;
+            }
+
+            VisitProcedure(procedure);
         }
 
         public virtual void Visit(Pl1InitialValue initialValue)
@@ -351,6 +362,11 @@ namespace LegacyCodeTransformer.Pl1.Syntax
         protected virtual void VisitStructureMember(Pl1StructureMember member)
         {
             DefaultVisit(member);
+        }
+
+        protected virtual void VisitProcedure(Pl1Procedure procedure)
+        {
+            DefaultVisit(procedure);
         }
 
         protected virtual void VisitInitialValue(Pl1InitialValue initialValue)

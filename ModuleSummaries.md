@@ -2505,3 +2505,44 @@ Eklenen test kapsamı:
 - Declaration + assignment + CALL + IF THEN DO içeren mini program output
 
 Bu milestone sonunda P05 statement pipeline, declaration, assignment, CALL, IF ve DO statement türleri için kaynak PL/I metninden EGL kaynak çıktıya kadar uçtan uca doğrulanmıştır.
+
+---
+
+## P06.1 - Procedure Syntax Model Foundation
+
+P06.1 kapsamında PL/I procedure desteği için ilk syntax model foundation adımı tamamlandı.
+
+Eklenen production bileşenleri:
+
+- Pl1Procedure
+
+Güncellenen production bileşenleri:
+
+- Pl1SyntaxTree
+- Pl1SyntaxVisitor
+- Pl1SyntaxWalker
+
+Pl1Procedure modeli procedure adını, procedure option listesini ve procedure içindeki executable statement listesini taşır.
+
+Bu adımda parser davranışı değiştirilmemiştir.
+
+Procedure parser entegrasyonu bilinçli olarak P06.2 kapsamına bırakılmıştır.
+
+Desteklenmesi hedeflenen temel PL/I procedure yapısı:
+
+    PROCEDURE_NAME: PROCEDURE;
+        CALL OTHER_PROCEDURE;
+    END PROCEDURE_NAME;
+
+Ayrıca ileride main procedure tespiti için aşağıdaki yapı da model seviyesinde desteklenebilir hale gelmiştir:
+
+    PROGRAM_NAME: PROCEDURE OPTIONS(MAIN);
+        CALL INIT_PROCESS;
+    END PROGRAM_NAME;
+
+Eklenen test kapsamı:
+
+- Procedure node traversal testi
+- Procedure içindeki CALL statement traversal testi
+
+Bu milestone sonunda PL/I syntax tree root modeli procedure listesini taşıyabilir hale gelmiştir.

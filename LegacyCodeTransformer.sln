@@ -29,6 +29,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2AE72334-9
 		Decisions.md = Decisions.md
 		Glossary.md = Glossary.md
 		ModuleSummaries.md = ModuleSummaries.md
+		Pl1CodingStandards.md = Pl1CodingStandards.md
 		Roadmap.md = Roadmap.md
 	EndProjectSection
 EndProject

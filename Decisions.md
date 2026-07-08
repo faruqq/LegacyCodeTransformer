@@ -3367,3 +3367,95 @@ End-to-end testler, ileride yapılacak refactor ve yeni statement eklemelerinde 
 ### Durum
 
 Kabul edildi.
+
+## Decision 082 - PL/I kaynak kod formatı ve procedure yazım standardı
+
+### Karar
+
+LegacyCodeTransformer, gerçek kurum PL/I kaynak kodlarında kullanılan kaynak satır formatını temel kabul edecektir.
+
+PL/I kaynak kod satırı standardı:
+
+- Her satır 1 adet boşluk karakteri ile başlar.
+- Yazılabilir kod alanı en fazla 72 karakterdir.
+- İlk boşluk karakteri dahil fiziksel satır uzunluğu en fazla 73 karakterdir.
+
+Procedure tanımları aşağıdaki yapı ile desteklenecektir.
+
+    PROCEDURE_NAME: PROCEDURE;
+        CALL OTHER_PROCEDURE;
+    END PROCEDURE_NAME;
+
+Procedure çağrıları aşağıdaki yapı ile desteklenecektir.
+
+    CALL PROCEDURE_NAME;
+
+P06 procedure geliştirmeleri bu standardı temel alacaktır.
+
+### Gerekçe
+
+Gerçek firma PL/I kaynak kodları sabit satır formatı ile yazılmaktadır.
+
+PL/I kodlarında her satırın ilk karakterinin boşluk olması ve yazılabilir kod alanının 72 karakterle sınırlı olması parser davranışını doğrudan etkiler.
+
+Procedure yapıları da gerçek firma kodlarında çoğunlukla business logic içerir. Parametre ve değişken declaration bilgileri genellikle procedure içinde değil, dosyanın başındaki global declaration bölümünde yer alır.
+
+Bu nedenle P06 ilk kapsamında procedure modeli sade tutulacak; procedure adı ve executable statement listesi üzerinden ilerleyecektir. Procedure parameter ve ayrı procedure body modeli gerçek ihtiyaç oluşmadan eklenmeyecektir.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Pl1/Lexing
+- LegacyCodeTransformer.Pl1/Parsing
+- LegacyCodeTransformer.Pl1/Procedures
+- LegacyCodeTransformer.Pl1/Statements
+- LegacyCodeTransformer.Pl1/Syntax
+- LegacyCodeTransformer.Pl1.Tests
+- LegacyCodeTransformer.Transpilers.Tests
+- docs
+
+### Durum
+
+Kabul edildi.
+
+---
+
+## Decision 082 - PL/I Coding Standards ayrı referans dokümanı olarak tutulacaktır
+
+### Karar
+
+PL/I kaynak kodlama standartları, docs klasörü altında ayrı bir referans dokümanı olarak tutulacaktır.
+
+Yeni doküman:
+
+- Pl1CodingStandards.md
+
+Bu doküman mimari karar kaydı değil, gerçek kurum PL/I kodlama pratiklerini ve parser/generator geliştirmelerinde temel alınacak kaynak format kurallarını içeren referans dokümanı olacaktır.
+
+### Gerekçe
+
+Decision 019 kapsamında yeni doküman ihtiyacı doğmadığı sürece dokümantasyonun mevcut dosyalarla devam edeceği belirtilmiştir.
+
+Ancak Decisions.md dosyası artık çok büyümüştür ve gerçek firma PL/I kodlama standartlarının zaman içinde artacağı öngörülmektedir.
+
+Bu bilgilerin Decisions.md içinde tutulması, ileride ayıklama ve bakım maliyetini artıracaktır.
+
+PL/I kaynak kod formatı, procedure yazım standardı, CALL standardı, DCL alışkanlıkları, INIT kullanımı, level number kuralları, statement yazım biçimleri ve firma kodlama pratikleri ayrı bir referans dokümanında toplanacaktır.
+
+Bu sayede Decisions.md mimari karar kaydı olarak kalır; PL/I kaynak kodlama standartları ise kendi bağlamında yönetilir.
+
+### Etkilediği Modüller
+
+- docs
+- Architecture.md
+- Decisions.md
+- Roadmap.md
+- Glossary.md
+- LegacyCodeTransformer.Pl1/Lexing
+- LegacyCodeTransformer.Pl1/Parsing
+- LegacyCodeTransformer.Pl1/Procedures
+- LegacyCodeTransformer.Pl1/Statements
+- LegacyCodeTransformer.Pl1.Tests
+
+### Durum
+
+✅ Aktif

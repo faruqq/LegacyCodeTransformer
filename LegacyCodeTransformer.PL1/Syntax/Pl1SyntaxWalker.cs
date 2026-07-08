@@ -1,36 +1,37 @@
 ﻿using LegacyCodeTransformer.Pl1.Declarations;
+using LegacyCodeTransformer.Pl1.Procedures;
 using LegacyCodeTransformer.Pl1.Statements;
 
 namespace LegacyCodeTransformer.Pl1.Syntax
 {
     /// <summary>
     /// PL/I syntax tree üzerinde varsayılan recursive traversal davranışı sağlayan walker sınıfıdır.
-    /// </summary>
-    /// <remarks>
+    ///
     /// Neden var?
-    /// Visitor sınıfı node dispatch standardını sağlar fakat child node dolaşımını otomatik
-    /// yapmak her visitor için gerekli değildir. Walker, varsayılan recursive dolaşımı merkezi
-    /// hale getirir.
+    /// Visitor sınıfı node dispatch standardını sağlar fakat child node dolaşımını
+    /// otomatik yapmak her visitor için gerekli değildir. Walker, varsayılan
+    /// recursive dolaşımı merkezi hale getirir.
     ///
     /// Ne çözüyor?
-    /// Syntax tree, declaration, structure member, data type, initial value, statement ve
-    /// expression traversal davranışını merkezi ve override edilebilir hale getirir.
+    /// Syntax tree, declaration, procedure, structure member, data type, initial value,
+    /// statement ve expression traversal davranışını merkezi ve override edilebilir
+    /// hale getirir.
     ///
     /// Hangi örneği destekliyor?
     /// DCL PARAM CHAR(08);
-    /// PARAM = 'ABC';
-    /// IF SQLCODE = 0 THEN DO;
+    /// PROCEDURE_NAME: PROCEDURE;
     ///     CALL FETCH_CURSOR;
-    /// END;
+    /// END PROCEDURE_NAME;
     ///
     /// Nerede kullanılır?
-    /// Semantic analyzer traversal işlemlerinde, metrics/dependency analyzer işlemlerinde
-    /// ve ileride transpiler visitor refactor çalışmalarında kullanılır.
+    /// Semantic analyzer traversal işlemlerinde, metrics/dependency analyzer
+    /// işlemlerinde ve ileride transpiler visitor refactor çalışmalarında kullanılır.
     ///
     /// Gelecekte neye temel olur?
-    /// SELECT, READ, WRITE, RETURN, STOP, LEAVE, embedded SQL ve procedure body modelleri
-    /// eklendiğinde recursive traversal davranışı bu sınıf üzerinden genişletilecektir.
-    /// </remarks>
+    /// SELECT, READ, WRITE, RETURN, STOP, LEAVE, embedded SQL ve procedure
+    /// modelleri eklendiğinde recursive traversal davranışı bu sınıf üzerinden
+    /// genişletilecektir.
+    /// </summary>
     public class Pl1SyntaxWalker : Pl1SyntaxVisitor
     {
         protected override void VisitSyntaxTree(Pl1SyntaxTree syntaxTree)
@@ -40,7 +41,20 @@ namespace LegacyCodeTransformer.Pl1.Syntax
                 Visit(declaration);
             }
 
+            foreach (var procedure in syntaxTree.Procedures)
+            {
+                Visit(procedure);
+            }
+
             foreach (var statement in syntaxTree.Statements)
+            {
+                Visit(statement);
+            }
+        }
+
+        protected override void VisitProcedure(Pl1Procedure procedure)
+        {
+            foreach (var statement in procedure.Statements)
             {
                 Visit(statement);
             }

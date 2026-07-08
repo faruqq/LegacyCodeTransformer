@@ -146,6 +146,22 @@ Pl1SyntaxTree
 
 Parser hedef dili bilmez.
 
+### PL/I kaynak kod formatı varsayımları
+
+PL/I parser, gerçek kurum PL/I kaynak kodlarında kullanılan aşağıdaki format varsayımlarını dikkate alacaktır.
+
+- Her kaynak satırı 1 adet boşluk karakteri ile başlar.
+- Yazılabilir kod alanı en fazla 72 karakterdir.
+- İlk boşluk karakteri dahil fiziksel satır uzunluğu en fazla 73 karakterdir.
+- Procedure tanımları etiketli yapıdadır.
+- Procedure çağrıları CALL statement ile yapılır.
+
+Temel procedure örneği:
+
+    PROCEDURE_NAME: PROCEDURE;
+        CALL OTHER_PROCEDURE;
+    END PROCEDURE_NAME;
+
 ---
 
 ## Syntax Tree
@@ -431,6 +447,7 @@ Bu proje boyunca aşağıdaki prensipler uygulanacaktır.
 
 * Her katmanın tek bir sorumluluğu vardır.
 * Parser hedef dili bilmez.
+* PL/I kaynak kod formatı ve gerçek kurum kodlama standartları Pl1CodingStandards.md dokümanında tutulur.
 * Generator kaynak dili bilmez.
 * Transpiler yalnızca model dönüşümü yapar.
 * Syntax Tree tabanlı mimari kullanılır.

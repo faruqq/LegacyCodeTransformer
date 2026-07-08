@@ -121,3 +121,23 @@ EGL record içerisinde yer alan field declaration modelidir.
     10 Param char(8);
 
 LegacyCodeTransformer içinde bu yapý `EglRecordFieldDeclaration` modeliyle temsil edilir.
+
+## Procedure
+
+PL/I tarafýnda executable business logic bloðudur.
+
+Temel procedure syntax yapýsý:
+
+    PROCEDURE_NAME: PROCEDURE;
+        ...
+    END PROCEDURE_NAME;
+
+Procedure çaðrýsý:
+
+    CALL PROCEDURE_NAME;
+
+Gerçek firma PL/I kodlarýnda procedure'ler çoðunlukla business logic içerir.
+
+Parametre ve deðiþken declaration bilgileri genellikle procedure içinde deðil, dosyanýn baþýndaki global declaration bölümünde yer alýr.
+
+P06 ilk kapsamýnda procedure modeli sade tutulacaktýr. Procedure parameter ve ayrý procedure body modeli gerçek ihtiyaç oluþmadan eklenmeyecektir.

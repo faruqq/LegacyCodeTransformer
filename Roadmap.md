@@ -1158,32 +1158,48 @@ P06 — Procedure Desteği
 
 # P06 — Procedure Desteği
 
-## Durum
-
-⏳ Planlandı
+## Durum ⏳ Devam Ediyor
 
 ## Amaç
 
-PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve semantic
-model olarak temsil edilmesini sağlamak.
+PL/I procedure seviyesindeki syntax yapılarının parse edilmesini ve statement pipeline ile entegre şekilde temsil edilmesini sağlamak.
 
-## Kapsam
+Firma PL/I kodlarında procedure yapıları çoğunlukla business logic içerir. Parametre ve değişken declaration bilgileri genellikle procedure içinde değil, dosyanın başındaki global declaration bölümünde yer alır.
 
-* PROCEDURE parser
+Bu nedenle P06 ilk kapsamı sade procedure modelleme ve parser entegrasyonu üzerine kurulacaktır.
+
+## Milestone Durumu
+
+* ✅ P06.1 — Procedure Syntax Model Foundation
+* ⏳ P06.2 — Procedure Parser Foundation
+* ⏳ P06.3 — Procedure Parser Statement Integration
+* ⏳ P06.4 — Procedure End-to-End Tests
+
+## İlk Kapsam
+
+* PL/I procedure syntax model foundation
+* PROCEDURE_NAME: PROCEDURE; parse desteği
+* END PROCEDURE_NAME; parse desteği
+* Procedure içindeki executable statement listesinin korunması
+* Global declaration + procedure statement ayrımının yapılması
+* CALL PROCEDURE_NAME; çağrılarının mevcut CALL statement pipeline ile uyumlu çalışması
+
+## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+
+* Procedure parameter modeli
+* Procedure body için ayrı model
+* Local declaration scope modeli
 * ENTRY parser
-* Parametre listeleri
 * RETURN statement
-* Local scope oluşturulması
-* Procedure semantic modeli
+* Parametre semantic analysis
 
 ## Başarı Kriteri
 
-Bir PL/I source dosyası procedure seviyesinde eksiksiz parse edilebilmeli ve
-statement parser ile entegre çalışmalıdır.
+Bir PL/I source dosyası procedure seviyesinde parse edilebilmeli, procedure içindeki assignment, CALL, IF, DO, DO WHILE ve DO UNTIL statement modelleri mevcut statement parser pipeline ile korunmalıdır.
 
-## Sonraki Faz
+## Sonraki Milestone
 
-P07 — Legacy PL/I Yapıları
+P06.2 — Procedure Parser Foundation
 
 ---
 
