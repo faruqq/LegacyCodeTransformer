@@ -1205,32 +1205,55 @@ P07 — Legacy PL/I Yapıları
 
 # P07 — Legacy PL/I Yapıları
 
-## Durum
-
-⏳ Planlandı
+## Durum ⏳ Devam Ediyor
 
 ## Amaç
 
-Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların desteklenmesini
-sağlamak.
+Kurumsal PL/I projelerinde yaygın kullanılan legacy yapıların parser tarafından kaybedilmeden okunmasını ve syntax tree üzerinde taşınmasını sağlamak.
 
-## Kapsam
+Bu fazda ilk hedef, legacy yapıların tamamını detaylı semantic modele dönüştürmek değildir.
 
-* INCLUDE
-* Compiler Directives
-* EXEC SQL
-* CICS çağrıları
-* Makrolar
-* COPY benzeri yapılar
+Öncelik, gerçek PL/I kaynak kodlarında sık görülen legacy satırların parser tarafından güvenli şekilde tanınması, statement pipeline içinde taşınması ve ileride semantic / generator adımlarına temel oluşturmasıdır.
+
+## Milestone Durumu
+
+* ✅ P07.1 — Embedded SQL Statement Foundation
+* ✅ P07.2 — Compiler Directive Statement Foundation
+* ⏳ P07.3 — INCLUDE Statement Foundation
+* ⏳ P07.4 — Legacy Statement End-to-End Tests
+* ⏳ P07.5 — Legacy Statement Documentation Closure
+
+## İlk Kapsam
+
+* EXEC SQL statement model foundation
+* EXEC SQL statement parser foundation
+* %INCLUDE, %PAGE, %EJECT gibi compiler directive satırlarının statement pipeline içinde taşınması
+* INCLUDE statement foundation
+* Procedure içinde legacy statement parse desteği
+* Syntax visitor / walker traversal desteği
+* Parser test coverage
+
+## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+
+* SQL grammar parser
+* SQL statement semantic classification
+* SQL host variable analysis
+* INCLUDE dosya çözümleme
+* COPYLIB fiziksel dosya okuma
+* Macro expansion
+* CICS semantic modelleme
+* EGL SQL generation
+* EGL CICS generation
 
 ## Başarı Kriteri
 
-Gerçek kurumsal PL/I projelerinde kullanılan temel legacy yapıların parser
-tarafından okunabilmesi.
+Gerçek kurumsal PL/I projelerinde sık görülen EXEC SQL, compiler directive ve INCLUDE benzeri legacy yapılar parser tarafından kaybedilmeden syntax tree üzerinde taşınabilmelidir.
 
-## Sonraki Faz
+Bu statement'lar top-level ve procedure body içinde mevcut statement pipeline üzerinden parse edilebilmelidir.
 
-P08 — Dönüşüm Kalitesini Artırma
+## Sonraki Milestone
+
+P07.3 — INCLUDE Statement Foundation
 
 ---
 

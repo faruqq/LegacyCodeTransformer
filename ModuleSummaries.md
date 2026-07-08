@@ -2621,3 +2621,66 @@ Eklenen test kapsamı:
 - END procedure adı mismatch diagnostic davranışının korunması
 
 Bu milestone sonunda ProcedureParser SRP uyumlu hale getirilmiş ve procedure body parsing mevcut statement parser mimarisiyle hizalanmıştır.
+
+## P07.1 - Embedded SQL Statement Foundation
+
+P07.1 kapsamında PL/I içindeki EXEC SQL statement'larının parser tarafından kaybedilmeden taşınması için embedded SQL foundation eklendi.
+
+Eklenen production bileşenleri:
+
+- Pl1EmbeddedSqlStatement
+- EmbeddedSqlStatementParser
+
+Güncellenen production bileşenleri:
+
+- Pl1TokenKind
+- Pl1Lexer
+- StatementParserKind
+- StatementDispatcher
+- StatementParser
+- Pl1SyntaxVisitor
+- Pl1SyntaxWalker
+
+Desteklenen temel örnek:
+
+    EXEC SQL INCLUDE SQLCA;
+
+EXEC SQL statement içeriği ilk aşamada raw text olarak korunur.
+
+Bu milestone kapsamında SQL grammar parse edilmemiştir.
+
+Bilinçli olarak kapsam dışı bırakılanlar:
+
+- SQL statement classification
+- SQL host variable analysis
+- SQL INCLUDE özel modeli
+- EGL SQL generation
+
+## P07.2 - Compiler Directive Statement Foundation
+
+P07.2 kapsamında PL/I compiler directive statement desteği eklendi.
+
+Eklenen production bileşenleri:
+
+- Pl1CompilerDirectiveStatement
+- CompilerDirectiveStatementParser
+
+Güncellenen production bileşenleri:
+
+- Pl1TokenKind
+- Pl1Lexer
+- StatementParserKind
+- StatementDispatcher
+- StatementParser
+- Pl1SyntaxVisitor
+- Pl1SyntaxWalker
+
+Desteklenen temel örnekler:
+
+    %INCLUDE COPYLIB;
+    %PAGE;
+    %EJECT;
+
+Directive içeriği ilk aşamada raw text olarak korunur.
+
+Bu milestone kapsamında INCLUDE resolution veya macro expansion yapılmamıştır.
