@@ -12,13 +12,16 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// PL/I semantic analyzer tarafından üretilen diagnostic listesini ve başarı
-    /// durumunu taşır.
+    /// PL/I semantic analyzer tarafından üretilen diagnostic listesini, başarı
+    /// durumunu ve semantic symbol table bilgisini taşır.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// Duplicate declaration veya undefined identifier gibi semantic hatalar ileride bu
-    /// model üzerinden raporlanacaktır.
+    /// DCL MUST_NO FIXED DECIMAL(8);
+    /// DCL CUSTOMER_NO FIXED DECIMAL(8);
+    ///
+    /// Bu input için SemanticResult.SymbolTable içinde iki global declaration sembolü
+    /// taşınır.
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -26,17 +29,23 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Symbol table, duplicate declaration ve reference analysis sonuçlarına temel olur.
+    /// Duplicate declaration, undefined identifier ve reference analysis sonuçlarına
+    /// temel olur.
     /// </summary>
     public sealed class SemanticResult
     {
         public IReadOnlyList<Diagnostic> Diagnostics { get; }
 
+        public SymbolTable SymbolTable { get; }
+
         public bool Success => !Diagnostics.Any(x => x.Severity == DiagnosticSeverity.Error);
 
-        public SemanticResult(IEnumerable<Diagnostic>? diagnostics = null)
+        public SemanticResult(
+            IEnumerable<Diagnostic>? diagnostics = null,
+            SymbolTable? symbolTable = null)
         {
             Diagnostics = diagnostics?.ToList() ?? new List<Diagnostic>();
+            SymbolTable = symbolTable ?? new SymbolTable();
         }
     }
 }
