@@ -1402,20 +1402,21 @@ public sealed class Pl1ParserTests
     }
 
     /// <summary>
-    /// Parser'ın desteklenmeyen token için declaration, procedure veya statement beklendiğini bildirdiğini doğrular.
+    /// Eksik compiler directive kullanımında directive adı diagnostic'i üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// Pl1Parser, statement başlangıcı olmayan unsupported token gördüğünde yeni top-level
-    /// beklenti mesajını üretmelidir.
+    /// Parser, '%' gördüğünde bunu compiler directive başlangıcı kabul eder.
+    /// '%' sonrasında directive adı yoksa top-level unsupported token diagnostic'i değil,
+    /// compiler directive adı bekleniyordu diagnostic'i üretmelidir.
     ///
     /// Hangi input'u test eder?
     /// %
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// Diagnostic içinde DCL, procedure veya executable statement bekleniyordu anlamına gelen mesaj bulunmalıdır.
+    /// Diagnostic içinde Compiler directive adı bekleniyordu mesajı bulunmalıdır.
     /// </summary>
     [Fact]
-    public void Parse_WithUnsupportedTopLevelToken_ShouldReturnDeclarationProcedureOrStatementDiagnostic()
+    public void Parse_WithIncompleteCompilerDirective_ShouldReturnDirectiveNameDiagnostic()
     {
         var result = ParseSource(
             "%");
@@ -1428,7 +1429,7 @@ public sealed class Pl1ParserTests
 
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Message.Contains("DCL, procedure veya executable statement"));
+            diagnostic => diagnostic.Message.Contains("Compiler directive adı bekleniyordu"));
     }
 
     /// <summary>

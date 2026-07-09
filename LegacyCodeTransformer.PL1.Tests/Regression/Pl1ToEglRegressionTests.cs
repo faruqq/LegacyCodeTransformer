@@ -15,7 +15,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
 
             var service = new ConversionService();
 
-            var result = service.Convert(source);
+            var result = service.ConvertPl1ToEgl(source);
 
             Assert.True(result.Success);
 
@@ -36,7 +36,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
 
             var service = new ConversionService();
 
-            var result = service.Convert(source);
+            var result = service.ConvertPl1ToEgl(source);
 
             Assert.True(result.Success);
 
@@ -59,7 +59,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
 
             var service = new ConversionService();
 
-            var result = service.Convert(source);
+            var result = service.ConvertPl1ToEgl(source);
 
             Assert.True(result.Success);
 

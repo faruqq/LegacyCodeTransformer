@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+﻿using LegacyCodeTransformer.Application.Services;
+using System.Diagnostics;
 using System.Text;
-using LegacyCodeTransformer.Application.Services;
 
 namespace LegacyCodeTransformer.Application.Tests.Performance
 {

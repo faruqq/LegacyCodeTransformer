@@ -6,7 +6,7 @@ namespace LegacyCodeTransformer.PL1.Tests.Diagnostics
     public sealed class Pl1TopLevelDiagnosticTests
     {
         [Fact]
-        public void Parse_WithUnsupportedTopLevelToken_ShouldReturnTopLevelExpectationDiagnostic()
+        public void Parse_WithIncompleteCompilerDirective_ShouldReturnDirectiveNameDiagnostic()
         {
             var result = ParseSource(
                 "%");
@@ -19,7 +19,7 @@ namespace LegacyCodeTransformer.PL1.Tests.Diagnostics
 
             Assert.Contains(
                 result.Diagnostics,
-                diagnostic => diagnostic.Message.Contains("DCL, procedure veya executable statement"));
+                diagnostic => diagnostic.Message.Contains("Compiler directive adı bekleniyordu"));
         }
 
         [Fact]

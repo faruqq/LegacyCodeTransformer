@@ -66,12 +66,13 @@ namespace LegacyCodeTransformer.PL1.Tests.Legacy
             var ifStatement = Assert.IsType<Pl1IfStatement>(
                 procedure.Statements[0]);
 
-            var thenBlock = Assert.IsType<Pl1BlockStatement>(
+            var thenDoStatement = Assert.IsType<Pl1DoStatement>(
                 ifStatement.ThenStatement);
 
-            Assert.Equal(2, thenBlock.Statements.Count);
-            Assert.IsType<Pl1CompilerDirectiveStatement>(thenBlock.Statements[0]);
-            Assert.IsType<Pl1EmbeddedSqlStatement>(thenBlock.Statements[1]);
+            Assert.Equal(Pl1DoStatementKind.Block, thenDoStatement.Kind);
+            Assert.Equal(2, thenDoStatement.Body.Statements.Count);
+            Assert.IsType<Pl1CompilerDirectiveStatement>(thenDoStatement.Body.Statements[0]);
+            Assert.IsType<Pl1EmbeddedSqlStatement>(thenDoStatement.Body.Statements[1]);
         }
     }
 }

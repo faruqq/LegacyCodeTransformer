@@ -65,15 +65,17 @@ namespace LegacyCodeTransformer.PL1.Tests.Regression
             var ifStatement = Assert.IsType<Pl1IfStatement>(
                 procedure.Statements[0]);
 
-            var thenBlock = Assert.IsType<Pl1BlockStatement>(
+            var thenDoStatement = Assert.IsType<Pl1DoStatement>(
                 ifStatement.ThenStatement);
 
-            var doStatement = Assert.IsType<Pl1DoStatement>(
-                thenBlock.Statements[0]);
+            Assert.Equal(Pl1DoStatementKind.Block, thenDoStatement.Kind);
 
-            Assert.Equal(Pl1DoStatementKind.While, doStatement.Kind);
-            Assert.Single(doStatement.Body.Statements);
-            Assert.IsType<Pl1CallStatement>(doStatement.Body.Statements[0]);
+            var nestedDoStatement = Assert.IsType<Pl1DoStatement>(
+                thenDoStatement.Body.Statements[0]);
+
+            Assert.Equal(Pl1DoStatementKind.While, nestedDoStatement.Kind);
+            Assert.Single(nestedDoStatement.Body.Statements);
+            Assert.IsType<Pl1CallStatement>(nestedDoStatement.Body.Statements[0]);
         }
 
         private static Core.Results.ParseResult<Pl1.Syntax.Pl1SyntaxTree> ParseSource(

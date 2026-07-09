@@ -4,6 +4,7 @@ using LegacyCodeTransformer.Egl.Generation;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Normalization;
 using LegacyCodeTransformer.Pl1.Parsing;
+using LegacyCodeTransformer.Pl1.Semantic;
 using LegacyCodeTransformer.Transpilers.Naming;
 using LegacyCodeTransformer.Transpilers.Pl1ToEgl;
 
@@ -14,15 +15,15 @@ namespace LegacyCodeTransformer.Application.Services;
 ///
 /// Neden var?
 /// ----------------------
-/// Lexer, Parser, Normalizer, Transpiler ve Generator sınıfları ayrı
+/// Lexer, Parser, Normalizer, Semantic Analyzer, Transpiler ve Generator sınıfları ayrı
 /// sorumluluklara sahiptir. Ancak dış dünyaya bu parçaları tek tek kullandırmak
 /// istemiyoruz.
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// PL/I → EGL dönüşüm akışını tek noktadan yönetir.
-/// Diagnostic toplama, başarısız aşamada dönüşümü durdurma ve başarılı
-/// durumda EGL source output üretme sorumluluğunu merkezi hale getirir.
+/// PL/I → EGL dönüşüm akışını tek noktadan yönetir. Diagnostic toplama,
+/// başarısız aşamada dönüşümü durdurma ve başarılı durumda EGL source output
+/// üretme sorumluluğunu merkezi hale getirir.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
@@ -38,8 +39,8 @@ namespace LegacyCodeTransformer.Application.Services;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// PL/I → C#, EGL → C#, sqlRecord metadata veya farklı output options
-/// eklendiğinde ilgili pipeline metotları bu katmanda koordine edilebilir.
+/// Semantic analysis, PL/I → C#, EGL → C#, sqlRecord metadata veya farklı output
+/// options eklendiğinde ilgili pipeline metotları bu katmanda koordine edilebilir.
 /// </summary>
 public sealed class ConversionService
 {
@@ -141,9 +142,9 @@ public sealed class ConversionService
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Lexer, Parser, Normalizer, Transpiler ve Generator aşamalarını tek
-    /// pipeline olarak çalıştırır. Transpiler aşamasına Pl1ToEglTranspilerOptions
-    /// vererek basicRecord / sqlRecord seçimini mümkün kılar.
+    /// Lexer, Parser, Normalizer, Semantic Analyzer, Transpiler ve Generator
+    /// aşamalarını tek pipeline olarak çalıştırır. Transpiler aşamasına
+    /// Pl1ToEglTranspilerOptions vererek basicRecord / sqlRecord seçimini mümkün kılar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
@@ -189,6 +190,16 @@ public sealed class ConversionService
         diagnostics.AddRange(normalizationResult.Diagnostics);
 
         if (!normalizationResult.Success || normalizationResult.SyntaxTree is null)
+        {
+            return new ConversionResult(null, diagnostics);
+        }
+
+        var semanticAnalyzer = new Pl1SemanticAnalyzer();
+        var semanticResult = semanticAnalyzer.Analyze(normalizationResult.SyntaxTree);
+
+        diagnostics.AddRange(semanticResult.Diagnostics);
+
+        if (!semanticResult.Success)
         {
             return new ConversionResult(null, diagnostics);
         }
