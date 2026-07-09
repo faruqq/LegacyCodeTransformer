@@ -2894,3 +2894,17 @@ Doğrulanan davranışlar:
 - Orta büyüklükte PL/I kaynak metni application pipeline üzerinden smoke threshold içinde EGL output'a dönüştürülür.
 
 Bu milestone sonunda P08 kalite fazı parser, generator, diagnostic, regression ve performans smoke coverage ile tamamlanmıştır.
+
+## P09 Başlangıcı - Semantic Analysis Fazı
+
+P09 ile birlikte parser tarafından üretilen syntax tree modellerinin semantic olarak analiz edilmesi hedeflenmektedir.
+
+Bu fazda ilk hedef tam kapsamlı compiler semantic engine oluşturmak değildir.
+
+İlk kapsam global declaration symbol table, duplicate declaration diagnostics ve temel reference analysis foundation üzerine kurulacaktır.
+
+P09 bilinçli olarak küçük milestone'lara bölünmüştür.
+
+İlk milestone:
+
+- P09.1 — Semantic Model Foundation

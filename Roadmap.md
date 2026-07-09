@@ -1259,7 +1259,7 @@ P08 — Dönüşüm Kalitesini Artırma
 
 # P08 — Dönüşüm Kalitesini Artırma
 
-## Durum ⏳ Devam Ediyor
+## Durum ✅ Tamamlandı
 
 ## Amaç
 
@@ -1313,32 +1313,57 @@ P09 — Semantic Analysis
 
 # P09 — Semantic Analysis
 
-## Durum
+# P09 — Semantic Analysis
 
-⏳ Planlandı
+## Durum ⏳ Devam Ediyor
 
 ## Amaç
 
-Parser tarafından oluşturulan syntax modelini analiz ederek semantic doğrulama
-yapmak ve transpiler katmanını beslemek.
+Parser tarafından oluşturulan PL/I syntax modelini semantic olarak analiz etmek ve transpiler katmanını daha güvenli hale getirmek.
 
-## Kapsam
+Bu fazın ilk hedefi tam kapsamlı compiler semantic engine oluşturmak değildir.
 
-* Symbol Table
-* Scope Analysis
-* Duplicate Declaration Detection
-* Type Resolution
-* Constant Evaluation
-* Semantic Diagnostic üretimi
+Öncelik, declaration ve statement modelleri üzerinden temel sembol bilgisi üretmek, duplicate declaration gibi açık hataları yakalamak ve ileride type resolution / scope analysis adımlarına temel oluşturmaktır.
+
+## Milestone Durumu
+
+* ⏳ P09.1 — Semantic Model Foundation
+* ⏳ P09.2 — Symbol Table Foundation
+* ⏳ P09.3 — Duplicate Declaration Diagnostics
+* ⏳ P09.4 — Basic Reference Analysis
+* ⏳ P09.5 — Semantic Analysis Regression Tests
+
+## İlk Kapsam
+
+* Semantic analysis result modeli
+* Symbol model foundation
+* Global declaration symbol table
+* Duplicate declaration detection
+* Basit identifier reference analizi
+* Semantic diagnostic üretimi
+* Parser output'unun semantic analyzer giriş modeli olarak kullanılması
+
+## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+
+* Full type resolution
+* Full expression semantic analysis
+* Scope stack
+* Procedure parameter binding
+* SQL host variable semantic analysis
+* INCLUDE resolution
+* Macro expansion
+* Data flow analysis
+* Control flow graph
 
 ## Başarı Kriteri
 
-Syntax modeli semantic olarak doğrulanmalı ve transpiler yalnızca semantic
-olarak geçerli modeller üzerinde çalışmalıdır.
+Syntax tree semantic analyzer tarafından okunabilmeli, global declaration sembolleri çıkarılabilmeli ve duplicate declaration gibi temel semantic hatalar diagnostic olarak raporlanabilmelidir.
 
-## Sonraki Faz
+Semantic analyzer mevcut parser/transpiler mimarisini bozmadan ayrı bir analiz katmanı olarak eklenmelidir.
 
-P10 — IDE Entegrasyonu
+## Sonraki Milestone
+
+P09.1 — Semantic Model Foundation
 
 ---
 
@@ -1460,14 +1485,15 @@ bir **Legacy Code Transformation Platformu** oluşturmaktır.
 * ✅ P05 — PL/I Statement Pipeline
 * ✅ P06 — Procedure Desteği
 * ✅ P07 — Legacy PL/I Yapıları
+* ✅ P08 — Dönüşüm Kalitesini Artırma
 
 ## Aktif Faz
 
-* P08 — Dönüşüm Kalitesini Artırma
+* P09 — Semantic Analysis
 
 ## Sonraki Büyük Faz
 
-* ⏳ P09 — Semantic Analysis
+* ⏳ P10 — IDE Entegrasyonu
 
 ---
 
