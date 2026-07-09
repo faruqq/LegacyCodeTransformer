@@ -1158,7 +1158,7 @@ P06 — Procedure Desteği
 
 # P06 — Procedure Desteği
 
-## Durum ⏳ Devam Ediyor
+## Durum ✅ Tamamlandı
 
 ## Amaç
 
@@ -1205,7 +1205,7 @@ P07 — Legacy PL/I Yapıları
 
 # P07 — Legacy PL/I Yapıları
 
-## Durum ⏳ Devam Ediyor
+## Durum ✅ Tamamlandı
 
 ## Amaç
 
@@ -1261,7 +1261,7 @@ P08 — Dönüşüm Kalitesini Artırma
 
 ## Durum
 
-⏳ Planlandı
+⏳ Devam Ediyor
 
 ## Amaç
 
@@ -1436,22 +1436,17 @@ bir **Legacy Code Transformation Platformu** oluşturmaktır.
 * ✅ P02 — Core Foundation
 * ✅ P03 — İlk PL/I → EGL Dönüşümü
 * ✅ P04 — PL/I Veri Tipleri ve Parser Foundation
+* ✅ P05 — PL/I Statement Pipeline
+* ✅ P06 — Procedure Desteği
+* ✅ P07 — Legacy PL/I Yapıları
 
 ## Aktif Faz
 
-* 🚧 P05 — PL/I Statement Desteği
-
-### P05 Milestone Durumu
-
-* ✅ P05.1 — Statement Model Foundation
-* 🚧 P05.2 — Statement Parser Foundation
-* ⏳ P05.3 — Assignment & CALL Parser
-* ⏳ P05.4 — IF / DO Parser
-* ⏳ P05.5 — Statement Integration & Tests
+* P08 — Dönüşüm Kalitesini Artırma
 
 ## Sonraki Büyük Faz
 
-* ⏳ P06 — Procedure Desteği
+* ⏳ P09 — Semantic Analysis
 
 ---
 
