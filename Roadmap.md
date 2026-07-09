@@ -1272,7 +1272,7 @@ Bu fazda öncelik yeni PL/I syntax eklemek değildir.
 ## Milestone Durumu
 
 * ✅ P08.1 — Parser Model Stabilization
-* ⏳ P08.2 — Generator Quality Improvements
+* ✅ P08.2 — Generator Quality Improvements
 * ⏳ P08.3 — Diagnostic Improvements
 * ⏳ P08.4 — Regression Test Suite
 * ⏳ P08.5 — Performance Improvements
@@ -1307,7 +1307,7 @@ EGL output okunabilir, tutarlı ve mevcut naming / indentation standartlarıyla 
 
 ## Sonraki Milestone
 
-P08.2 — Generator Quality Improvements
+P08.3 — Diagnostic Improvements
 
 ---
 

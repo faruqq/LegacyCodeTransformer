@@ -2814,3 +2814,21 @@ Doğrulanan alanlar:
 - Pl1SyntaxWalker procedure body içindeki legacy statement modellerini dolaşabilir.
 
 Bu milestone sonunda mevcut parser modeli yeni statement aileleri eklenmeden önce stabil kabul edilmiştir.
+
+## P08.2 - Generator Quality Improvements
+
+P08.2 kapsamında EGL generator output kalitesi regression testleriyle sabitlendi.
+
+Production code değişikliği yapılmamıştır.
+
+Doğrulanan alanlar:
+
+- Null syntax tree boş output üretir.
+- Boş syntax tree boş output üretir.
+- Declaration, assignment ve CALL output sırası korunur.
+- IF içinde DO block indentation standardı korunur.
+- DO WHILE içinde IF statement indentation standardı korunur.
+- Record field level bazlı indentation korunur.
+- Record array field suffix formatı korunur.
+
+Bu milestone sonunda EGL generator output formatı P08 kalite standardı kapsamında regression testlerle güvence altına alınmıştır.
