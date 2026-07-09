@@ -1275,7 +1275,7 @@ Bu fazda öncelik yeni PL/I syntax eklemek değildir.
 * ✅ P08.2 — Generator Quality Improvements
 * ✅ P08.3 — Diagnostic Improvements
 * ✅ P08.4 — Regression Test Suite
-* ⏳ P08.5 — Performance Improvements
+* ✅ P08.5 — Performance Improvements
 
 ## İlk Kapsam
 
@@ -1307,7 +1307,7 @@ EGL output okunabilir, tutarlı ve mevcut naming / indentation standartlarıyla 
 
 ## Sonraki Milestone
 
-P08.5 — Performance Improvements
+P09 — Semantic Analysis
 
 ---
 

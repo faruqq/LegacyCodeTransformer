@@ -2873,3 +2873,24 @@ Doğrulanan davranışlar:
 - Application seviyesinde DO WHILE + CALL dönüşümü sabitlenir.
 
 Bu milestone sonunda mevcut parser/transpiler/generator davranışı regression test suite ile güvence altına alınmıştır.
+
+## P08.5 - Performance Improvements
+
+P08.5 kapsamında parser ve application pipeline için performans smoke testleri eklendi.
+
+Production code değişikliği yapılmamıştır.
+
+Eklenen test bileşenleri:
+
+- Pl1ParserPerformanceTests
+- Pl1LegacyParserPerformanceTests
+- ConversionServicePerformanceTests
+
+Doğrulanan davranışlar:
+
+- Büyük declaration + statement input'u parser tarafından smoke threshold içinde parse edilir.
+- Çok sayıda procedure içeren input smoke threshold içinde parse edilir.
+- Çok sayıda EXEC SQL ve compiler directive statement içeren input smoke threshold içinde parse edilir.
+- Orta büyüklükte PL/I kaynak metni application pipeline üzerinden smoke threshold içinde EGL output'a dönüştürülür.
+
+Bu milestone sonunda P08 kalite fazı parser, generator, diagnostic, regression ve performans smoke coverage ile tamamlanmıştır.
