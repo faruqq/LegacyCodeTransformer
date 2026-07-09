@@ -11,6 +11,7 @@ namespace LegacyCodeTransformer.PL1.Tests.Statements
         {
             var statement = new Pl1CompilerDirectiveStatement(
                 "PAGE",
+                null,
                 "%PAGE",
                 SourceLocation.Unknown);
 

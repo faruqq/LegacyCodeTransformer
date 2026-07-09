@@ -9,8 +9,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Neden var?
 /// ----------------------
-/// %INCLUDE, %PAGE, %EJECT gibi compiler directive satırları executable PL/I
-/// statement değildir; ancak kaynak yapının parçasıdır ve kaybedilmemelidir.
+/// %INCLUDE, %PAGE, %EJECT, %PROCESS gibi compiler directive satırları executable
+/// PL/I statement değildir; ancak kaynak yapının parçasıdır ve kaybedilmemelidir.
 ///
 /// Ne çözüyor?
 /// ----------------------
@@ -21,7 +21,7 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// %INCLUDE COPYLIB;
 /// %PAGE;
-/// %EJECT;
+/// %PROCESS MACRO;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -29,8 +29,8 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// INCLUDE resolution, listing directive filtering ve compiler directive semantic
-/// analysis davranışları için temel olur.
+/// INCLUDE resolution, listing directive filtering, macro directive analysis
+/// ve compiler directive semantic analysis davranışları için temel olur.
 /// </summary>
 internal sealed class CompilerDirectiveStatementParser : ParserBase
 {
@@ -73,15 +73,31 @@ internal sealed class CompilerDirectiveStatementParser : ParserBase
         Consume(Pl1TokenKind.Semicolon, "';' bekleniyordu.");
 
         var rawDirectiveText = "%" + BuildRawText(directiveTokens);
+        var arguments = BuildArguments(directiveTokens);
 
         var statement = new Pl1CompilerDirectiveStatement(
             directiveName,
+            arguments,
             rawDirectiveText,
             startLocation);
 
         return new HelperParseResult<Pl1Statement>(
             statement,
             Position);
+    }
+
+    private static IReadOnlyList<string> BuildArguments(
+        IReadOnlyList<Pl1Token> directiveTokens)
+    {
+        if (directiveTokens.Count <= 1)
+        {
+            return Array.Empty<string>();
+        }
+
+        return directiveTokens
+            .Skip(1)
+            .Select(GetTokenText)
+            .ToList();
     }
 
     private static string BuildRawText(IReadOnlyList<Pl1Token> tokens)
