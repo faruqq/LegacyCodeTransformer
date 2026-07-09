@@ -2750,3 +2750,51 @@ Doğrulanan davranışlar:
 - Compiler directive argument tokenları korunur.
 
 Bu milestone sonunda legacy statement parser foundation davranışı gerçek PL/I kaynak kodlarına daha yakın end-to-end senaryolarla sabitlenmiştir.
+
+## P07.5 - Legacy Statement Documentation Closure
+
+P07.5 kapsamında P07 legacy statement desteği dokümantasyon seviyesinde kapatıldı.
+
+P07 sonunda parser aşağıdaki legacy statement ailelerini syntax tree üzerinde kaybetmeden taşıyabilir hale gelmiştir:
+
+- EXEC SQL statement
+- Compiler directive statement
+
+Desteklenen örnekler:
+
+    EXEC SQL INCLUDE SQLCA;
+    EXEC SQL SELECT CUSTOMER_NO INTO :CUSTOMER_NO FROM CUSTOMER_TABLE;
+    %INCLUDE COPYLIB;
+    %PAGE;
+    %EJECT;
+    %PROCESS MACRO;
+    %PROCESS FLAG(TEST);
+
+P07 kapsamında EXEC SQL içeriği raw text olarak korunur.
+
+Compiler directive statement için aşağıdaki bilgiler korunur:
+
+- DirectiveName
+- Arguments
+- RawDirectiveText
+
+P07 sonunda legacy statement'lar aşağıdaki konumlarda parse edilebilmektedir:
+
+- Top-level statement listesi
+- Procedure body
+- DO body
+- IF THEN DO body
+
+Bilinçli olarak yapılmayanlar:
+
+- SQL grammar parse
+- SQL semantic classification
+- SQL host variable analysis
+- INCLUDE dosya çözümleme
+- COPYLIB fiziksel dosya okuma
+- Macro expansion
+- CICS semantic modelleme
+- EGL SQL generation
+- EGL CICS generation
+
+Bu kapanış ile P07 parser foundation tamamlanmıştır.

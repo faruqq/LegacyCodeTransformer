@@ -150,3 +150,26 @@ Bu doküman ileride aþaðýdaki baþlýklarla geniþletilecektir.
 - Batch / CICS farklarý
 - Firma kodlama alýþkanlýklarý
 - Gerçek PL/I örneklerinden çýkarýlan parser kurallarý
+
+---
+
+# Embedded SQL Yazým Standardý
+
+Firma PL/I kodlarýnda DB2 eriþimleri EXEC SQL statement'larý ile yapýlabilir.
+
+Bu satýrlar PL/I executable statement pipeline içinde taþýnýr; ancak SQL grammar bu aþamada parse edilmez.
+
+Temel örnekler:
+
+    EXEC SQL INCLUDE SQLCA;
+    EXEC SQL SELECT CUSTOMER_NO
+        INTO :CUSTOMER_NO
+        FROM CUSTOMER_TABLE;
+
+Parser ilk aþamada EXEC SQL içeriðini raw text olarak korur.
+
+Model karþýlýðý:
+
+    RawSqlText = EXEC SQL INCLUDE SQLCA
+
+Daha geliþmiþ SQL statement classification, SQL host variable analysis ve EGL SQL generation ileriki fazlara býrakýlmýþtýr.
