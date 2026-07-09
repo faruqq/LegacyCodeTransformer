@@ -2849,3 +2849,27 @@ Doğrulanan diagnostic davranışları:
 - EXEC sonrası SQL keyword eksikse diagnostic üretilir.
 
 Bu milestone sonunda parser diagnostic davranışı P08 kalite standardı kapsamında regression testlerle güvence altına alınmıştır.
+
+## P08.4 - Regression Test Suite
+
+P08.4 kapsamında parser, transpiler ve application seviyesinde regression test coverage eklendi.
+
+Production code değişikliği yapılmamıştır.
+
+Eklenen test bileşenleri:
+
+- Pl1ParserRegressionTests
+- Pl1ToEglTranspilerRegressionTests
+- Pl1ToEglRegressionTests
+
+Doğrulanan davranışlar:
+
+- Mixed PL/I source içinde declaration, top-level statement ve procedure ayrımı korunur.
+- Procedure body içinde EXEC SQL, assignment ve CALL statement sırası korunur.
+- Nested IF THEN DO ve DO WHILE hiyerarşisi korunur.
+- Assignment, CALL, IF ve DO statement modelleri transpiler pipeline içinde korunur.
+- Application seviyesinde declaration + assignment + CALL dönüşümü sabitlenir.
+- Application seviyesinde IF + CALL dönüşümü sabitlenir.
+- Application seviyesinde DO WHILE + CALL dönüşümü sabitlenir.
+
+Bu milestone sonunda mevcut parser/transpiler/generator davranışı regression test suite ile güvence altına alınmıştır.
