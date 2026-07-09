@@ -2684,3 +2684,44 @@ Desteklenen temel örnekler:
 Directive içeriği ilk aşamada raw text olarak korunur.
 
 Bu milestone kapsamında INCLUDE resolution veya macro expansion yapılmamıştır.
+
+## P07.3 - Legacy Statement Expansion
+
+P07.3 kapsamında compiler directive statement modeli argument bilgisini koruyacak şekilde genişletildi.
+
+Güncellenen production bileşenleri:
+
+- Pl1CompilerDirectiveStatement
+- CompilerDirectiveStatementParser
+
+Güncellenen test bileşenleri:
+
+- Pl1CompilerDirectiveStatementParserTests
+- Pl1ProcedureCompilerDirectiveParserTests
+- Pl1CompilerDirectiveSyntaxWalkerTests
+
+Pl1CompilerDirectiveStatement artık aşağıdaki bilgileri taşır:
+
+- DirectiveName
+- Arguments
+- RawDirectiveText
+
+Desteklenen örnekler:
+
+    %INCLUDE COPYLIB;
+    %PAGE;
+    %PROCESS MACRO;
+    %PROCESS FLAG(TEST);
+
+Parser directive grammar çözmez.
+
+Directive adından sonra gelen tokenlar argument listesi olarak korunur.
+
+Bu sayede INCLUDE resolution, macro directive analysis ve ileride eklenecek compiler directive semantic analizleri tekrar raw text tokenize etmek zorunda kalmadan ilerleyebilir.
+
+Bu milestone kapsamında bilinçli olarak yapılmayanlar:
+
+- INCLUDE dosya çözümleme
+- COPYLIB fiziksel dosya okuma
+- Macro expansion
+- Directive semantic validation

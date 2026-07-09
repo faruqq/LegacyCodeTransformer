@@ -90,6 +90,48 @@ Parametreli kullaným mevcut CALL statement parser kapsamý üzerinden deðerlendiri
 
 ---
 
+---
+
+# Compiler Directive Yazým Standardý
+
+Firma PL/I kodlarýnda compiler directive satýrlarý `%` karakteri ile baþlayabilir.
+
+Bu satýrlar executable PL/I statement deðildir; ancak kaynak dosyanýn parçasýdýr ve parser tarafýndan kaybedilmeden syntax tree üzerinde taþýnmalýdýr.
+
+Temel örnekler:
+s
+    %INCLUDE COPYLIB;
+    %PAGE;
+    %EJECT;
+    %PROCESS MACRO;
+    %PROCESS FLAG(TEST);
+
+Parser ilk aþamada directive grammar çözmez.
+
+Directive adý ve directive adýndan sonra gelen argument tokenlarý korunur.
+
+Örnek:
+
+    %INCLUDE COPYLIB;
+
+Model karþýlýðý:
+
+    DirectiveName = INCLUDE
+    Arguments = COPYLIB
+    RawDirectiveText = %INCLUDE COPYLIB
+
+Örnek:
+
+    %PROCESS FLAG(TEST);
+
+Model karþýlýðý:
+
+    DirectiveName = PROCESS
+    Arguments = FLAG, (, TEST, )
+    RawDirectiveText = %PROCESS FLAG ( TEST )
+
+INCLUDE dosya çözümleme, COPYLIB fiziksel dosya okuma ve macro expansion bu aþamada yapýlmaz.
+
 # Geniþletilecek Baþlýklar
 
 Bu doküman ileride aþaðýdaki baþlýklarla geniþletilecektir.
