@@ -1327,7 +1327,7 @@ Bu fazın ilk hedefi tam kapsamlı compiler semantic engine oluşturmak değildi
 
 ## Milestone Durumu
 
-* ⏳ P09.1 — Semantic Model Foundation
+* ✅ P09.1 — Semantic Model Foundation
 * ⏳ P09.2 — Symbol Table Foundation
 * ⏳ P09.3 — Duplicate Declaration Diagnostics
 * ⏳ P09.4 — Basic Reference Analysis
@@ -1363,7 +1363,7 @@ Semantic analyzer mevcut parser/transpiler mimarisini bozmadan ayrı bir analiz 
 
 ## Sonraki Milestone
 
-P09.1 — Semantic Model Foundation
+P09.2 — Symbol Table Foundation
 
 ---
 

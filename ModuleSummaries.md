@@ -2908,3 +2908,30 @@ P09 bilinçli olarak küçük milestone'lara bölünmüştür.
 İlk milestone:
 
 - P09.1 — Semantic Model Foundation
+
+## P09.1 - Semantic Model Foundation
+
+P09.1 kapsamında PL/I semantic analysis katmanının ilk foundation adımı eklendi.
+
+Eklenen production bileşenleri:
+
+- SemanticResult
+- Pl1SemanticAnalyzer
+
+Güncellenen production bileşenleri:
+
+- ConversionService
+
+Semantic analyzer parser / normalizer sonrasında ve transpiler öncesinde çalışacak şekilde pipeline'a yerleştirildi.
+
+Bu milestone kapsamında henüz semantic kural çalıştırılmamaktadır.
+
+Bilinçli olarak yapılmayanlar:
+
+- Symbol table
+- Duplicate declaration kontrolü
+- Undefined identifier kontrolü
+- Type resolution
+- Scope analysis
+
+Bu milestone sonunda semantic analysis için PL/I projesi altında sade ve over-engineering içermeyen foundation oluşturulmuştur.
