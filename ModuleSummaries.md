@@ -2935,3 +2935,62 @@ Bilinçli olarak yapılmayanlar:
 - Scope analysis
 
 Bu milestone sonunda semantic analysis için PL/I projesi altında sade ve over-engineering içermeyen foundation oluşturulmuştur.
+
+## P09.2 - Symbol Table Foundation
+
+P09.2 kapsamında PL/I semantic analyzer global declaration'lardan symbol table üretir hale getirildi.
+
+Eklenen production bileşenleri:
+
+- Symbol
+- SymbolTable
+
+Güncellenen production bileşenleri:
+
+- SemanticResult
+- Pl1SemanticAnalyzer
+
+Pl1SemanticAnalyzer artık Pl1SyntaxTree.Declarations listesindeki top-level declaration modellerinden semantic symbol üretir.
+
+Desteklenen declaration kaynakları:
+
+- Pl1VariableDeclaration
+- Pl1StructureDeclaration
+
+Structure declaration için yalnızca top-level structure adı symbol olarak eklenir.
+
+Structure member field'ları bu aşamada symbol table'a eklenmez.
+
+Desteklenen örnek:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NAME CHAR(30);
+
+Bu input için semantic symbol table aşağıdaki symbol'ları içerir:
+
+    MUST_NO
+    CUSTOMER_NO
+    CUSTOMER_NAME
+
+Desteklenen structure örneği:
+
+    DCL 1 CUSTOMER_INFO,
+        5 MUST_NO CHAR(8),
+        5 CUSTOMER_NAME CHAR(30);
+
+Bu input için yalnızca aşağıdaki symbol eklenir:
+
+    CUSTOMER_INFO
+
+Bilinçli olarak yapılmayanlar:
+
+- Duplicate declaration diagnostic
+- Undefined identifier diagnostic
+- Symbol type bilgisi
+- Source location bilgisi
+- Scope stack
+- Procedure local scope
+- Structure member symbol table
+
+Bu milestone sonunda P09 semantic analyzer, duplicate declaration ve basic reference analysis adımlarına temel olacak symbol table foundation'a sahip hale gelmiştir.
