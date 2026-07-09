@@ -1259,34 +1259,55 @@ P08 — Dönüşüm Kalitesini Artırma
 
 # P08 — Dönüşüm Kalitesini Artırma
 
-## Durum
-
-⏳ Devam Ediyor
+## Durum ⏳ Devam Ediyor
 
 ## Amaç
 
-Üretilen EGL kodunun doğruluğunu, okunabilirliğini ve bakım kolaylığını artırmak.
+Parser, syntax tree, transpiler ve generator tarafında dönüşüm kalitesini artırmak.
 
-## Kapsam
+Bu fazda öncelik yeni PL/I syntax eklemek değildir.
 
-* Gelişmiş Normalizer
-* Kod formatlama
-* Unsupported Syntax Recovery
-* Daha gelişmiş Diagnostic sistemi
-* İsimlendirme kuralları
-* Diagnostic iyileştirmeleri
+Öncelik mevcut parser modeli, syntax tree yapısı, diagnostic davranışı ve EGL output kalitesinin stabil hale getirilmesidir.
+
+## Milestone Durumu
+
+* ⏳ P08.1 — Parser Model Stabilization
+* ⏳ P08.2 — Generator Quality Improvements
+* ⏳ P08.3 — Diagnostic Improvements
+* ⏳ P08.4 — Regression Test Suite
+* ⏳ P08.5 — Performance Improvements
+
+## İlk Kapsam
+
+* Syntax tree model ailesinin gözden geçirilmesi
+* Parser modelinin yeni statement türlerine hazır olduğunun doğrulanması
+* Visitor / Walker coverage kontrolü
+* EGL generator output tutarlılığının iyileştirilmesi
+* Diagnostic mesajlarının standardize edilmesi
+* Regression test setinin güçlendirilmesi
+
+## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+
+* Full expression parser
+* SQL grammar parser
+* Semantic analysis
+* Symbol table
+* Scope analysis
+* Yeni hedef dil generatorları
+* Macro expansion
+* INCLUDE dosya çözümleme
 
 ## Başarı Kriteri
 
-Desteklenmeyen syntax'lar mümkün olduğunca parse edilmeye devam edilmeli ve
-kullanıcıya anlaşılır diagnostic mesajları sunmalıdır.
+Parser ve syntax tree modeli stabil kabul edilebilmelidir.
 
-Üretilen EGL kodu okunabilir, tutarlı ve mümkün olduğunca manuel düzenleme
-gerektirmeyecek kaliteye ulaşmalıdır.
+Yeni PL/I statement türleri eklendiğinde mevcut çekirdek mimaride değişiklik gerekmemeli; yalnızca ilgili statement modeli, parser, dispatcher bağlantısı ve testleri eklenerek ilerlenebilmelidir.
 
-## Sonraki Faz
+EGL output okunabilir, tutarlı ve mevcut naming / indentation standartlarıyla uyumlu olmalıdır.
 
-P09 — Semantic Analysis
+## Sonraki Milestone
+
+P08.1 — Parser Model Stabilization
 
 ---
 
