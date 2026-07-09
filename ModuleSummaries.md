@@ -2798,3 +2798,19 @@ Bilinçli olarak yapılmayanlar:
 - EGL CICS generation
 
 Bu kapanış ile P07 parser foundation tamamlanmıştır.
+
+## P08.1 - Parser Model Stabilization
+
+P08.1 kapsamında parser ve syntax tree model ailesi stabilizasyon testleriyle doğrulandı.
+
+Production code değişikliği yapılmamıştır.
+
+Doğrulanan alanlar:
+
+- Pl1SyntaxTree declaration, procedure ve top-level statement ayrımını korur.
+- Pl1Procedure options ve statement listelerini dış koleksiyon değişikliklerinden izole eder.
+- Pl1EmbeddedSqlStatement raw SQL text bilgisini korur.
+- Pl1CompilerDirectiveStatement directive adı, argument listesi ve raw text bilgisini korur.
+- Pl1SyntaxWalker procedure body içindeki legacy statement modellerini dolaşabilir.
+
+Bu milestone sonunda mevcut parser modeli yeni statement aileleri eklenmeden önce stabil kabul edilmiştir.
