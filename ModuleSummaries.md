@@ -2832,3 +2832,20 @@ Doğrulanan alanlar:
 - Record array field suffix formatı korunur.
 
 Bu milestone sonunda EGL generator output formatı P08 kalite standardı kapsamında regression testlerle güvence altına alınmıştır.
+
+## P08.3 - Diagnostic Improvements
+
+P08.3 kapsamında parser diagnostic davranışları regression testlerle sabitlendi.
+
+Production code değişikliği yapılmamıştır.
+
+Doğrulanan diagnostic davranışları:
+
+- Desteklenmeyen top-level token için DCL, procedure veya executable statement beklentisi üretilir.
+- Geçerli statement sonrası gelen hatalı token diagnostic üretirken parse edilmiş statement korunur.
+- Eksik procedure END durumunda procedure modeli ve body statement listesi korunur.
+- END procedure adı uyuşmadığında anlamlı diagnostic üretilir.
+- İsimsiz compiler directive diagnostic üretir.
+- EXEC sonrası SQL keyword eksikse diagnostic üretilir.
+
+Bu milestone sonunda parser diagnostic davranışı P08 kalite standardı kapsamında regression testlerle güvence altına alınmıştır.
