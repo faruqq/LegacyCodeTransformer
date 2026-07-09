@@ -2725,3 +2725,28 @@ Bu milestone kapsamında bilinçli olarak yapılmayanlar:
 - COPYLIB fiziksel dosya okuma
 - Macro expansion
 - Directive semantic validation
+
+## P07.4 - Legacy Statement End-to-End Tests
+
+P07.4 kapsamında legacy statement parser davranışı end-to-end testlerle doğrulandı.
+
+Eklenen test bileşenleri:
+
+- Pl1LegacyStatementEndToEndParserTests
+- Pl1LegacyStatementProcedureParserTests
+- Pl1LegacyStatementRawTextParserTests
+
+Doğrulanan davranışlar:
+
+- EXEC SQL statement top-level parse edilir.
+- Compiler directive statement top-level parse edilir.
+- Legacy statement sırası korunur.
+- Declaration, top-level statement ve procedure ayrımı korunur.
+- Procedure body içinde EXEC SQL statement parse edilir.
+- Procedure body içinde compiler directive statement parse edilir.
+- DO WHILE body içinde legacy statement parse edilir.
+- IF THEN DO body içinde legacy statement parse edilir.
+- EXEC SQL raw text korunur.
+- Compiler directive argument tokenları korunur.
+
+Bu milestone sonunda legacy statement parser foundation davranışı gerçek PL/I kaynak kodlarına daha yakın end-to-end senaryolarla sabitlenmiştir.
