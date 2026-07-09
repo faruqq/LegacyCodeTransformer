@@ -1,4 +1,5 @@
-﻿using LegacyCodeTransformer.Pl1.Declarations;
+﻿using LegacyCodeTransformer.Core.Diagnostics;
+using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Syntax;
 
 namespace LegacyCodeTransformer.Pl1.Semantic
@@ -15,14 +16,15 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     /// Ne çözüyor?
     /// ----------------------
     /// PL/I syntax tree ile transpiler arasına semantic analysis katmanını yerleştirir.
-    /// P09.2 kapsamında global declaration'lardan symbol table foundation üretir.
+    /// P09.3 kapsamında global declaration duplicate kontrollerini semantic diagnostic
+    /// olarak üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// DCL MUST_NO FIXED DECIMAL(8);
-    /// DCL CUSTOMER_NO FIXED DECIMAL(8);
+    /// DCL MUST_NO CHAR(8);
     ///
-    /// Bu input için MUST_NO ve CUSTOMER_NO sembolleri üretilir.
+    /// Bu input için duplicate declaration diagnostic'i üretilir.
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -30,8 +32,8 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Duplicate declaration diagnostics, basic reference analysis ve type resolution
-    /// adımları bu sınıf üzerinden geliştirilecektir.
+    /// Basic reference analysis, type resolution ve scope analysis adımları bu sınıf
+    /// üzerinden geliştirilecektir.
     /// </summary>
     public sealed class Pl1SemanticAnalyzer
     {
@@ -42,16 +44,36 @@ namespace LegacyCodeTransformer.Pl1.Semantic
                 return new SemanticResult();
             }
 
-            var symbols = syntaxTree.Declarations
-                .Select(CreateSymbol)
-                .Where(symbol => symbol is not null)
-                .Cast<Symbol>()
-                .ToList();
+            var diagnostics = new List<Diagnostic>();
+            var symbolsByName = new Dictionary<string, Symbol>(
+                StringComparer.OrdinalIgnoreCase);
 
-            var symbolTable = new SymbolTable(symbols);
+            foreach (var declaration in syntaxTree.Declarations)
+            {
+                var symbol = CreateSymbol(declaration);
+
+                if (symbol is null)
+                {
+                    continue;
+                }
+
+                if (symbolsByName.ContainsKey(symbol.Name))
+                {
+                    diagnostics.Add(
+                        SemanticDiagnosticFactory.DuplicateDeclaration(
+                            symbol.Name,
+                            declaration.Location));
+
+                    continue;
+                }
+
+                symbolsByName.Add(symbol.Name, symbol);
+            }
+
+            var symbolTable = new SymbolTable(symbolsByName.Values);
 
             return new SemanticResult(
-                diagnostics: null,
+                diagnostics,
                 symbolTable);
         }
 
