@@ -3062,3 +3062,102 @@ Bu milestone kapsamında bilinçli olarak yapılmayanlar:
 - Type compatibility kontrolü
 
 Bu milestone sonunda duplicate global declaration durumları exception üretmek yerine kontrollü semantic diagnostic olarak raporlanabilir hale gelmiştir.
+
+## P09.4 - Basic Reference Analysis
+
+P09.4 kapsamında PL/I semantic analyzer için temel symbol reference analysis desteği eklendi.
+
+Eklenen production bileşenleri:
+
+- Pl1SymbolReference
+- Pl1ReferenceCollector
+
+Güncellenen production bileşenleri:
+
+- SemanticResult
+- Pl1SemanticAnalyzer
+
+Eklenen test bileşeni:
+
+- Pl1SemanticAnalyzerReferenceTests
+
+Pl1SemanticAnalyzer artık global symbol table oluşturulduktan sonra syntax tree üzerinde güvenli reference kullanımlarını toplar.
+
+Reference traversal işlemi mevcut Pl1SyntaxWalker altyapısı üzerinden gerçekleştirilir.
+
+İlk kapsamda yalnızca güvenle sınıflandırılabilen aşağıdaki raw expression biçimleri analiz edilir:
+
+- Basit identifier
+- Qualified identifier
+
+Desteklenen basit identifier örneği:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    CUSTOMER_NO = MUST_NO;
+    CALL FETCH_CUSTOMER(CUSTOMER_NO);
+
+Bu örnekte aşağıdaki reference kullanımları toplanır:
+
+    CUSTOMER_NO
+    MUST_NO
+    CUSTOMER_NO
+
+Desteklenen qualified identifier örneği:
+
+    DCL 1 CUSTOMER_INFO,
+        5 MUST_NO CHAR(8),
+        5 CUSTOMER_NAME CHAR(30);
+
+    CUSTOMER_INFO.MUST_NO = '12345678';
+
+Qualified identifier çözümlemesinde root symbol adı kullanılır.
+
+Bu örnekte:
+
+    ReferenceText = CUSTOMER_INFO.MUST_NO
+    RootSymbolName = CUSTOMER_INFO
+    IsResolved = true
+
+Explicit declaration bulunmayan identifier kullanımları reference listesinde korunur.
+
+Örnek:
+
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    CUSTOMER_NO = GUNCEL_MUST_NO;
+
+Bu örnekte GUNCEL_MUST_NO reference olarak toplanır ancak:
+
+    IsResolved = false
+
+değerini taşır.
+
+Unresolved reference bu aşamada semantic diagnostic üretmez.
+
+Bunun nedeni PL/I implicit declaration davranışının henüz proje seviyesinde kesin olarak kararlaştırılmamış olmasıdır.
+
+Full expression parser bulunmadığı için operator içeren karmaşık raw expression metinlerinden tahmini reference çıkarımı yapılmaz.
+
+Örnek:
+
+    IF MUST_NO = CUSTOMER_NO THEN
+        CALL FETCH_CUSTOMER;
+
+IF condition metni bu aşamada parçalanmaz ve MUST_NO ile CUSTOMER_NO için tahmini reference üretilmez.
+
+Bilinçli olarak yapılmayanlar:
+
+- Unresolved reference diagnostic üretimi
+- Complex condition identifier extraction
+- Binary expression analysis
+- Function call expression analysis
+- Array element reference analysis
+- Structure member existence validation
+- Procedure adı reference analysis
+- SQL host variable reference analysis
+- Full type resolution
+- Scope analysis
+
+Bu milestone sonunda semantic analyzer, güvenli identifier kullanımlarını declaration symbol table karşısında resolved veya unresolved olarak sınıflandırabilir hale gelmiştir.
