@@ -7,21 +7,23 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     ///
     /// Neden var?
     /// ----------------------
-    /// Parser syntax tree üretir; ancak semantic kontroller ayrı bir sonuç modeliyle
-    /// raporlanmalıdır.
+    /// Parser syntax tree üretir; ancak semantic kontroller ve çözümleme bilgileri
+    /// ayrı bir sonuç modeliyle raporlanmalıdır.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// PL/I semantic analyzer tarafından üretilen diagnostic listesini, başarı
-    /// durumunu ve semantic symbol table bilgisini taşır.
+    /// Semantic diagnostic listesini, başarı durumunu, symbol table bilgisini ve
+    /// kaynak koddan toplanan symbol reference listesini taşır.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// DCL MUST_NO FIXED DECIMAL(8);
     /// DCL CUSTOMER_NO FIXED DECIMAL(8);
     ///
-    /// Bu input için SemanticResult.SymbolTable içinde iki global declaration sembolü
-    /// taşınır.
+    /// CUSTOMER_NO = MUST_NO;
+    ///
+    /// Bu input için SymbolTable iki symbol, References ise CUSTOMER_NO ve
+    /// MUST_NO kullanımlarını taşır.
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -29,8 +31,8 @@ namespace LegacyCodeTransformer.Pl1.Semantic
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Duplicate declaration, undefined identifier ve reference analysis sonuçlarına
-    /// temel olur.
+    /// Undefined identifier politikası, reference navigation, structure member
+    /// resolution ve type analysis sonuçlarına temel olur.
     /// </summary>
     public sealed class SemanticResult
     {
@@ -38,14 +40,22 @@ namespace LegacyCodeTransformer.Pl1.Semantic
 
         public SymbolTable SymbolTable { get; }
 
-        public bool Success => !Diagnostics.Any(x => x.Severity == DiagnosticSeverity.Error);
+        public IReadOnlyList<Pl1SymbolReference> References { get; }
+
+        public bool Success =>
+            !Diagnostics.Any(
+                diagnostic =>
+                    diagnostic.Severity == DiagnosticSeverity.Error);
 
         public SemanticResult(
             IEnumerable<Diagnostic>? diagnostics = null,
-            SymbolTable? symbolTable = null)
+            SymbolTable? symbolTable = null,
+            IEnumerable<Pl1SymbolReference>? references = null)
         {
             Diagnostics = diagnostics?.ToList() ?? new List<Diagnostic>();
             SymbolTable = symbolTable ?? new SymbolTable();
+            References = references?.ToList() ??
+                new List<Pl1SymbolReference>();
         }
     }
 }
