@@ -1381,110 +1381,241 @@ P10 — IDE Entegrasyonu
 
 ---
 
-# P10 — IDE Entegrasyonu
+# P10 — Statement & Declaration Coverage Expansion
 
-## Durum
-
-⏳ Planlandı
+## Durum ⏳ Devam Ediyor
 
 ## Amaç
 
-LegacyCodeTransformer'ın IDE içerisinden kullanılabilir hale getirilmesi.
+Gerçek PL/I kaynak örneklerinde karşılaşılan statement ve declaration çeşitlerinin parser → semantic analyzer → transpiler → EGL generator pipeline boyunca desteklenmesini sağlamak.
 
-## Kapsam
+Bu fazda geliştirme öncelikleri sentetik örneklerden değil, gerçek veya anonimleştirilmiş PL/I case dosyalarından çıkarılacaktır.
 
-* Eclipse tabanlı eklenti
-* IBM RBD entegrasyonu
-* Tek dosya dönüşümü
-* Çoklu dosya dönüşümü
-* Progress gösterimi
+Her yeni destek aşağıdaki geliştirme akışıyla ilerleyecektir.
+
+    Gerçek PL/I Case
+            ↓
+        Parser
+            ↓
+    Semantic Analysis
+            ↓
+       Transpiler
+            ↓
+       Generator
+            ↓
+      actual.egl
+            ↓
+    İnsan İncelemesi
+            ↓
+     Regression Test
+
+## Milestone Durumu
+
+* ⏳ P10.1 — File-Based Conversion Case Foundation
+* ⏳ P10.2 — Real-World PL/I Case Inventory
+* ⏳ P10.3 — Statement Coverage Expansion
+* ⏳ P10.4 — Declaration Coverage Expansion
+* ⏳ P10.5 — P10 Regression Closure
+
+## P10.1 Kapsamı
+
+* samples klasörünün oluşturulması
+* Case001, Case002 ... klasör standardı
+* input.pl1 desteği
+* actual.egl üretimi
+* notes.md desteği
+* CLI üzerinden dosyadan PL/I okuma
+* CLI üzerinden EGL dosyası üretme
+* Conversion diagnostic bilgilerinin gösterilmesi
+* actual.egl dosyalarının Git tarafından takip edilmemesi
+* Gelecekte expected.egl desteğine hazır altyapının oluşturulması
+
+## Case Klasör Standardı
+
+    samples/
+
+        Case001/
+            input.pl1
+            actual.egl
+            notes.md
+
+        Case002/
+            input.pl1
+            actual.egl
+            notes.md
+
+Dosyaların görevleri:
+
+* input.pl1
+    Gerçek PL/I kaynak kodudur.
+
+* actual.egl
+    Mevcut compiler'ın ürettiği EGL çıktısıdır.
+
+* notes.md
+    İnceleme notlarını ve uzman geri bildirimlerini içerir.
+
+actual.egl dosyaları Git repository'sine commit edilmeyecektir.
+
+input.pl1 ve notes.md proje hafızasının bir parçasıdır.
+
+## İlk Kapsam
+
+* Gerçek PL/I case dosyalarının dönüştürülmesi
+* Dosya bazlı çıktı üretimi
+* Gerçek örneklerden yeni statement ihtiyaçlarının çıkarılması
+* Gerçek örneklerden yeni declaration ihtiyaçlarının çıkarılması
+* Onaylanan dönüşümlerin regression testlerine eklenmesi
+
+## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+
+* IDE entegrasyonu
+* GUI
+* Batch conversion
+* expected.egl otomatik güncellemesi
+* Case approval komutu
+* Snapshot testing
+* INCLUDE çözümleme
+* Macro expansion
 
 ## Başarı Kriteri
 
-Kullanıcı IDE üzerinden PL/I dosyalarını doğrudan dönüştürebilmelidir.
+Bir case klasörü içindeki input.pl1 dosyası mevcut compiler pipeline üzerinden dönüştürülebilmeli ve sonuç actual.egl dosyasına yazılabilmelidir.
 
-## Sonraki Faz
+Üretilen çıktı insanlar tarafından rahatça incelenebilmelidir.
 
-P11 — Yeni Hedef Diller
+Yeni geliştirmeler gerçek case dosyalarından çıkarılmalıdır.
+
+## Sonraki Milestone
+
+P10.1 — File-Based Conversion Case Foundation
 
 ---
 
-# P11 — Yeni Hedef Diller
+# P11 — Advanced Semantic Analysis
 
-## Durum
-
-⏳ Planlandı
+## Durum ⏳ Planlandı
 
 ## Amaç
 
-Mevcut parser ve semantic altyapısını kullanarak farklı hedef dillere dönüşüm
-yapabilmek.
+P09 kapsamında oluşturulan semantic foundation'ı gerçek PL/I dönüşüm ihtiyaçlarına göre genişletmek.
 
-## İlk Hedefler
+## Planlanan Kapsam
 
-* PL/I → C#
-* EGL → C#
-* PL/I → Java
-* PL/I → Kotlin (Opsiyonel)
+* Procedure symbol resolution
+* Procedure call resolution
+* Structure member resolution
+* Scope modelinin oluşturulması
+* Undefined identifier politikasının belirlenmesi
+* Symbol type bilgisinin eklenmesi
+* Type compatibility kontrolleri
+* SQL host variable semantic analysis
+* Semantic diagnostic standardının genişletilmesi
 
 ## Başarı Kriteri
 
-Yeni hedef dillere dönüşüm yalnızca yeni generator katmanları eklenerek
-gerçekleştirilebilmelidir.
-
-## Sonraki Faz
-
-P12 — Kurumsal Özellikler
+Gerçek PL/I örneklerinde kullanılan identifier ve procedure kullanımları güvenilir şekilde çözümlenebilmelidir.
 
 ---
 
-# P12 — Kurumsal Özellikler
+# P12 — Conversion Quality Improvements
 
-## Durum
-
-⏳ Planlandı
+## Durum ⏳ Planlandı
 
 ## Amaç
 
-Kurumsal projelerde ihtiyaç duyulacak yardımcı araçları geliştirmek.
+PL/I → EGL dönüşüm kalitesini gerçek projelerden gelen geri bildirimlerle sürekli iyileştirmek.
 
-## İlk Hedefler
+## Planlanan Kapsam
 
-* Batch Conversion
-* Klasör bazlı dönüşüm
-* Dönüşüm raporları
-* Satır eşleme (Line Mapping)
-* Performans ölçümleri
-* Loglama
-* Konfigürasyon profilleri
+* EGL procedure output
+* Expression dönüşüm kalitesi
+* Operator mapping
+* Record output iyileştirmeleri
+* sqlRecord desteği
+* Embedded SQL output stratejisi
+* Compiler directive output politikası
+* EGL formatting
+* Kayıp dönüşümler için diagnostic üretimi
 
 ## Başarı Kriteri
 
-Binlerce PL/I dosyası kurumsal ölçekte güvenilir ve raporlanabilir şekilde
-dönüştürülebilmelidir.
-
-## Sonraki Faz
-
-Projenin ihtiyaçlarına göre yeni fazlar eklenecektir.
+Üretilen EGL çıktıları gerçek EGL geliştiricileri tarafından okunabilir ve kabul edilebilir kaliteye ulaşmalıdır.
 
 ---
 
-# Uzun Vadeli Hedef
+# P13 — Regression Sample Library
 
-LegacyCodeTransformer'ın yalnızca **PL/I → EGL** dönüşümü yapan bir araç
-olması hedeflenmemektedir.
+## Durum ⏳ Planlandı
 
-Uzun vadeli hedef;
+## Amaç
 
-* Kaynak dili parse edebilen,
-* Semantic model oluşturabilen,
-* Farklı hedef dillere dönüştürebilen,
-* Genişletilebilir,
-* Sürdürülebilir,
-* Test edilebilir,
-* Kurumsal ölçekte kullanılabilir
+P10 ile oluşturulan gerçek PL/I case altyapısını tam regression test kütüphanesine dönüştürmek.
 
-bir **Legacy Code Transformation Platformu** oluşturmaktır.
+## Planlanan Kapsam
+
+* expected.egl desteği
+* Case discovery mekanizması
+* Parametrik regression test runner
+* expected.egl karşılaştırması
+* Case bazlı hata raporları
+* Case metadata standardı
+* Regression kütüphanesinin kontrollü büyütülmesi
+
+## Başarı Kriteri
+
+Yeni bir regression case yalnızca aşağıdaki dosyalar eklenerek sisteme dahil edilebilmelidir.
+
+    input.pl1
+    expected.egl
+    notes.md
+
+---
+
+# P14 — Performance
+
+## Durum ⏳ Planlandı
+
+## Amaç
+
+Gerçek PL/I projelerinde compiler performansını ölçmek ve gerekli optimizasyonları yapmak.
+
+## Planlanan Kapsam
+
+* Büyük PL/I dosyalarıyla benchmark
+* Bellek kullanımı
+* Parser performansı
+* Semantic analyzer performansı
+* Transpiler performansı
+* Generator performansı
+* Gerçek ölçümlerle doğrulanan optimizasyonlar
+
+## Başarı Kriteri
+
+Performans iyileştirmeleri tahminlere göre değil, ölçülebilir benchmark sonuçlarına göre yapılmalıdır.
+
+---
+
+# P15 — IDE Integration
+
+## Durum ⏳ Planlandı
+
+## Amaç
+
+Compiler pipeline yeterli olgunluğa ulaştıktan sonra IDE entegrasyonunu gerçekleştirmek.
+
+## Planlanan Kapsam
+
+* SourceLocation tabanlı hata gösterimi
+* Symbol navigation
+* Reference navigation
+* Dönüştürme önizlemesi
+* PL/I ve EGL karşılaştırması
+* IDE Extension
+
+## Başarı Kriteri
+
+IDE entegrasyonu compiler mantığını tekrar implement etmemeli, mevcut compiler katmanlarını kullanmalıdır.
 
 ---
 
@@ -1504,32 +1635,47 @@ bir **Legacy Code Transformation Platformu** oluşturmaktır.
 
 ## Aktif Faz
 
-* Henüz başlatılmadı.
+* P10 — Statement & Declaration Coverage Expansion
 
-## Sonraki Büyük Faz
+## Aktif Milestone
 
-* ⏳ P10 — IDE Entegrasyonu
+* P10.1 — File-Based Conversion Case Foundation
 
----
+## Sonraki Büyük Fazlar
+
+* ⏳ P11 — Advanced Semantic Analysis
+* ⏳ P12 — Conversion Quality Improvements
+* ⏳ P13 — Regression Sample Library
+* ⏳ P14 — Performance
+* ⏳ P15 — IDE Integration
 
 ---
 
 # Yol Haritası Güncelleme Kuralları
 
-Roadmap.md yaşayan bir dokümandır.
+Her milestone aşağıdaki sırayla ilerletilir.
 
-Aşağıdaki durumlarda güncellenmelidir:
+1. Production Code
+2. Production Refactor (gerekirse)
+3. Unit Tests
+4. Dokümantasyon
+5. Commit
 
-* Yeni bir faz başlatıldığında.
-* Bir milestone tamamlandığında.
-* Büyük mimari kararlar roadmap'i etkilediğinde.
-* Faz kapsamı değiştiğinde.
-* Başarı kriterleri güncellendiğinde.
+Production kodu tamamlanmadan dokümantasyon güncellenmez.
 
-Teknik implementasyon ayrıntıları bu dokümanda tutulmaz.
+Dokümantasyon tamamlanmadan milestone kapatılmaz.
 
-Mimari kararlar Decisions.md içerisinde dokümante edilir.
+Her milestone sonunda:
 
-Tamamlanan geliştirmeler ModuleSummaries.md içerisinde kronolojik olarak özetlenir.
+* Roadmap.md
+* ModuleSummaries.md
+* Decisions.md (gerekiyorsa)
 
-Roadmap.md yalnızca projenin geliştirme yönünü ve planlanan fazlarını gösteren üst seviye referans dokümandır.
+güncellenir.
+
+Gerçek PL/I case'lerinden elde edilen yeni kurallar uygun görüldüğünde:
+
+* Pl1CodingStandards.md
+* Regression Sample Library
+
+dokümanlarına eklenir.
