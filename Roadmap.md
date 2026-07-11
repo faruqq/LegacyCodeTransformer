@@ -1315,7 +1315,7 @@ P09 — Semantic Analysis
 
 # P09 — Semantic Analysis
 
-## Durum ⏳ Devam Ediyor
+## Durum ✅ Tamamlandı
 
 ## Amaç
 
@@ -1331,24 +1331,32 @@ Bu fazın ilk hedefi tam kapsamlı compiler semantic engine oluşturmak değildi
 * ✅ P09.2 — Symbol Table Foundation
 * ✅ P09.3 — Duplicate Declaration Diagnostics
 * ✅ P09.4 — Basic Reference Analysis
-* ⏳ P09.5 — Semantic Analysis Regression Tests
+* ✅ P09.5 — Semantic Analysis Regression Tests
 
-## İlk Kapsam
+## Tamamlanan Kapsam
 
 * Semantic analysis result modeli
 * Symbol model foundation
 * Global declaration symbol table
-* Duplicate declaration detection
+* Case-insensitive symbol karşılaştırması
+* Duplicate global declaration detection
 * Basit identifier reference analizi
+* Qualified identifier root symbol çözümlemesi
+* Resolved ve unresolved reference bilgisinin korunması
 * Semantic diagnostic üretimi
-* Parser output'unun semantic analyzer giriş modeli olarak kullanılması
+* Semantic analyzer'ın conversion pipeline'a entegrasyonu
+* Semantic analysis regression testleri
 
-## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
+## Bilinçli Olarak Kapsam Dışı Bırakılanlar
 
 * Full type resolution
 * Full expression semantic analysis
+* Complex condition identifier extraction
 * Scope stack
 * Procedure parameter binding
+* Procedure local scope
+* Structure member existence validation
+* Unresolved reference diagnostic politikası
 * SQL host variable semantic analysis
 * INCLUDE resolution
 * Macro expansion
@@ -1357,13 +1365,19 @@ Bu fazın ilk hedefi tam kapsamlı compiler semantic engine oluşturmak değildi
 
 ## Başarı Kriteri
 
-Syntax tree semantic analyzer tarafından okunabilmeli, global declaration sembolleri çıkarılabilmeli ve duplicate declaration gibi temel semantic hatalar diagnostic olarak raporlanabilmelidir.
+Syntax tree semantic analyzer tarafından okunabilmektedir.
 
-Semantic analyzer mevcut parser/transpiler mimarisini bozmadan ayrı bir analiz katmanı olarak eklenmelidir.
+Global variable ve structure declaration modellerinden symbol table üretilebilmektedir.
 
-## Sonraki Milestone
+Duplicate global declaration durumları exception yerine semantic diagnostic olarak raporlanabilmektedir.
 
-P09.5 — Semantic Analysis Regression Tests
+Basit ve qualified identifier reference kullanımları global symbol table karşısında resolved veya unresolved olarak sınıflandırılabilmektedir.
+
+Semantic hata bulunduğunda ConversionService, transpiler ve generator aşamalarına geçmeden dönüşümü kontrollü biçimde durdurabilmektedir.
+
+## Sonraki Faz
+
+P10 — IDE Entegrasyonu
 
 ---
 
@@ -1486,14 +1500,17 @@ bir **Legacy Code Transformation Platformu** oluşturmaktır.
 * ✅ P06 — Procedure Desteği
 * ✅ P07 — Legacy PL/I Yapıları
 * ✅ P08 — Dönüşüm Kalitesini Artırma
+* ✅ P09 — Semantic Analysis
 
 ## Aktif Faz
 
-* P09 — Semantic Analysis
+* Henüz başlatılmadı.
 
 ## Sonraki Büyük Faz
 
 * ⏳ P10 — IDE Entegrasyonu
+
+---
 
 ---
 

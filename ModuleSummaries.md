@@ -3161,3 +3161,128 @@ Bilinçli olarak yapılmayanlar:
 - Scope analysis
 
 Bu milestone sonunda semantic analyzer, güvenli identifier kullanımlarını declaration symbol table karşısında resolved veya unresolved olarak sınıflandırabilir hale gelmiştir.
+
+## P09.5 - Semantic Analysis Regression Tests
+
+P09.5 kapsamında P09 boyunca geliştirilen semantic analysis davranışları gerçekçi PL/I kaynak örnekleriyle regression testlerine bağlandı.
+
+Production code değişikliği yapılmamıştır.
+
+Eklenen test bileşenleri:
+
+- Pl1SemanticAnalyzerRegressionTests
+- Pl1SemanticAnalyzerCaseInsensitiveRegressionTests
+- Pl1SemanticAnalyzerFailureRegressionTests
+- ConversionServiceSemanticRegressionTests
+
+Birlikte doğrulanan semantic davranışlar:
+
+- Global variable declaration modellerinden symbol table üretilir.
+- Global structure declaration adı symbol table içinde korunur.
+- Assignment hedefi ve değeri üzerindeki güvenli identifier reference kullanımları toplanır.
+- CALL argument reference kullanımları toplanır.
+- Procedure içindeki statement reference kullanımları global declaration sembollerine çözümlenir.
+- PL/I identifier karşılaştırması case-insensitive gerçekleştirilir.
+- Qualified identifier kullanımlarında root structure symbol çözümlenir.
+- Duplicate declaration bulunduğunda ilk symbol korunur.
+- Duplicate declaration semantic diagnostic üretirken güvenli reference analizi devam eder.
+- Unresolved reference bilgisi korunur ancak mevcut politika gereği diagnostic üretilmez.
+- Geçerli semantic input application pipeline üzerinden EGL output üretir.
+- Duplicate declaration bulunduğunda application pipeline transpiler öncesinde durur.
+- Unresolved reference mevcut politika belirlenene kadar dönüşümü durdurmaz.
+
+Desteklenen gerçekçi declaration ve reference örneği:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NAME CHAR(30);
+
+    CUSTOMER_NO = MUST_NO;
+    CALL FETCH_CUSTOMER(CUSTOMER_NO, CUSTOMER_NAME);
+
+Bu örnekte:
+
+    MUST_NO
+    CUSTOMER_NO
+    CUSTOMER_NAME
+
+global symbol olarak oluşturulur.
+
+Assignment ve CALL statement içindeki güvenli reference kullanımları symbol table karşısında resolved olarak sınıflandırılır.
+
+Procedure içinde global declaration kullanımı da doğrulanmıştır:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    CUSTOMER_FETCH: PROCEDURE;
+        CUSTOMER_NO = MUST_NO;
+        CALL FETCH_CUSTOMER(CUSTOMER_NO);
+    END CUSTOMER_FETCH;
+
+PL/I identifier casing davranışı aşağıdaki örnekle sabitlenmiştir:
+
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    customer_no = CUSTOMER_NO;
+
+Declaration ve reference casing değerleri farklı olsa da her iki reference aynı global symbol'e çözümlenir.
+
+Duplicate declaration hata davranışı aşağıdaki örnekle doğrulanmıştır:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL MUST_NO CHAR(8);
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    CUSTOMER_NO = MUST_NO;
+
+Bu durumda:
+
+- SemanticResult başarısız olur.
+- MUST_NO için duplicate declaration diagnostic'i üretilir.
+- İlk MUST_NO symbol'ü korunur.
+- CUSTOMER_NO symbol'ü korunur.
+- Güvenli reference bilgileri kaybedilmez.
+- ConversionService EGL output üretmez.
+
+Unresolved reference davranışı aşağıdaki örnekle doğrulanmıştır:
+
+    DCL CUSTOMER_NO FIXED DECIMAL(8);
+
+    CUSTOMER_NO = GUNCEL_MUST_NO;
+    CALL FETCH_CUSTOMER(GUNCEL_MUST_NO);
+
+GUNCEL_MUST_NO reference kullanımları unresolved olarak korunur.
+
+PL/I implicit declaration ve unresolved identifier politikası kesinleşmediği için bu aşamada semantic diagnostic üretilmez.
+
+P09 sonunda semantic analysis pipeline aşağıdaki sırayla çalışır:
+
+    PL/I Syntax Tree
+        ↓
+    Pl1SemanticAnalyzer
+        ↓
+    Global Symbol Table
+        ↓
+    Duplicate Declaration Analysis
+        ↓
+    Basic Reference Analysis
+        ↓
+    SemanticResult
+        ↓
+    Transpiler veya Kontrollü Durdurma
+
+Bilinçli olarak yapılmayanlar:
+
+- Full expression reference analysis
+- Complex IF condition identifier extraction
+- Undefined identifier diagnostic üretimi
+- Structure member existence doğrulaması
+- Procedure symbol ve procedure call resolution
+- Symbol type bilgisi
+- Type compatibility kontrolü
+- Procedure local scope
+- Scope stack
+- SQL host variable analysis
+
+Bu milestone sonunda P09 semantic analysis foundation gerçekçi PL/I örnekleriyle regression seviyesinde güvence altına alınmıştır.
