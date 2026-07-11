@@ -2994,3 +2994,71 @@ Bilinçli olarak yapılmayanlar:
 - Structure member symbol table
 
 Bu milestone sonunda P09 semantic analyzer, duplicate declaration ve basic reference analysis adımlarına temel olacak symbol table foundation'a sahip hale gelmiştir.
+
+## P09.3 - Duplicate Declaration Diagnostics
+
+P09.3 kapsamında global PL/I declaration isimleri için duplicate declaration semantic kontrolü eklendi.
+
+Eklenen production bileşeni:
+
+- SemanticDiagnosticFactory
+
+Güncellenen production bileşeni:
+
+- Pl1SemanticAnalyzer
+
+Eklenen test bileşenleri:
+
+- Pl1SemanticAnalyzerDuplicateDeclarationTests
+- ConversionServiceSemanticTests
+
+Pl1SemanticAnalyzer artık global declaration sembollerini case-insensitive olarak karşılaştırır.
+
+Aynı isme sahip ikinci declaration bulunduğunda semantic diagnostic üretilir.
+
+Desteklenen gerçekçi örnek:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL MUST_NO CHAR(8);
+
+Üretilen semantic diagnostic:
+
+    Duplicate declaration bulundu: MUST_NO.
+
+PL/I identifier karşılaştırması case-insensitive yapıldığı için aşağıdaki kullanım da duplicate declaration kabul edilir:
+
+    DCL MUST_NO FIXED DECIMAL(8);
+    DCL must_no CHAR(8);
+
+Structure declaration isimleri de aynı global symbol table içinde değerlendirilir.
+
+Desteklenen structure örneği:
+
+    DCL 1 CUSTOMER_INFO,
+        5 MUST_NO CHAR(8);
+
+    DCL 1 CUSTOMER_INFO,
+        5 CUSTOMER_NAME CHAR(30);
+
+Bu örnekte CUSTOMER_INFO için duplicate declaration diagnostic'i üretilir.
+
+Duplicate declaration bulunduğunda:
+
+- İlk declaration symbol table içinde korunur.
+- İkinci declaration symbol table'a eklenmez.
+- İkinci declaration konumu semantic diagnostic üzerinde taşınır.
+- SemanticResult başarısız olur.
+- ConversionService transpiler ve generator aşamalarına devam etmez.
+- EGL output üretilmez.
+
+Bu milestone kapsamında bilinçli olarak yapılmayanlar:
+
+- Structure member duplicate kontrolü
+- Procedure adı duplicate kontrolü
+- Undefined identifier kontrolü
+- Symbol type bilgisi
+- Procedure local scope
+- Full scope analysis
+- Type compatibility kontrolü
+
+Bu milestone sonunda duplicate global declaration durumları exception üretmek yerine kontrollü semantic diagnostic olarak raporlanabilir hale gelmiştir.
