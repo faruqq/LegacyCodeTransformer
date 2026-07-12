@@ -3560,3 +3560,114 @@ Bu milestone adımında bilinçli olarak yapılmayanlar:
 
 Bu adım sonunda procedure parameter adı ile veri tipi declaration modeli
 güvenli biçimde ilişkilendirilebilir hale gelmiştir.
+
+## P10.3 - Parameterless PL/I Procedure to EGL Function Generation
+
+P10.3 kapsamında parameter ve procedure-local declaration taşımayan
+PL/I procedure modellerinin EGL function olarak üretilmesi sağlandı.
+
+Eklenen production bileşeni:
+
+- EglFunction
+
+Güncellenen production bileşenleri:
+
+- EglSyntaxTree
+- EglCodeGenerator
+- Pl1ToEglTranspiler
+
+Eklenen test bileşenleri:
+
+- EglFunctionTests
+- EglFunctionGeneratorTests
+- Pl1ProcedureToEglFunctionTranspilerTests
+- ProcedureConversionTests
+
+Güncellenen regression test bileşeni:
+
+- Pl1ToEglTranspilerRegressionTests
+
+EglSyntaxTree artık aşağıdaki root koleksiyonlarını ayrı taşır:
+
+    Declarations
+    Functions
+    Statements
+
+Desteklenen PL/I örneği:
+
+    CUSTOMER_PROCESS: PROCEDURE;
+        CUSTOMER_NO = MUST_NO;
+        CALL FETCH_CUSTOMER(CUSTOMER_NO, CUSTOMER_NAME);
+    END CUSTOMER_PROCESS;
+
+Üretilen EGL:
+
+    function CustomerProcess()
+        CustomerNo = MustNo;
+        FetchCustomer(CustomerNo, CustomerName);
+    end
+
+Procedure adı identifier naming strategy üzerinden dönüştürülür.
+
+Procedure body içindeki assignment ve CALL statement modelleri mevcut
+StatementTranspiler üzerinden EGL statement modellerine dönüştürülür.
+
+EGL generator function body statement'larını bir indentation seviyesi
+içeride üretir.
+
+Declaration, function ve top-level statement modelleri aynı EGL syntax
+tree içinde korunur.
+
+Root output sırası:
+
+    1. Global declaration'lar
+    2. EGL function blokları
+    3. Top-level statement'lar
+
+Case001 güncel pipeline ile başarıyla dönüştürülmüştür.
+
+Case001 tarafından üretilen EGL:
+
+    MustNo decimal(8);
+    CustomerNo decimal(8);
+    CustomerName char(30);
+
+    function CustomerProcess()
+        CustomerNo = MustNo;
+        FetchCustomer(CustomerNo, CustomerName);
+    end
+
+Parameter içeren PL/I procedure modelleri henüz EGL function olarak
+üretilmemektedir.
+
+Case002 artık eksik EGL output üretmek yerine aşağıdaki diagnostic ile
+kontrollü olarak başarısız olur:
+
+    Parameter içeren PL/I procedure için EGL function mapping henüz
+    desteklenmiyor: CUSTOMER_PROCESS.
+
+Bu durumda:
+
+- ConversionResult başarısız olur.
+- EGL generator çalıştırılmaz.
+- actual.egl üretilmez.
+- Procedure business logic'i sessizce kaybolmaz.
+
+Procedure body declaration içeren fakat parameter taşımayan procedure
+için de mevcut kapsamda diagnostic üretilir.
+
+Bu adımda bilinçli olarak yapılmayanlar:
+
+- EGL function parameter modeli
+- Procedure parameter type mapping
+- in / out / inOut direction mapping
+- Procedure local declaration generation
+- Procedure local scope
+- OPTIONS(MAIN) mapping
+- EGL program part generation
+- RETURN statement mapping
+
+P10.3 milestone'u henüz tamamlanmamıştır.
+
+Sonraki kapsam parametreli procedure dönüşümünü güvenli biçimde
+desteklemek için gerekli semantic ve EGL function parameter modelidir.

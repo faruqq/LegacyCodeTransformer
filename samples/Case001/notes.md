@@ -1,216 +1,103 @@
-\# Case001 İnceleme Notları
+# Case001 İnceleme Notları
 
+## Amaç
 
+Global declaration bilgileri ile parametresiz PL/I procedure içinde
+kullanılan assignment ve function invocation dönüşümünü incelemek.
 
-\## Amaç
+## Input Kapsamı
 
+- FIXED DECIMAL declaration
+- CHAR declaration
+- Parametresiz PL/I procedure
+- Assignment statement
+- Argument içeren PL/I CALL statement
+- Global declaration bilgilerinin procedure içinde kullanılması
 
+## Mevcut Çıktı İncelemesi
 
-Global declaration bilgileri ile procedure içinde kullanılan assignment
+Case001 güncel compiler pipeline ile yeniden çalıştırıldı.
 
-ve function çağrılarının mevcut PL/I → EGL pipeline davranışını
+Dönüşüm başarıyla tamamlandı ve actual.egl dosyası üretildi.
 
-incelemek.
+Üretilen EGL:
 
+    MustNo decimal(8);
+    CustomerNo decimal(8);
+    CustomerName char(30);
 
+    function CustomerProcess()
+        CustomerNo = MustNo;
+        FetchCustomer(CustomerNo, CustomerName);
+    end
 
-\## Input Kapsamı
+## Doğru Dönüşen Alanlar
 
+- MUST_NO FIXED DECIMAL(8) declaration'ı MustNo decimal(8) olarak
+  dönüştü.
+- CUSTOMER_NO FIXED DECIMAL(8) declaration'ı CustomerNo decimal(8)
+  olarak dönüştü.
+- CUSTOMER_NAME CHAR(30) declaration'ı CustomerName char(30) olarak
+  dönüştü.
+- CUSTOMER_PROCESS PL/I procedure'ü CustomerProcess EGL function
+  olarak üretildi.
+- Procedure içindeki CUSTOMER_NO = MUST_NO assignment statement'ı
+  function body içinde üretildi.
+- Procedure içindeki FETCH_CUSTOMER çağrısı doğrudan EGL function
+  invocation olarak üretildi.
+- Function body indentation standardı korundu.
+- Global declaration'lar function bloğundan önce üretildi.
+- actual.egl doğru case klasöründe oluşturuldu.
+- actual.egl Git tarafından takip edilmedi.
 
+## Eksik veya Hatalı Alanlar
 
-\- FIXED DECIMAL declaration
+Case001 kapsamındaki parametresiz procedure dönüşümünde gözlenen açık bir
+dönüşüm kaybı bulunmamaktadır.
 
-\- CHAR declaration
+Ancak aşağıdaki hedef dil konuları uzman incelemesi gerektirir:
 
-\- PL/I procedure tanımı
+- Global alanların EGL function içinden kullanım standardı
+- Function'ın bağımsız EGL source içinde mi yoksa program/library part
+  içinde mi bulunması gerektiği
+- EGL part wrapper ihtiyacı
+- Function ve global declaration yerleşim sırası
+- Function visibility standardı
 
-\- Assignment statement
+## Dönüşüm Standardı Bulguları
 
-\- Argument içeren PL/I CALL statement
-
-\- Global declaration bilgilerinin procedure içinde kullanılması
-
-
-
-\## Mevcut Çıktı İncelemesi
-
-
-
-CLI case modu başarıyla çalıştırıldı.
-
-
-
-input.pl1 dosyası okundu ve actual.egl dosyası üretildi.
-
-
-
-Üretilen mevcut çıktı:
-
-
-
-&#x20;   MustNo decimal(8);
-
-&#x20;   CustomerNo decimal(8);
-
-&#x20;   CustomerName char(30);
-
-
-
-\## Doğru Dönüşen Alanlar
-
-
-
-\- MUST\_NO FIXED DECIMAL(8) declaration'ı MustNo decimal(8) olarak
-
-&#x20; dönüştü.
-
-\- CUSTOMER\_NO FIXED DECIMAL(8) declaration'ı CustomerNo decimal(8)
-
-&#x20; olarak dönüştü.
-
-\- CUSTOMER\_NAME CHAR(30) declaration'ı CustomerName char(30) olarak
-
-&#x20; dönüştü.
-
-\- CLI input.pl1 dosyasını okuyabildi.
-
-\- CLI actual.egl dosyasını doğru case klasöründe oluşturabildi.
-
-\- actual.egl Git tarafından takip edilmedi.
-
-
-
-\## Eksik veya Hatalı Alanlar
-
-
-
-\- CUSTOMER\_PROCESS PL/I procedure'ü EGL function olarak üretilmedi.
-
-\- Procedure içindeki CUSTOMER\_NO = MUST\_NO assignment statement'ı
-
-&#x20; actual.egl çıktısında yer almadı.
-
-\- Procedure içindeki FETCH\_CUSTOMER çağrısı actual.egl çıktısında yer
-
-&#x20; almadı.
-
-\- Dönüştürülmeyen PL/I procedure için diagnostic üretilmedi.
-
-\- Kaynak kodun procedure bölümü dönüştürülmediği halde conversion
-
-&#x20; başarılı kabul edildi.
-
-
-
-\## Dönüşüm Standardı Bulguları
-
-
-
-PL/I CALL statement EGL tarafında `call` keyword'üyle üretilmemelidir.
-
-
+PL/I procedure, parameter ve local declaration taşımadığı durumda EGL
+function olarak üretilebilir.
 
 PL/I:
 
+    CUSTOMER_PROCESS: PROCEDURE;
+        CUSTOMER_NO = MUST_NO;
+        CALL FETCH_CUSTOMER(CUSTOMER_NO, CUSTOMER_NAME);
+    END CUSTOMER_PROCESS;
 
+EGL:
 
-&#x20;   CALL FETCH\_CUSTOMER(CUSTOMER\_NO, CUSTOMER\_NAME);
+    function CustomerProcess()
+        CustomerNo = MustNo;
+        FetchCustomer(CustomerNo, CustomerName);
+    end
 
+PL/I CALL statement EGL tarafında call keyword'ü kullanılmadan doğrudan
+function invocation olarak üretilir.
 
-
-Doğru EGL:
-
-
-
-&#x20;   FetchCustomer(CustomerNo, CustomerName);
-
-
-
-Bu hata production generator ve regression testlerinde düzeltilmiştir.
-
-
-
-\## EGL Function İncelemesi
-
-
-
-PL/I procedure yapısının EGL hedef karşılığı function olacaktır.
-
-
-
-İlk aday function biçimi:
-
-
-
-&#x20;   function CustomerProcess()
-
-&#x20;       CustomerNo = MustNo;
-
-&#x20;       FetchCustomer(CustomerNo, CustomerName);
-
-&#x20;   end
-
-
-
-Bu çıktı henüz compiler tarafından üretilmemektedir.
-
-
-
-PL/I procedure parametreleri ileride desteklendiğinde EGL function
-
-parametrelerinin:
-
-
-
-\- veri tipi
-
-\- in
-
-\- out
-
-\- inOut
-
-
-
-bilgileri gerçek PL/I declaration ve kullanım bilgisi üzerinden
-
-belirlenmelidir.
-
-
-
-Parametre yönü tahmin edilmeyecektir.
-
-
-
-\## Uzman Geri Bildirimi
-
-
+## Uzman Geri Bildirimi
 
 Henüz alınmadı.
 
+Özellikle EGL function'ın hangi program, library veya service part
+içinde bulunması gerektiği gerçek EGL proje örnekleri üzerinden
+doğrulanmalıdır.
 
+## Sonraki İşlemler
 
-EGL function gövdesi, global alan kullanımı ve parametre yönleri gerçek
-
-EGL örnekleri üzerinden ayrıca doğrulanacaktır.
-
-
-
-\## Sonraki İşlemler
-
-
-
-1\. PL/I procedure → EGL function dönüşüm modeli tasarlanacak.
-
-2\. Procedure body mevcut statement transpiler üzerinden dönüştürülecek.
-
-3\. Dönüştürülmeyen procedure durumunda diagnostic politikası
-
-&#x20;  belirlenecek.
-
-4\. Case001 yeniden çalıştırılacak.
-
-5\. Yeni actual.egl çıktısı incelenecek.
-
-6\. Uzman geri bildirimi bu dosyaya eklenecek.
-
+1. Case001 EGL çıktısı uzman incelemesine sunulacak.
+2. EGL part wrapper standardı doğrulanacak.
+3. Function ve global alan yerleşimi doğrulanacak.
+4. Geri bildirimler bu dosyaya eklenecek.
+5. Doğruluğu kesinleştiğinde expected.egl adayı değerlendirilecek.

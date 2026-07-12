@@ -1466,6 +1466,11 @@ input.pl1 ve notes.md proje hafızasının bir parçasıdır.
 * Gerçek örneklerden yeni statement ihtiyaçlarının çıkarılması
 * Gerçek örneklerden yeni declaration ihtiyaçlarının çıkarılması
 * Onaylanan dönüşümlerin regression testlerine eklenmesi
+* Parametresiz PL/I procedure → EGL function dönüşümü
+* Procedure body statement'larının EGL function body içinde üretilmesi
+* Desteklenmeyen procedure dönüşümleri için kontrollü diagnostic
+* Parameterized procedure dönüşümü için semantic binding kullanımı
+* EGL function parameter type ve direction modelinin oluşturulması
 
 ## Bilinçli Olarak İlk Kapsam Dışı Bırakılanlar
 

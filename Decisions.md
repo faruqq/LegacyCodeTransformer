@@ -3720,3 +3720,105 @@ biçimde belirlenebilir.
 ### Durum
 
 ✅ Aktif
+
+## Decision 086 - Parametresiz PL/I procedure EGL function olarak üretilecektir
+
+### Karar
+
+Parameter ve procedure-local declaration taşımayan PL/I procedure
+modelleri EGL hedef dilinde EglFunction modeli olarak üretilecektir.
+
+Desteklenen PL/I örneği:
+
+    CUSTOMER_PROCESS: PROCEDURE;
+        CUSTOMER_NO = MUST_NO;
+        CALL FETCH_CUSTOMER(CUSTOMER_NO, CUSTOMER_NAME);
+    END CUSTOMER_PROCESS;
+
+Üretilen EGL:
+
+    function CustomerProcess()
+        CustomerNo = MustNo;
+        FetchCustomer(CustomerNo, CustomerName);
+    end
+
+PL/I procedure adı mevcut identifier naming strategy üzerinden EGL
+function adına dönüştürülecektir.
+
+Procedure body içindeki executable statement modelleri mevcut
+StatementTranspiler üzerinden dönüştürülecektir.
+
+EglSyntaxTree aşağıdaki root koleksiyonları ayrı taşıyacaktır:
+
+    Declarations
+    Functions
+    Statements
+
+EGL generator root modelleri aşağıdaki sırayla üretecektir:
+
+    Global declaration'lar
+    EGL function blokları
+    Top-level statement'lar
+
+Parameter içeren PL/I procedure bu aşamada EGL function olarak
+üretilmeyecektir.
+
+Procedure body declaration içeren PL/I procedure de bu aşamada EGL
+function olarak üretilmeyecektir.
+
+Desteklenmeyen procedure modelleri sessizce atlanmayacaktır.
+
+Parameter içeren procedure için semantic/transpiler diagnostic
+üretilecek ve conversion pipeline EGL output üretmeden duracaktır.
+
+Procedure body declaration içeren procedure için de aynı kontrollü
+başarısızlık davranışı uygulanacaktır.
+
+### Gerekçe
+
+Case001 incelemesi, parser ve semantic katmanda korunan PL/I procedure
+business logic'inin transpiler tarafından işlenmediğini ve kaynak kodun
+sessizce kaybolduğunu göstermiştir.
+
+Kaynak kodun bir bölümünün dönüştürülmediği halde conversion'ın başarılı
+kabul edilmesi güvenilir bir compiler davranışı değildir.
+
+Parametresiz procedure dönüşümü için gerekli bilgiler mevcut modellerde
+zaten bulunmaktadır:
+
+- Procedure adı
+- Procedure body statement listesi
+- StatementTranspiler
+- EGL statement modelleri
+- EGL generator
+
+Bu nedenle ilk function kapsamı yeni semantic tahmin gerektirmeden
+güvenli biçimde uygulanabilmektedir.
+
+Parameter taşıyan procedure için ise aşağıdaki bilgiler henüz tamamlanmış
+değildir:
+
+- EGL function parameter modeli
+- Parameter EGL type mapping
+- in / out / inOut direction analizi
+- Procedure local scope
+- Local declaration output
+
+Bu bilgileri tahmin ederek eksik veya hatalı EGL üretmek yerine conversion
+açık diagnostic ile durdurulacaktır.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Functions
+- LegacyCodeTransformer.Egl/Syntax
+- LegacyCodeTransformer.Egl/Generation
+- LegacyCodeTransformer.Transpilers/Pl1ToEgl
+- LegacyCodeTransformer.Egl.Tests
+- LegacyCodeTransformer.Transpilers.Tests
+- LegacyCodeTransformer.Application.Tests
+- samples/Case001
+- samples/Case002
+
+### Durum
+
+✅ Aktif

@@ -86,66 +86,74 @@ Bu nedenle bu örnek expected EGL olarak kullanılmayacaktır.
 
 ## Mevcut Çıktı İncelemesi
 
-Case002 güncel parser ile CLI case modu üzerinden yeniden çalıştırıldı.
+Case002 parametresiz EGL function desteği eklendikten sonra yeniden
+çalıştırıldı.
 
-Dönüşüm başarıyla tamamlandı ve actual.egl dosyası üretildi.
+Dönüşüm kontrollü olarak başarısız oldu.
 
-Üretilen çıktı:
+Üretilen diagnostic:
 
-    ErrorText char(50);
-    CustomerNo decimal(8);
-    CustomerProcess("CUSTOMER NOT FOUND");
+    Parameter içeren PL/I procedure için EGL function mapping henüz
+    desteklenmiyor: CUSTOMER_PROCESS.
+
+actual.egl dosyası üretilmedi.
+
+Bu davranış bilinçlidir.
+
+Parameter ve direction bilgisi tamamlanmadan eksik EGL function üretmek
+yerine conversion pipeline durdurulmaktadır.
 
 ## Doğru Çalışan Alanlar
 
-- PROCEDURE(PROCESS_TEXT) header syntax'ı başarıyla parse edildi.
-- PROCESS_TEXT procedure parameter adı sırası korunarak procedure
-  modeline eklendi.
-- Procedure body içindeki DCL PROCESS_TEXT CHAR(50) declaration'ı
-  başarıyla parse edildi.
-- Procedure body declaration ve executable statement koleksiyonları
-  ayrı biçimde korundu.
-- Procedure sonrasındaki top-level CALL statement başarıyla parse edildi.
-- PL/I CALL statement EGL tarafında call keyword'ü kullanılmadan doğrudan
-  function invocation olarak üretildi.
-- Global ERROR_TEXT declaration'ı ErrorText char(50) olarak dönüştürüldü.
-- Global CUSTOMER_NO declaration'ı CustomerNo decimal(8) olarak
-  dönüştürüldü.
-- actual.egl dosyası başarıyla oluşturuldu.
+- PROCEDURE(PROCESS_TEXT) header syntax'ı başarıyla parse edilmektedir.
+- PROCESS_TEXT header parameter sırası korunmaktadır.
+- DCL PROCESS_TEXT CHAR(50) procedure body declaration'ı parse
+  edilmektedir.
+- Header parameter ile body declaration semantic binding'i
+  çözülmektedir.
+- PROCESS_TEXT binding üzerinden Pl1CharacterType ve Length = 50
+  bilgisine erişilebilmektedir.
+- Procedure body assignment ve CALL statement modelleri syntax tree
+  üzerinde korunmaktadır.
+- Top-level CALL CUSTOMER_PROCESS statement'ı parse edilmektedir.
+- Desteklenmeyen parameter mapping sessizce atlanmamaktadır.
+- Conversion başarısız olduğunda EGL output üretilmemektedir.
 
 ## Eksik veya Hatalı Alanlar
 
-- CUSTOMER_PROCESS PL/I procedure'ü henüz EGL function olarak
-  üretilmiyor.
-- Procedure içindeki PROCESS_TEXT declaration'ı EGL function
-  parametresine dönüştürülmüyor.
-- Procedure içindeki ERROR_TEXT = PROCESS_TEXT assignment statement'ı
-  actual.egl çıktısında bulunmuyor.
-- Procedure içindeki WRITE_ERROR çağrısı actual.egl çıktısında
-  bulunmuyor.
-- Procedure parameter veri tipi ile header parameter adı arasında
-  semantic binding henüz yapılmıyor.
-- EGL function parameter direction bilgisi henüz belirlenmiyor.
-- Procedure dönüştürülmediği halde conversion başarılı kabul ediliyor.
-- Dönüştürülmeyen procedure için diagnostic üretilmiyor.
+- EGL function parameter syntax modeli bulunmamaktadır.
+- PROCESS_TEXT için EGL parameter type henüz üretilmemektedir.
+- Parameter direction henüz belirlenmemektedir.
+- in, out veya inOut mapping yapılmamaktadır.
+- Procedure body declaration'ı EGL function parameter declaration'a
+  dönüştürülmemektedir.
+- Parameterized CustomerProcess function henüz üretilmemektedir.
+- Procedure dışındaki CustomerProcess invocation da output'a
+  yazılmamaktadır; çünkü conversion diagnostic nedeniyle generator
+  aşamasına geçilmemektedir.
 
 ## Semantic Değerlendirme
 
-PROCESS_TEXT declaration'ı procedure içinde korunmaktadır.
+PROCESS_TEXT için semantic binding resolved durumdadır.
 
-Ancak mevcut semantic analyzer yalnızca global declaration symbol table
-üretmektedir.
+Binding bilgileri:
 
-Procedure parameter ve local declaration için ayrı scope veya local
-symbol table henüz bulunmamaktadır.
+    ProcedureName = CUSTOMER_PROCESS
+    ParameterName = PROCESS_TEXT
+    Declaration.Name = PROCESS_TEXT
+    Declaration.DataType = Pl1CharacterType
+    Declaration.DataType.Length = 50
+    IsResolved = true
 
-Header parameter adı ile procedure declaration bilgisinin eşleştirilmesi
-sonraki semantic adımlardan biri olacaktır.
+Bu bilgi EGL parameter type mapping için yeterli bir foundation
+sağlamaktadır.
+
+Ancak direction bilgisi declaration tipinden tek başına çıkarılamaz.
+
+Procedure body içindeki read/write kullanımları ayrıca analiz
+edilmelidir.
 
 ## EGL Function Parameter İncelemesi
-
-CUSTOMER_PROCESS procedure'ü EGL tarafında function olarak
-dönüştürülmelidir.
 
 Aday hedef yapı:
 
@@ -160,20 +168,15 @@ Aday hedef yapı:
 
 Bu örnek henüz onaylanmış EGL output değildir.
 
-Özellikle aşağıdaki bilgiler gerçek EGL örnekleriyle doğrulanmalıdır:
+Aşağıdaki konular doğrulanmadan production mapping yapılmayacaktır:
 
-- Function parameter declaration syntax'ı
-- CHAR(50) için doğru EGL parameter type
-- `in` yönünün doğru kullanımı
+- EGL function parameter declaration sırası
+- Type ve direction keyword sırası
+- CHAR(50) parameter syntax'ı
+- `in` direction doğruluğu
 - Function header satır bölme standardı
-- Global alanların function içinden erişim davranışı
-- Function'ların EGL program part içindeki yerleşimi
-
-Parameter direction tahmin edilmeyecektir.
-
-PROCESS_TEXT yalnızca okunuyor göründüğü için `in` adayıdır; ancak bu
-bilgi semantic kullanım analizi ve gerçek EGL standardıyla
-doğrulanmadan production output'a taşınmayacaktır.
+- Local declaration ve parameter ayrımı
+- Function'ın EGL part içindeki yerleşimi
 
 ## Uzman Geri Bildirimi
 
@@ -181,12 +184,11 @@ Henüz alınmadı.
 
 ## Sonraki İşlemler
 
-1. Procedure header parameter ile procedure declaration binding modeli
-   belirlenecek.
-2. Procedure local declaration scope ihtiyacı değerlendirilecek.
-3. EGL function parameter syntax'ı doğrulanacak.
-4. PL/I procedure → EGL function syntax modeli oluşturulacak.
-5. Procedure body mevcut statement transpiler üzerinden dönüştürülecek.
-6. Dönüştürülmeyen procedure için diagnostic politikası belirlenecek.
-7. Case001 ve Case002 yeniden çalıştırılacak.
-8. actual.egl çıktıları tekrar incelenecek.
+1. EGL function parameter syntax modeli oluşturulacak.
+2. PL/I parameter declaration data type EGL type'a map edilecek.
+3. Parameter read/write kullanım analizi tasarlanacak.
+4. in / out / inOut direction politikası gerçek örneklerle
+   doğrulanacak.
+5. Parameterized Pl1Procedure → EglFunction dönüşümü eklenecek.
+6. Case002 yeniden çalıştırılacak.
+7. actual.egl çıktısı uzman incelemesine sunulacak.
