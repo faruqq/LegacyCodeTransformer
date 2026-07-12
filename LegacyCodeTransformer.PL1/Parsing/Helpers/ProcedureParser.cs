@@ -1,4 +1,5 @@
 ﻿using LegacyCodeTransformer.Core.Syntax;
+using LegacyCodeTransformer.Pl1.Declarations;
 using LegacyCodeTransformer.Pl1.Lexing;
 using LegacyCodeTransformer.Pl1.Procedures;
 using LegacyCodeTransformer.Pl1.Statements;
@@ -12,28 +13,23 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 /// ----------------------
 /// Pl1Parser ana orchestration sınıfı procedure grammar detaylarını
 /// doğrudan bilmemelidir. Procedure header, parameter listesi, option
-/// listesi, body sınırı ve END doğrulama davranışı ayrı parser içinde
-/// tutulmalıdır.
+/// listesi, body declaration'ları, executable statement'lar ve END
+/// doğrulama davranışı ayrı parser içinde tutulmalıdır.
 ///
 /// Ne çözüyor?
 /// ----------------------
 /// Parametresiz veya parametreli PROCEDURE header bilgisini, options
-/// listesini ve procedure içindeki executable statement listesini
-/// Pl1Procedure modeline dönüştürür.
+/// listesini, procedure içindeki declaration modellerini ve executable
+/// statement listesini Pl1Procedure modeline dönüştürür.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
-/// PROCEDURE_NAME: PROCEDURE;
-///     CALL FETCH_CURSOR;
-/// END PROCEDURE_NAME;
-///
 /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
-///     ERROR_TEXT = PROCESS_TEXT;
-/// END CUSTOMER_PROCESS;
+///     DCL PROCESS_TEXT CHAR(50);
 ///
-/// PROGRAM_NAME: PROCEDURE(ARG1, ARG2) OPTIONS(MAIN);
-///     CALL INIT_PROCESS;
-/// END PROGRAM_NAME;
+///     ERROR_TEXT = PROCESS_TEXT;
+///     CALL WRITE_ERROR(ERROR_TEXT);
+/// END CUSTOMER_PROCESS;
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -41,9 +37,9 @@ namespace LegacyCodeTransformer.Pl1.Parsing.Helpers;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// Procedure parameter declaration eşleştirmesi, local declaration
-/// parsing, parameter scope, semantic analysis ve EGL function
-/// transpiler entegrasyonu bu parser çıktısı üzerinden ilerleyecektir.
+/// Procedure parameter declaration eşleştirmesi, local scope,
+/// semantic analysis ve EGL function transpiler entegrasyonu bu parser
+/// çıktısı üzerinden ilerleyecektir.
 /// </summary>
 internal sealed class ProcedureParser : ParserBase
 {
@@ -57,21 +53,19 @@ internal sealed class ProcedureParser : ParserBase
     ///
     /// Neden var?
     /// ----------------------
-    /// Root syntax tree procedure bloklarını declaration ve top-level
+    /// Root syntax tree procedure bloklarını top-level declaration ve
     /// statement listelerinden ayrı biçimde taşımalıdır.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Procedure adını, ordered parameter listesini, options listesini
-    /// ve executable body statement'larını okuyarak Pl1Procedure üretir.
+    /// Procedure adını, ordered parameter listesini, options listesini,
+    /// local declaration modellerini ve executable body statement'larını
+    /// okuyarak Pl1Procedure üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// PROCESS_CURSOR: PROCEDURE;
-    ///     CALL FETCH_CURSOR;
-    /// END PROCESS_CURSOR;
-    ///
     /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+    ///     DCL PROCESS_TEXT CHAR(50);
     ///     ERROR_TEXT = PROCESS_TEXT;
     /// END CUSTOMER_PROCESS;
     ///
@@ -81,8 +75,8 @@ internal sealed class ProcedureParser : ParserBase
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Procedure body declaration parsing ve parameter semantic
-    /// resolution davranışları bu methodun ürettiği model üzerinden
+    /// Parameter declaration resolution ve procedure-level semantic
+    /// analysis davranışları bu methodun ürettiği model üzerinden
     /// geliştirilecektir.
     /// </summary>
     public HelperParseResult<Pl1Procedure> ParseProcedure()
@@ -123,13 +117,15 @@ internal sealed class ProcedureParser : ParserBase
                 Position);
         }
 
-        var parameters = Current.Kind == Pl1TokenKind.OpenParenthesis
-            ? ParseParameters()
-            : new List<string>();
+        var parameters = Current.Kind ==
+            Pl1TokenKind.OpenParenthesis
+                ? ParseParameters()
+                : new List<string>();
 
-        var options = Current.Kind == Pl1TokenKind.OptionsKeyword
-            ? ParseOptions()
-            : new List<string>();
+        var options = Current.Kind ==
+            Pl1TokenKind.OptionsKeyword
+                ? ParseOptions()
+                : new List<string>();
 
         if (Consume(
                 Pl1TokenKind.Semicolon,
@@ -140,7 +136,12 @@ internal sealed class ProcedureParser : ParserBase
                 Position);
         }
 
-        var statements = ParseProcedureStatements();
+        var declarations = new List<Pl1Declaration>();
+        var statements = new List<Pl1Statement>();
+
+        ParseProcedureBody(
+            declarations,
+            statements);
 
         if (Current.Kind == Pl1TokenKind.EndKeyword)
         {
@@ -159,7 +160,8 @@ internal sealed class ProcedureParser : ParserBase
             options,
             statements,
             procedureStart,
-            parameters);
+            parameters,
+            declarations);
 
         return new HelperParseResult<Pl1Procedure>(
             procedure,
@@ -183,7 +185,6 @@ internal sealed class ProcedureParser : ParserBase
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// PROCEDURE(PROCESS_TEXT)
-    ///
     /// PROCEDURE(CUSTOMER_NO, CUSTOMER_NAME)
     ///
     /// Nerede kullanılır?
@@ -320,25 +321,27 @@ internal sealed class ProcedureParser : ParserBase
     }
 
     /// <summary>
-    /// Procedure body içindeki executable statement listesini parse eder.
+    /// Procedure body içindeki declaration ve executable statement
+    /// modellerini parse eder.
     ///
     /// Neden var?
     /// ----------------------
-    /// ProcedureParser yalnızca procedure sınırını yönetmelidir. CALL,
-    /// IF, DO ve assignment gibi statement grammar detayları mevcut
-    /// StatementParser sorumluluğunda kalmalıdır.
+    /// Gerçek PL/I procedure'lerinde header parameter'larının veri tipi
+    /// body içindeki DCL statement ile tanımlanabilir. Procedure body
+    /// yalnızca executable statement'lardan oluşmak zorunda değildir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// END PROCEDURE_NAME sınırına kadar executable statement'ları
-    /// mevcut statement parser pipeline üzerinden parse eder.
+    /// DCL token'ı görüldüğünde mevcut DeclarationParser'ı, diğer
+    /// statement başlangıçlarında mevcut StatementParser'ı kullanır.
+    /// Böylece declaration grammar'ı tekrar implemente edilmez.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// PROCESS_CURSOR: PROCEDURE;
-    ///     PARAM = 'ABC';
-    ///     CALL FETCH_CURSOR;
-    /// END PROCESS_CURSOR;
+    /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+    ///     DCL PROCESS_TEXT CHAR(50);
+    ///     ERROR_TEXT = PROCESS_TEXT;
+    /// END CUSTOMER_PROCESS;
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -346,35 +349,62 @@ internal sealed class ProcedureParser : ParserBase
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Procedure local declaration desteği ayrı bir body item ayrımıyla
-    /// eklendiğinde bu method kontrollü biçimde genişletilecektir.
+    /// Procedure local symbol table, parameter declaration binding ve
+    /// scope analysis bu ayrılmış koleksiyonlar üzerinden ilerler.
     /// </summary>
-    private List<Pl1Statement> ParseProcedureStatements()
+    private void ParseProcedureBody(
+        ICollection<Pl1Declaration> declarations,
+        ICollection<Pl1Statement> statements)
     {
-        var statements = new List<Pl1Statement>();
-
         while (!IsAtEnd() &&
                !IsProcedureEnd())
         {
-            var statementStartPosition = Position;
-            var statementParser = new StatementParser(Context);
-            var result = statementParser.ParseStatement();
+            var bodyItemStartPosition = Position;
 
-            Position = result.Position;
-
-            if (result.Value is not null)
+            if (Current.Kind == Pl1TokenKind.DclKeyword)
             {
-                statements.Add(result.Value);
+                var declarationParser =
+                    new DeclarationParser(Context);
 
-                continue;
+                var declarationResult =
+                    declarationParser.ParseDeclaration();
+
+                Position = declarationResult.Position;
+
+                if (declarationResult.Value is not null)
+                {
+                    declarations.Add(
+                        declarationResult.Value);
+
+                    continue;
+                }
+            }
+            else
+            {
+                var statementParser =
+                    new StatementParser(Context);
+
+                var statementResult =
+                    statementParser.ParseStatement();
+
+                Position = statementResult.Position;
+
+                if (statementResult.Value is not null)
+                {
+                    statements.Add(
+                        statementResult.Value);
+
+                    continue;
+                }
             }
 
-            if (Position == statementStartPosition)
+            if (Position == bodyItemStartPosition)
             {
                 Diagnostics.Add(
                     ParserDiagnosticFactory.UnexpectedToken(
                         Current,
-                        "procedure executable statement veya END procedure"));
+                        "procedure declaration, executable " +
+                        "statement veya END procedure"));
 
                 var recoveryHelper =
                     new StatementRecoveryHelper(Context);
@@ -382,8 +412,6 @@ internal sealed class ProcedureParser : ParserBase
                 recoveryHelper.SkipCurrentStatement();
             }
         }
-
-        return statements;
     }
 
     private void ParseProcedureEnd(string procedureName)
@@ -396,7 +424,7 @@ internal sealed class ProcedureParser : ParserBase
         {
             Diagnostics.Add(
                 ParserDiagnosticFactory.ExpectedToken(
-                    $"END sonrası procedure adı bekleniyordu: " +
+                    "END sonrası procedure adı bekleniyordu: " +
                     $"{procedureName}.",
                     Current));
 
