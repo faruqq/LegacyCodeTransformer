@@ -164,15 +164,35 @@ Tamamlanan parser kapsamı:
 
 
 
+Tamamlanan semantic kapsam:
+
+
+
+1\. Header parameter ile body variable declaration binding
+
+2\. Case-insensitive parameter declaration eşleştirmesi
+
+3\. Çoklu parameter binding sırasının korunması
+
+4\. Binding üzerinden PL/I data type modeline erişim
+
+5\. Eşleşmeyen parameter bilgisinin unresolved olarak korunması
+
+6\. Procedure declaration bilgilerinin global SymbolTable dışında
+
+&#x20;  tutulması
+
+
+
 Kalan production ihtiyaçları:
 
 
 
-1\. Header parameter ile body declaration binding
+1\. Procedure local symbol table
 
-2\. Procedure local symbol table
+2\. Duplicate procedure declaration kontrolü
 
-3\. Procedure parameter type resolution
+3\. Missing parameter declaration diagnostic politikası
 
 4\. Procedure parameter read/write kullanım analizi
 
@@ -180,13 +200,13 @@ Kalan production ihtiyaçları:
 
 6\. EGL function parameter direction mapping
 
-7\. PL/I procedure → EGL function transpilation
+7\. EGL function syntax modeli
 
-8\. Procedure body statement generation
+8\. PL/I procedure → EGL function transpilation
 
-9\. Desteklenmeyen procedure dönüşümü için diagnostic
+9\. Procedure body statement generation
 
-
+10\. Dönüştürülmeyen procedure için diagnostic
 
 İlk kapsamda hâlâ yapılmayacaklar:
 

@@ -3456,3 +3456,107 @@ Kalan temel dönüşüm açıkları:
 
 Bu milestone sonunda gerçek case envanteri, sonraki conversion coverage
 çalışmalarını yönlendirecek somut bulgular üretmiştir.
+
+## P10.3 - Procedure Parameter Declaration Binding Foundation
+
+P10.3 kapsamında PL/I procedure header parameter adları ile procedure
+body içindeki variable declaration modelleri arasında semantic binding
+foundation oluşturuldu.
+
+Eklenen production bileşeni:
+
+- Pl1ProcedureParameterBinding
+
+Güncellenen production bileşenleri:
+
+- Pl1SemanticAnalyzer
+- SemanticResult
+
+Eklenen test bileşeni:
+
+- Pl1ProcedureParameterBindingTests
+
+Pl1SemanticAnalyzer artık her procedure için header parameter listesini
+kaynak sırasıyla dolaşır.
+
+Her parameter adı aynı procedure içindeki Pl1VariableDeclaration
+modelleriyle case-insensitive olarak karşılaştırılır.
+
+Desteklenen örnek:
+
+    CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        DCL PROCESS_TEXT CHAR(50);
+
+        ERROR_TEXT = PROCESS_TEXT;
+    END CUSTOMER_PROCESS;
+
+Bu örnek için aşağıdaki resolved binding oluşturulur:
+
+    ProcedureName = CUSTOMER_PROCESS
+    ParameterName = PROCESS_TEXT
+    Declaration.Name = PROCESS_TEXT
+    IsResolved = true
+
+Binding üzerinden declaration data type bilgisine erişilebilir:
+
+    Pl1CharacterType
+    Length = 50
+
+Çoklu parameter listesinde header sırası korunur.
+
+Örnek:
+
+    PROCESS_DATA: PROCEDURE(INPUT_TEXT, OUTPUT_TEXT);
+        DCL INPUT_TEXT CHAR(30);
+        DCL OUTPUT_TEXT CHAR(50);
+    END PROCESS_DATA;
+
+Binding sırası:
+
+    1. INPUT_TEXT
+    2. OUTPUT_TEXT
+
+Declaration casing değeri header parameter casing değerinden farklı
+olsa bile binding başarıyla çözümlenir.
+
+Örnek:
+
+    PROCEDURE(PROCESS_TEXT);
+        DCL process_text CHAR(50);
+
+Eşleşen declaration bulunmayan parameter bilgisi kaybedilmez.
+
+Örnek:
+
+    CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        ERROR_TEXT = PROCESS_TEXT;
+    END CUSTOMER_PROCESS;
+
+Bu durumda:
+
+    ParameterName = PROCESS_TEXT
+    Declaration = null
+    IsResolved = false
+
+Unresolved binding bu aşamada semantic diagnostic üretmez ve
+ConversionService pipeline'ını durdurmaz.
+
+Procedure body declaration modelleri global SymbolTable içine
+eklenmemiştir.
+
+Bu milestone adımında bilinçli olarak yapılmayanlar:
+
+- Procedure local SymbolTable
+- Procedure scope stack
+- Missing parameter declaration diagnostic'i
+- Duplicate local declaration diagnostic'i
+- Parameter read/write kullanım analizi
+- in yönü belirleme
+- out yönü belirleme
+- inOut yönü belirleme
+- EGL function parameter modeli
+- PL/I procedure → EGL function transpilation
+- Procedure body EGL generation
+
+Bu adım sonunda procedure parameter adı ile veri tipi declaration modeli
+güvenli biçimde ilişkilendirilebilir hale gelmiştir.

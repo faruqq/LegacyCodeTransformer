@@ -3618,3 +3618,105 @@ geliştirilecektir.
 ### Durum
 
 ✅ Aktif
+
+## Decision 085 - Procedure parameter declaration binding semantic katmanda yapılacaktır
+
+### Karar
+
+PL/I procedure header üzerinde bulunan parameter adları ile procedure
+body içindeki declaration modellerinin eşleştirilmesi parser veya
+transpiler katmanında yapılmayacaktır.
+
+Eşleştirme PL/I semantic analyzer tarafından gerçekleştirilecektir.
+
+Desteklenen örnek:
+
+    CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        DCL PROCESS_TEXT CHAR(50);
+
+        ERROR_TEXT = PROCESS_TEXT;
+    END CUSTOMER_PROCESS;
+
+Bu örnekte:
+
+    Header parameter:
+    PROCESS_TEXT
+
+    Body declaration:
+    DCL PROCESS_TEXT CHAR(50);
+
+bilgileri semantic analysis sırasında case-insensitive olarak
+eşleştirilecektir.
+
+Binding sonucu aşağıdaki bilgileri taşıyacaktır:
+
+- Procedure adı
+- Parameter adı
+- Eşleşen Pl1VariableDeclaration
+- Binding çözümleme durumu
+
+Eşleşen declaration bulunduğunda:
+
+    IsResolved = true
+
+olacaktır.
+
+Eşleşen declaration bulunmadığında:
+
+    IsResolved = false
+    Declaration = null
+
+olarak korunacaktır.
+
+Bu aşamada unresolved procedure parameter binding semantic diagnostic
+üretmeyecektir.
+
+Procedure body declaration modelleri global SymbolTable içine
+eklenmeyecektir.
+
+Parameter direction bilgisi bu binding sırasında belirlenmeyecektir.
+
+Aşağıdaki yönlerden hiçbiri tahmin edilmeyecektir:
+
+- in
+- out
+- inOut
+
+### Gerekçe
+
+Procedure header yalnızca parameter adını taşırken parameter veri tipi
+procedure body içindeki DCL declaration üzerinden tanımlanabilmektedir.
+
+Parser'ın görevi kaynak syntax bilgisini kaybetmeden modellemektir.
+Header parameter ile declaration arasındaki anlam ilişkisini kurmak
+parser sorumluluğu değildir.
+
+Transpiler ise yalnızca semantic olarak çözümlenmiş bilgileri hedef EGL
+modeline dönüştürmelidir. Binding davranışının transpiler içine
+yerleştirilmesi dönüşüm ve semantic çözümleme sorumluluklarını
+karıştıracaktır.
+
+Procedure body declaration'larının global SymbolTable içine eklenmesi
+local bilgilerin global scope gibi davranmasına neden olacağından
+mevcut aşamada yapılmamıştır.
+
+Unresolved binding için diagnostic politikası henüz kesinleşmediğinden
+yanlış pozitif üretmemek amacıyla bilgi korunmuş fakat dönüşüm
+durdurulmamıştır.
+
+Parameter direction yalnızca declaration tipi ve procedure body
+içindeki okuma/yazma kullanımları analiz edildikten sonra güvenilir
+biçimde belirlenebilir.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Semantic/Pl1ProcedureParameterBinding
+- LegacyCodeTransformer.PL1/Semantic/Pl1SemanticAnalyzer
+- LegacyCodeTransformer.PL1/Semantic/SemanticResult
+- LegacyCodeTransformer.PL1.Tests/Semantic
+- samples/Case002
+- samples/Inventory.md
+
+### Durum
+
+✅ Aktif
