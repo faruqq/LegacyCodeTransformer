@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using LegacyCodeTransformer.Core.Syntax;
+﻿using LegacyCodeTransformer.Core.Syntax;
 using LegacyCodeTransformer.Egl.Declarations;
+using LegacyCodeTransformer.Egl.Functions;
 using LegacyCodeTransformer.Egl.Statements;
 
 namespace LegacyCodeTransformer.Egl.Syntax
@@ -11,44 +10,58 @@ namespace LegacyCodeTransformer.Egl.Syntax
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I → EGL dönüşüm pipeline'ında Transpiler aşaması doğrudan string üretmez.
-    /// Bunun yerine EGL diline ait güçlü tipli bir syntax tree üretir.
+    /// PL/I → EGL dönüşüm pipeline'ında transpiler doğrudan string
+    /// üretmez. Bunun yerine EGL diline ait güçlü tipli bir syntax tree
+    /// üretir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// EGL declaration ve executable statement modellerini tek root syntax tree altında
-    /// taşır.
+    /// EGL declaration, function ve top-level executable statement
+    /// modellerini tek root syntax tree altında taşır.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// Declaration örneği:
+    /// Declaration:
     ///
-    ///     Param char(8);
+    /// CustomerNo decimal(8);
     ///
-    /// Statement örneği:
+    /// Function:
     ///
-    ///     param = "ABC";
+    /// function CustomerProcess()
+    ///     CustomerNo = MustNo;
+    /// end
+    ///
+    /// Top-level statement:
+    ///
+    /// CustomerProcess();
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// PL/I → EGL Transpiler çıktısında, EGL Code Generator girişinde ve unit testlerde
-    /// kullanılır.
+    /// PL/I → EGL transpiler çıktısında, EglCodeGenerator girişinde ve
+    /// EGL model testlerinde kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// EGL program, service, library, function, record, variable ve statement modelleri
-    /// aynı syntax tree kökü üzerinden taşınabilecektir.
+    /// EGL program, service, library, function, record, variable ve
+    /// statement modelleri aynı syntax tree kökü üzerinden
+    /// taşınabilecektir.
     /// </summary>
     public sealed class EglSyntaxTree : SyntaxTree
     {
         public IReadOnlyList<EglDeclaration> Declarations { get; }
+
+        public IReadOnlyList<EglFunction> Functions { get; }
 
         public IReadOnlyList<EglStatement> Statements { get; }
 
         public EglSyntaxTree(
             IEnumerable<EglDeclaration>? declarations,
             SourceLocation location)
-            : this(declarations, null, location)
+            : this(
+                declarations,
+                functions: null,
+                statements: null,
+                location)
         {
         }
 
@@ -56,10 +69,29 @@ namespace LegacyCodeTransformer.Egl.Syntax
             IEnumerable<EglDeclaration>? declarations,
             IEnumerable<EglStatement>? statements,
             SourceLocation location)
+            : this(
+                declarations,
+                functions: null,
+                statements,
+                location)
+        {
+        }
+
+        public EglSyntaxTree(
+            IEnumerable<EglDeclaration>? declarations,
+            IEnumerable<EglFunction>? functions,
+            IEnumerable<EglStatement>? statements,
+            SourceLocation location)
             : base(location)
         {
-            Declarations = declarations?.ToList() ?? new List<EglDeclaration>();
-            Statements = statements?.ToList() ?? new List<EglStatement>();
+            Declarations = declarations?.ToList() ??
+                new List<EglDeclaration>();
+
+            Functions = functions?.ToList() ??
+                new List<EglFunction>();
+
+            Statements = statements?.ToList() ??
+                new List<EglStatement>();
         }
     }
 }

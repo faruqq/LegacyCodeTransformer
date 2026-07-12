@@ -10,6 +10,8 @@ using LegacyCodeTransformer.Pl1.InitialValues;
 using LegacyCodeTransformer.Pl1.Syntax;
 using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
+using LegacyCodeTransformer.Egl.Functions;
+using LegacyCodeTransformer.Pl1.Procedures;
 
 namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 {
@@ -155,11 +157,45 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             _options = options ?? Pl1ToEglTranspilerOptions.Default;
         }
 
-        public Pl1ToEglTranspilationResult Transpile(Pl1SyntaxTree syntaxTree)
+        /// <summary>
+        /// PL/I syntax tree modelini EGL syntax tree modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parser tarafından üretilen declaration, procedure ve top-level
+        /// statement modellerinin hedef EGL syntax tree modeline aktarılması
+        /// gerekir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Global declaration'ları, desteklenen parametresiz procedure
+        /// modellerini ve top-level statement'ları sırasıyla EGL declaration,
+        /// function ve statement modellerine dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// CUSTOMER_PROCESS: PROCEDURE;
+        ///     CUSTOMER_NO = MUST_NO;
+        ///     CALL FETCH_CUSTOMER(CUSTOMER_NO);
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// ConversionService pipeline içinde semantic analysis sonrasında
+        /// çağrılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Parameter alan procedure'ler, local declaration'lar ve OPTIONS(MAIN)
+        /// mapping'i aynı procedure dönüşüm zinciri üzerinden genişletilecektir.
+        /// </summary>
+        public Pl1ToEglTranspilationResult Transpile(
+            Pl1SyntaxTree syntaxTree)
         {
             if (syntaxTree is null)
             {
-                _diagnostics.AddError("Transpile edilecek Pl1SyntaxTree null olamaz.");
+                _diagnostics.AddError(
+                    "Transpile edilecek Pl1SyntaxTree null olamaz.");
 
                 return new Pl1ToEglTranspilationResult(
                     null,
@@ -170,7 +206,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 
             foreach (var declaration in syntaxTree.Declarations)
             {
-                var eglDeclaration = TranspileDeclaration(declaration);
+                var eglDeclaration =
+                    TranspileDeclaration(declaration);
 
                 if (eglDeclaration is not null)
                 {
@@ -178,14 +215,30 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                 }
             }
 
-            var statements = new List<EglStatement>();
             var statementTranspiler = new StatementTranspiler(
                 _diagnostics,
                 _options.NamingOptions.Style);
 
+            var functions = new List<EglFunction>();
+
+            foreach (var procedure in syntaxTree.Procedures)
+            {
+                var eglFunction = TranspileProcedure(
+                    procedure,
+                    statementTranspiler);
+
+                if (eglFunction is not null)
+                {
+                    functions.Add(eglFunction);
+                }
+            }
+
+            var statements = new List<EglStatement>();
+
             foreach (var statement in syntaxTree.Statements)
             {
-                var eglStatement = statementTranspiler.TranspileStatement(statement);
+                var eglStatement =
+                    statementTranspiler.TranspileStatement(statement);
 
                 if (eglStatement is not null)
                 {
@@ -195,12 +248,100 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 
             var eglSyntaxTree = new EglSyntaxTree(
                 declarations,
+                functions,
                 statements,
                 syntaxTree.Location);
 
             return new Pl1ToEglTranspilationResult(
                 eglSyntaxTree,
                 _diagnostics.Diagnostics);
+        }
+
+        /// <summary>
+        /// Desteklenen PL/I procedure modelini EGL function modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I procedure modelleri parser ve semantic katmanda korunmasına
+        /// rağmen transpiler tarafından işlenmediğinde kaynak kodun business
+        /// logic bölümü sessizce kaybolmaktadır.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// İlk kapsamda parameter ve procedure-local declaration taşımayan
+        /// procedure modellerini EGL function modeline dönüştürür.
+        ///
+        /// Desteklenmeyen parameter veya local declaration bulunduğunda
+        /// procedure'ü sessizce atlamak yerine açık diagnostic üretir.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// CUSTOMER_PROCESS: PROCEDURE;
+        ///     CUSTOMER_NO = MUST_NO;
+        ///     CALL FETCH_CUSTOMER(CUSTOMER_NO);
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// Transpile methodu içinde Pl1SyntaxTree.Procedures koleksiyonu
+        /// işlenirken kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Procedure parameter binding sonuçlarının EGL function parameter
+        /// modellerine aktarılması ve local declaration dönüşümü bu method
+        /// üzerinden eklenecektir.
+        /// </summary>
+        private EglFunction? TranspileProcedure(
+            Pl1Procedure procedure,
+            StatementTranspiler statementTranspiler)
+        {
+            if (procedure.Parameters.Count > 0)
+            {
+                _diagnostics.Add(
+                    new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Parameter içeren PL/I procedure için EGL function " +
+                        $"mapping henüz desteklenmiyor: {procedure.Name}.",
+                        procedure.Location));
+
+                return null;
+            }
+
+            if (procedure.Declarations.Count > 0)
+            {
+                _diagnostics.Add(
+                    new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Body declaration içeren PL/I procedure için EGL " +
+                        $"function mapping henüz desteklenmiyor: " +
+                        $"{procedure.Name}.",
+                        procedure.Location));
+
+                return null;
+            }
+
+            var statements = new List<EglStatement>();
+
+            foreach (var statement in procedure.Statements)
+            {
+                var eglStatement =
+                    statementTranspiler.TranspileStatement(statement);
+
+                if (eglStatement is null)
+                {
+                    return null;
+                }
+
+                statements.Add(eglStatement);
+            }
+
+            return new EglFunction(
+                IdentifierNameTransformer.Transform(
+                    procedure.Name,
+                    _options.NamingOptions.Style),
+                statements,
+                procedure.Location);
         }
 
         /// <summary>

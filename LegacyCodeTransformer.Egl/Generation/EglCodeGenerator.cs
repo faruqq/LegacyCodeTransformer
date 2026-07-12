@@ -4,6 +4,7 @@ using LegacyCodeTransformer.Egl.InitialValues;
 using LegacyCodeTransformer.Egl.Statements;
 using LegacyCodeTransformer.Egl.Syntax;
 using LegacyCodeTransformer.Egl.Types;
+using LegacyCodeTransformer.Egl.Functions;
 
 namespace LegacyCodeTransformer.Egl.Generation;
 
@@ -38,6 +39,39 @@ namespace LegacyCodeTransformer.Egl.Generation;
 /// </summary>
 public sealed class EglCodeGenerator
 {
+    /// <summary>
+    /// EGL syntax tree modelinden EGL kaynak kodu üretir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// EGL declaration, function ve top-level statement modelleri hedef
+    /// kaynak dosyada kontrollü sırayla yazılmalıdır.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Declaration'ları önce, function modellerini sonra ve top-level
+    /// statement'ları en son üretir. Farklı root bölüm aileleri arasında
+    /// okunabilir bir boş satır bırakır.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// CustomerNo decimal(8);
+    ///
+    /// function CustomerProcess()
+    ///     CustomerNo = MustNo;
+    /// end
+    ///
+    /// CustomerProcess();
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// ConversionService pipeline içinde transpiler sonrasında kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// EGL program part ve function parameter üretimi geldiğinde root output
+    /// sıralaması bu method üzerinden genişletilecektir.
+    /// </summary>
     public string Generate(EglSyntaxTree syntaxTree)
     {
         if (syntaxTree is null)
@@ -53,6 +87,32 @@ public sealed class EglCodeGenerator
                 GenerateDeclaration(declaration));
         }
 
+        if (syntaxTree.Declarations.Count > 0 &&
+            syntaxTree.Functions.Count > 0)
+        {
+            builder.AppendLine();
+        }
+
+        for (var index = 0;
+             index < syntaxTree.Functions.Count;
+             index++)
+        {
+            builder.Append(
+                GenerateFunction(
+                    syntaxTree.Functions[index]));
+
+            if (index < syntaxTree.Functions.Count - 1)
+            {
+                builder.AppendLine();
+            }
+        }
+
+        if (syntaxTree.Functions.Count > 0 &&
+            syntaxTree.Statements.Count > 0)
+        {
+            builder.AppendLine();
+        }
+
         foreach (var statement in syntaxTree.Statements)
         {
             builder.Append(
@@ -60,6 +120,57 @@ public sealed class EglCodeGenerator
                     statement,
                     0));
         }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Parametresiz EGL function modelinden function kaynak bloğu üretir.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// PL/I procedure body statement'larının EGL çıktısında kaybolmadan
+    /// function bloğu içinde üretilmesi gerekir.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Function header'ını, bir seviye içeri girintilenen body
+    /// statement'larını ve function sonlandırma satırını üretir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// function CustomerProcess()
+    ///     CustomerNo = MustNo;
+    ///     FetchCustomer(CustomerNo);
+    /// end
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// Generate methodunda EglSyntaxTree.Functions koleksiyonu işlenirken
+    /// kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Function parameter, local declaration ve return type output
+    /// davranışları bu method içinde kontrollü olarak genişletilecektir.
+    /// </summary>
+    private static string GenerateFunction(
+        EglFunction function)
+    {
+        var builder = new StringBuilder();
+
+        builder.AppendLine(
+            $"function {function.Name}()");
+
+        foreach (var statement in function.Statements)
+        {
+            builder.Append(
+                GenerateStatement(
+                    statement,
+                    1));
+        }
+
+        builder.AppendLine("end");
 
         return builder.ToString();
     }
