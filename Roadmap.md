@@ -1377,7 +1377,7 @@ Semantic hata bulunduğunda ConversionService, transpiler ve generator aşamalar
 
 ## Sonraki Faz
 
-P10 — IDE Entegrasyonu
+P10 — Statement & Declaration Coverage Expansion
 
 ---
 
@@ -1412,8 +1412,8 @@ Her yeni destek aşağıdaki geliştirme akışıyla ilerleyecektir.
 ## Milestone Durumu
 
 * ✅ P10.1 — File-Based Conversion Case Foundation
-* ⏳ P10.2 — Real-World PL/I Case Inventory
-* ⏳ P10.3 — Statement Coverage Expansion
+* ✅ P10.2 — Real-World PL/I Case Inventory
+* ⏳ P10.3 — Procedure & Statement Coverage Expansion
 * ⏳ P10.4 — Declaration Coverage Expansion
 * ⏳ P10.5 — P10 Regression Closure
 
@@ -1488,7 +1488,7 @@ Yeni geliştirmeler gerçek case dosyalarından çıkarılmalıdır.
 
 ## Sonraki Milestone
 
-P10.2 — Real-World PL/I Case Inventory
+P10.3 — Procedure & Statement Coverage Expansion
 
 ---
 
@@ -1528,7 +1528,7 @@ PL/I → EGL dönüşüm kalitesini gerçek projelerden gelen geri bildirimlerle
 
 ## Planlanan Kapsam
 
-* EGL procedure output
+* EGL function output
 * Expression dönüşüm kalitesi
 * Operator mapping
 * Record output iyileştirmeleri
@@ -1639,7 +1639,7 @@ IDE entegrasyonu compiler mantığını tekrar implement etmemeli, mevcut compil
 
 ## Aktif Milestone
 
-* P10.1 — File-Based Conversion Case Foundation
+* P10.3 — Procedure & Statement Coverage Expansion
 
 ## Sonraki Büyük Fazlar
 

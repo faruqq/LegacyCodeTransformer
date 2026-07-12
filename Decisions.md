@@ -3527,3 +3527,94 @@ görülmemiştir.
 ### Durum
 
 ✅ Aktif
+
+## Decision 084 - Procedure header parametreleri ve body declaration'ları ayrı korunacaktır
+
+### Karar
+
+PL/I procedure modelleri aşağıdaki bilgileri birbirinden ayrı
+koleksiyonlarda taşıyacaktır:
+
+- Header parameter adları
+- Procedure option bilgileri
+- Procedure body declaration modelleri
+- Procedure body executable statement modelleri
+
+Procedure header parameter adları kaynak sırasını koruyan:
+
+    IReadOnlyList<string> Parameters
+
+koleksiyonunda taşınacaktır.
+
+Procedure body içinde parse edilen DCL modelleri:
+
+    IReadOnlyList<Pl1Declaration> Declarations
+
+koleksiyonunda taşınacaktır.
+
+Executable statement modelleri mevcut:
+
+    IReadOnlyList<Pl1Statement> Statements
+
+koleksiyonunda taşınmaya devam edecektir.
+
+İlk kapsamda ayrı bir Pl1ProcedureBody veya Pl1ProcedureParameter
+abstraction oluşturulmayacaktır.
+
+Desteklenen örnek:
+
+    CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        DCL PROCESS_TEXT CHAR(50);
+
+        ERROR_TEXT = PROCESS_TEXT;
+        CALL WRITE_ERROR(ERROR_TEXT);
+    END CUSTOMER_PROCESS;
+
+Bu örnekte:
+
+    Parameters:
+    PROCESS_TEXT
+
+    Declarations:
+    DCL PROCESS_TEXT CHAR(50);
+
+    Statements:
+    ERROR_TEXT = PROCESS_TEXT;
+    CALL WRITE_ERROR(ERROR_TEXT);
+
+olarak korunacaktır.
+
+### Gerekçe
+
+Case002 incelemesi, gerçek PL/I procedure tanımlarında header parameter
+adının procedure body içindeki DCL declaration ile birlikte
+kullanılabildiğini doğrulamıştır.
+
+Yalnızca executable statement listesi taşıyan önceki procedure modeli bu
+bilgiyi kaybetmekte ve procedure body içindeki DCL token'ı diagnostic
+üretmekteydi.
+
+Header parameter bilgisinin yalnızca isimlerden oluştuğu mevcut aşamada
+ayrı bir Pl1ProcedureParameter sınıfı oluşturmak erken abstraction
+olacaktır.
+
+Declaration ve statement listelerinin ayrı tutulması mevcut parser,
+visitor ve semantic katman sorumluluklarıyla uyumludur.
+
+Parameter declaration binding, type resolution, direction analysis ve
+procedure local scope daha sonra gerçek ihtiyaç üzerinden
+geliştirilecektir.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.PL1/Procedures
+- LegacyCodeTransformer.PL1/Parsing
+- LegacyCodeTransformer.PL1/Syntax
+- LegacyCodeTransformer.PL1/Semantic
+- LegacyCodeTransformer.PL1.Tests
+- samples/Case002
+- samples/Inventory.md
+
+### Durum
+
+✅ Aktif

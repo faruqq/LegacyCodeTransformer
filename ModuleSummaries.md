@@ -3373,3 +3373,86 @@ Güncellenen test alanları:
 Bu milestone sonunda gerçek PL/I case dosyaları CLI üzerinden
 çalıştırılabilir ve üretilen EGL çıktısı dosya üzerinden incelenebilir
 hale gelmiştir.
+
+## P10.2 - Real-World PL/I Case Inventory
+
+P10.2 kapsamında gerçek PL/I örneklerinin mevcut compiler pipeline
+üzerindeki davranışı Case001 ve Case002 üzerinden incelendi.
+
+Eklenen kalıcı case bileşenleri:
+
+- samples/README.md
+- samples/Inventory.md
+- samples/Case002/input.pl1
+- samples/Case002/notes.md
+
+Case001 aşağıdaki temel dönüşüm açığını ortaya çıkardı:
+
+- Parametresiz PL/I procedure modelleri parser tarafından korunmaktadır.
+- Procedure modelleri henüz EGL function olarak üretilmemektedir.
+- Procedure body statement'ları EGL output'a taşınmamaktadır.
+- Dönüştürülmeyen procedure için diagnostic üretilmemektedir.
+
+Case002 ilk çalıştırmada aşağıdaki procedure header biçiminin
+desteklenmediğini gösterdi:
+
+    CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+
+Bu ihtiyaç üzerine procedure modeli ve parser aşağıdaki şekilde
+genişletildi:
+
+- Pl1Procedure.Parameters eklendi.
+- Tek parameter parse desteği eklendi.
+- Çoklu parameter parse desteği eklendi.
+- Parameter sırası korunur hale getirildi.
+- Parameter listesi ile OPTIONS birlikte desteklendi.
+
+Case002 ikinci çalıştırmada procedure body içindeki DCL kullanımının
+desteklenmediğini gösterdi:
+
+    DCL PROCESS_TEXT CHAR(50);
+
+Bu ihtiyaç üzerine aşağıdaki production değişiklikleri yapıldı:
+
+- Pl1Procedure.Declarations eklendi.
+- ProcedureParser declaration ve executable statement ayrımı yapar
+  hale getirildi.
+- Procedure body DCL modelleri mevcut DeclarationParser üzerinden
+  parse edilmeye başlandı.
+- Pl1SyntaxWalker procedure declaration modellerini dolaşacak şekilde
+  genişletildi.
+
+Eklenen test bileşenleri:
+
+- Pl1ProcedureParameterParserTests
+- Pl1ProcedureDeclarationParserTests
+- Pl1ProcedureDeclarationSyntaxWalkerTests
+
+Case002 güncel pipeline ile başarıyla dönüştürülmüş ve aşağıdaki EGL
+çıktısı üretilmiştir:
+
+    ErrorText char(50);
+    CustomerNo decimal(8);
+    CustomerProcess("CUSTOMER NOT FOUND");
+
+Bu çıktı aşağıdaki davranışları doğrulamıştır:
+
+- Global declaration'lar EGL output'a dönüştürülmektedir.
+- Top-level PL/I CALL doğrudan EGL function invocation olarak
+  üretilmektedir.
+- Parametreli procedure header başarıyla parse edilmektedir.
+- Procedure body declaration'ları syntax tree üzerinde korunmaktadır.
+- Procedure body executable statement'ları syntax tree üzerinde
+  korunmaktadır.
+
+Kalan temel dönüşüm açıkları:
+
+- PL/I procedure → EGL function dönüşümü
+- Header parameter ile body declaration binding
+- EGL function parameter type çözümlemesi
+- EGL function parameter in / out / inOut direction çözümlemesi
+- Procedure body statement transpilation
+- Dönüştürülmeyen procedure için diagnostic üretimi
+
+Bu milestone sonunda gerçek case envanteri, sonraki conversion coverage
+çalışmalarını yönlendirecek somut bulgular üretmiştir.

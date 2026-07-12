@@ -94,81 +94,115 @@ Mevcut durum:
 
 
 
-Case002 ile doğrulanan mevcut durum:
+Case002 ile doğrulanan güncel durum:
 
 
 
-\- Lexer parameter listesi tokenlarını üretebilmektedir.
+\- Lexer parameter listesi tokenlarını üretmektedir.
 
-\- ProcedureParser, PROCEDURE sonrasında parameter listesi
+\- ProcedureParser tek parameter listesini desteklemektedir.
 
-&#x20; desteklememektedir.
+\- ProcedureParser virgülle ayrılmış çoklu parameter listesini
 
-\- ProcedureParser doğrudan semicolon veya OPTIONS beklemektedir.
+&#x20; desteklemektedir.
 
-\- Procedure parameter syntax modeli bulunmamaktadır.
+\- Header parameter sırası korunmaktadır.
 
-\- Procedure body içindeki DCL declaration desteklenmemektedir.
+\- Parameter listesi OPTIONS ile birlikte kullanılabilmektedir.
 
-\- Procedure local declaration ve parameter scope modeli
+\- Pl1Procedure.Parameters header parameter adlarını taşımaktadır.
 
-&#x20; bulunmamaktadır.
+\- Procedure body içindeki DCL declaration parse edilmektedir.
 
-\- Parse başarısız olduğu için EGL output üretilmemektedir.
+\- Pl1Procedure.Declarations procedure declaration modellerini
 
-\- İlk parse hatasından sonra zincirleme recovery diagnostic'leri
+&#x20; taşımaktadır.
 
-&#x20; oluşmaktadır.
+\- Procedure declaration ve executable statement listeleri ayrı
 
+&#x20; korunmaktadır.
 
+\- Pl1SyntaxWalker procedure declaration modellerini ziyaret etmektedir.
 
-Gözlenen diagnostic mesajları:
+\- Case002 parser diagnostic üretmeden conversion pipeline'dan
 
-
-
-&#x20;   ';' bekleniyordu.
-
-&#x20;   Beklenmeyen token: (
-
-&#x20;   Beklenmeyen token: END.
-
-&#x20;   '=' bekleniyordu.
+&#x20; geçmektedir.
 
 
 
-İlk production kapsamı:
+Case002 tarafından üretilen mevcut EGL:
 
 
 
-1\. Procedure parameter syntax modeli
+&#x20;   ErrorText char(50);
 
-2\. PROCEDURE(PARAMETER) parser desteği
+&#x20;   CustomerNo decimal(8);
 
-3\. Birden fazla parameter için virgüllü liste desteği
-
-4\. Header parameter sırasının korunması
-
-5\. Parameter declaration ilişkisinin sonraki adıma hazırlanması
-
-6\. Parser unit testleri
-
-7\. Case002 yeniden çalıştırması
+&#x20;   CustomerProcess("CUSTOMER NOT FOUND");
 
 
 
-İlk kapsamda yapılmayacaklar:
+Tamamlanan parser kapsamı:
 
 
 
-\- EGL parameter yönü tahmini
+1\. Procedure parameter header modeli
 
-\- Full local scope analysis
+2\. Tek parameter parse desteği
 
-\- Procedure parameter type resolution
+3\. Çoklu parameter parse desteği
 
-\- Procedure local variable semantic analysis
+4\. Parameter sırasının korunması
 
-\- PL/I procedure → EGL function generation
+5\. Parameter + OPTIONS birlikte kullanım desteği
+
+6\. Procedure body declaration parsing
+
+7\. Declaration ve statement koleksiyon ayrımı
+
+8\. Procedure declaration walker traversal desteği
+
+
+
+Kalan production ihtiyaçları:
+
+
+
+1\. Header parameter ile body declaration binding
+
+2\. Procedure local symbol table
+
+3\. Procedure parameter type resolution
+
+4\. Procedure parameter read/write kullanım analizi
+
+5\. EGL function parameter type mapping
+
+6\. EGL function parameter direction mapping
+
+7\. PL/I procedure → EGL function transpilation
+
+8\. Procedure body statement generation
+
+9\. Desteklenmeyen procedure dönüşümü için diagnostic
+
+
+
+İlk kapsamda hâlâ yapılmayacaklar:
+
+
+
+\- Parameter direction tahmini
+
+\- Full scope stack
+
+\- Nested procedure scope
+
+\- Return type inference
+
+\- OPTIONS(MAIN) mapping
+
+\- Full local variable semantic analysis
 
 
 
@@ -177,6 +211,8 @@ Gözlenen diagnostic mesajları:
 
 
 \- Case002
+
+
 
 \### P1 — OPTIONS(MAIN) ana procedure
 
