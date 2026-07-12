@@ -2339,8 +2339,8 @@ Desteklenen örnekler:
 
 Üretilen EGL çıktıları:
 
-    call FetchCursor();
-    call Proc1(CustomerNo, "ABC");
+    FetchCursor();
+    Proc1(CustomerNo, "ABC");
 
 Eklenen test kapsamı:
 
@@ -2389,13 +2389,13 @@ Desteklenen örnekler:
 Üretilen EGL çıktıları:
 
     if (CustomerNo = MustNo)
-        call FetchCursor();
+        FetchCursor();
     end
 
     if (A = B)
-        call Proc1();
+        Proc1();
     else
-        call Proc2();
+        Proc2();
     end
 
 Eklenen test kapsamı:
@@ -2448,15 +2448,15 @@ Desteklenen örnekler:
 Üretilen EGL çıktıları:
 
     do
-        call Proc1();
+        Proc1();
     end
 
     while (Sqlcode = 0)
-        call FetchCursor();
+        FetchCursor();
     end
 
     while (!(Eof))
-        call CloseCursor();
+        CloseCursor();
     end
 
 Eklenen test kapsamı:
@@ -3286,3 +3286,90 @@ Bilinçli olarak yapılmayanlar:
 - SQL host variable analysis
 
 Bu milestone sonunda P09 semantic analysis foundation gerçekçi PL/I örnekleriyle regression seviyesinde güvence altına alınmıştır.
+
+## P10.1 - File-Based Conversion Case Foundation
+
+P10.1 kapsamında gerçek PL/I kaynak örneklerinin dosya tabanlı olarak
+çalıştırılabilmesi için CLI conversion case foundation tamamlandı.
+
+Eklenen ve güncellenen production bileşenleri:
+
+- CliOptions
+- CliArgumentParser
+- Program.cs
+
+Eklenen test bileşeni:
+
+- CliArgumentParserTests
+
+Eklenen örnek case:
+
+- samples/Case001/input.pl1
+- samples/Case001/notes.md
+
+CLI artık iki farklı çalışma modunu destekler.
+
+Tek dosya modu:
+
+    --input <input.pl1>
+    --output <actual.egl>
+
+Case modu:
+
+    --case <case-klasörü>
+
+Case modunda CLI aşağıdaki yolları otomatik olarak kullanır:
+
+    input:
+    <case-klasörü>/input.pl1
+
+    output:
+    <case-klasörü>/actual.egl
+
+`actual.egl` yeniden üretilebilen inceleme çıktısı olduğu için Git
+tarafından takip edilmez.
+
+Kalıcı proje hafızası olarak aşağıdaki dosyalar repository içinde tutulur:
+
+- input.pl1
+- notes.md
+
+İlk gerçek case çalıştırması aşağıdaki dönüşüm eksiklerini görünür hale
+getirmiştir:
+
+- Global declaration modelleri EGL çıktısına dönüştürülmektedir.
+- PL/I procedure modelleri parser ve semantic analyzer tarafından
+  korunmaktadır.
+- PL/I procedure modelleri henüz EGL function olarak üretilmemektedir.
+- Procedure body içindeki executable statement'lar henüz EGL çıktısına
+  taşınmamaktadır.
+- Desteklenmeyen procedure dönüşümü için henüz diagnostic
+  üretilmemektedir.
+
+Case incelemesi sırasında ayrıca PL/I CALL dönüşümünün EGL tarafında
+hatalı `call` keyword'ü ürettiği tespit edilmiştir.
+
+Doğru dönüşüm standardı aşağıdaki şekilde düzeltilmiştir:
+
+    PL/I:
+    CALL FETCH_CUSTOMER(CUSTOMER_NO);
+
+    EGL:
+    FetchCustomer(CustomerNo);
+
+Güncellenen EGL bileşenleri:
+
+- EglCodeGenerator
+- EglCallStatement dokümantasyonu
+
+Güncellenen test alanları:
+
+- EGL generator testleri
+- Nested statement generator testleri
+- Transpiler testleri
+- Application regression testleri
+- Performance regression beklentileri
+
+Bu milestone sonunda gerçek PL/I case dosyaları CLI üzerinden
+çalıştırılabilir ve üretilen EGL çıktısı dosya üzerinden incelenebilir
+hale gelmiştir.

@@ -922,8 +922,8 @@ PL/I CALL statement modellerini EGL CALL syntax modeline dönüştürmek ve EGL 
 
 EGL output:
 
-    call FetchCursor();
-    call Proc1(CustomerNo, "ABC");
+    FetchCursor();
+    Proc1(CustomerNo, "ABC");
 
 ### Bilinçli Olarak Kapsam Dışı Bırakılanlar
 
@@ -988,13 +988,13 @@ PL/I IF statement modellerini EGL IF syntax modeline dönüştürmek ve EGL gene
 EGL output:
 
     if (CustomerNo = MustNo)
-        call FetchCursor();
+        FetchCursor();
     end
 
     if (A = B)
-        call Proc1();
+        Proc1();
     else
-        call Proc2();
+        Proc2();
     end
 
 ### Bilinçli Olarak Kapsam Dışı Bırakılanlar
@@ -1066,15 +1066,15 @@ PL/I DO, DO WHILE ve DO UNTIL statement modellerini EGL DO / loop syntax modelin
 EGL output:
 
     do
-        call Proc1();
+        Proc1();
     end
 
     while (Sqlcode = 0)
-        call FetchCursor();
+        FetchCursor();
     end
 
     while (!(Eof))
-        call CloseCursor();
+        CloseCursor();
     end
 
 ### Bilinçli Olarak Kapsam Dışı Bırakılanlar
@@ -1411,7 +1411,7 @@ Her yeni destek aşağıdaki geliştirme akışıyla ilerleyecektir.
 
 ## Milestone Durumu
 
-* ⏳ P10.1 — File-Based Conversion Case Foundation
+* ✅ P10.1 — File-Based Conversion Case Foundation
 * ⏳ P10.2 — Real-World PL/I Case Inventory
 * ⏳ P10.3 — Statement Coverage Expansion
 * ⏳ P10.4 — Declaration Coverage Expansion
@@ -1488,7 +1488,7 @@ Yeni geliştirmeler gerçek case dosyalarından çıkarılmalıdır.
 
 ## Sonraki Milestone
 
-P10.1 — File-Based Conversion Case Foundation
+P10.2 — Real-World PL/I Case Inventory
 
 ---
 

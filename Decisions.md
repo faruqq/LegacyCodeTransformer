@@ -3173,8 +3173,8 @@ Desteklenen örnekler:
 
 EGL output örnekleri:
 
-    call FetchCursor();
-    call Proc1(CustomerNo, "ABC");
+    FetchCursor();
+    Proc1(CustomerNo, "ABC");
 
 ### Etkilediği Modüller
 
@@ -3228,13 +3228,13 @@ Desteklenen örnekler:
 EGL output örnekleri:
 
     if (CustomerNo = MustNo)
-        call FetchCursor();
+        FetchCursor();
     end
 
     if (A = B)
-        call Proc1();
+        Proc1();
     else
-        call Proc2();
+        Proc2();
     end
 
 ### Etkilediği Modüller
@@ -3296,15 +3296,15 @@ Desteklenen örnekler:
 EGL output örnekleri:
 
     do
-        call Proc1();
+        Proc1();
     end
 
     while (Sqlcode = 0)
-        call FetchCursor();
+        FetchCursor();
     end
 
     while (!(Eof))
-        call CloseCursor();
+        CloseCursor();
     end
 
 ### Etkilediği Modüller
@@ -3455,6 +3455,74 @@ Bu sayede Decisions.md mimari karar kaydı olarak kalır; PL/I kaynak kodlama st
 - LegacyCodeTransformer.Pl1/Procedures
 - LegacyCodeTransformer.Pl1/Statements
 - LegacyCodeTransformer.Pl1.Tests
+
+### Durum
+
+✅ Aktif
+
+## Decision 083 - PL/I CALL EGL function invocation olarak üretilecektir
+
+### Karar
+
+PL/I kaynak kodundaki CALL statement modelleri EGL çıktısında `call`
+keyword'ü kullanılarak üretilmeyecektir.
+
+PL/I kaynak örneği:
+
+    CALL FETCH_CUSTOMER;
+    CALL PROCESS_CUSTOMER(CUSTOMER_NO, CUSTOMER_NAME);
+
+Doğru EGL çıktısı:
+
+    FetchCustomer();
+    ProcessCustomer(CustomerNo, CustomerName);
+
+Aşağıdaki EGL çıktıları geçersiz kabul edilecektir:
+
+    FetchCustomer();
+    ProcessCustomer(CustomerNo, CustomerName);
+
+Kaynak PL/I modeli `Pl1CallStatement` olarak kalacaktır.
+
+Mevcut EGL modeli bu aşamada `EglCallStatement` adını koruyacaktır.
+Bu model, generator tarafından doğrudan EGL function invocation olarak
+üretilecektir.
+
+Sadece model adını daha doğru göstermek amacıyla geniş kapsamlı bir
+yeniden adlandırma yapılmayacaktır.
+
+Bu Decision, Decision 078 içindeki EGL `call` source line kararının ve
+Decision 079 ile Decision 080 içindeki `call` keyword'ü kullanan EGL
+örneklerinin yerine geçer.
+
+### Gerekçe
+
+PL/I procedure çağrıları kaynak dilde CALL keyword'ü ile yazılır.
+
+EGL hedef dilinde function çağrıları doğrudan function adı ve argument
+listesi kullanılarak gerçekleştirilir. EGL çıktısına PL/I CALL keyword'ünü
+taşımak hedef dil söz dizimini yanlış üretmektedir.
+
+Gerçek case çıktısının incelenmesi sonucunda bu hata tespit edilmiştir.
+
+Düzeltme yalnızca generator formatlaması değildir. PL/I CALL ile EGL
+function invocation arasındaki kaynak dil ve hedef dil ayrımını kesin
+hale getirir.
+
+Mevcut `EglCallStatement` modeli çağrılacak function adını ve argument
+listesini doğru taşıdığı için bu aşamada model refactor'u gerekli
+görülmemiştir.
+
+### Etkilediği Modüller
+
+- LegacyCodeTransformer.Egl/Generation
+- LegacyCodeTransformer.Egl/Statements
+- LegacyCodeTransformer.Egl.Tests
+- LegacyCodeTransformer.Transpilers.Tests
+- LegacyCodeTransformer.Application.Tests
+- docs/Decisions.md
+- docs/Roadmap.md
+- docs/ModuleSummaries.md
 
 ### Durum
 
