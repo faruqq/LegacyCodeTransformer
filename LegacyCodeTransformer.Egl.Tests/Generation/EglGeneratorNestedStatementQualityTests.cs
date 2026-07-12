@@ -6,22 +6,24 @@ using LegacyCodeTransformer.Egl.Syntax;
 namespace LegacyCodeTransformer.Egl.Tests.Generation;
 
 /// <summary>
-/// Nested EGL statement output kalitesini doğrulayan generator testlerini içerir.
+/// Nested EGL statement output kalitesini doğrulayan generator testlerini
+/// içerir.
 ///
 /// Neden var?
 /// ----------------------
-/// IF ve DO statement'ları nested output üretir. P08 kapsamında indentation
-/// standardının bozulmaması gerekir.
+/// IF ve DO statement'ları nested output üretir. Function invocation ve
+/// indentation standardının nested yapılarda bozulmaması gerekir.
 ///
 /// Ne çözüyor?
 /// ----------------------
-/// IF içindeki DO, DO içindeki CALL ve nested indentation davranışını sabitler.
+/// IF içindeki DO, DO içindeki function invocation ve nested indentation
+/// davranışını sabitler.
 ///
 /// Hangi örneği destekliyor?
 /// ----------------------
 /// if (Sqlcode = 0)
 ///     do
-///         call FetchCursor();
+///         FetchCursor();
 ///     end
 /// end
 ///
@@ -31,8 +33,8 @@ namespace LegacyCodeTransformer.Egl.Tests.Generation;
 ///
 /// Gelecekte neye temel olur?
 /// ----------------------
-/// SELECT, procedure block ve SQL output eklendiğinde nested indentation standardı
-/// bu testlerle korunur.
+/// SELECT, function block ve SQL output eklendiğinde nested indentation
+/// standardı bu testlerle korunur.
 /// </summary>
 public sealed class EglGeneratorNestedStatementQualityTests
 {
@@ -68,11 +70,13 @@ public sealed class EglGeneratorNestedStatementQualityTests
         var expected =
             "if (Sqlcode = 0)" + Environment.NewLine +
             "    do" + Environment.NewLine +
-            "        call FetchCursor();" + Environment.NewLine +
+            "        FetchCursor();" + Environment.NewLine +
             "    end" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 
     [Fact]
@@ -107,10 +111,12 @@ public sealed class EglGeneratorNestedStatementQualityTests
         var expected =
             "while (Sqlcode = 0)" + Environment.NewLine +
             "    if (CustomerNo = MustNo)" + Environment.NewLine +
-            "        call ProcessCustomer();" + Environment.NewLine +
+            "        ProcessCustomer();" + Environment.NewLine +
             "    end" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 }

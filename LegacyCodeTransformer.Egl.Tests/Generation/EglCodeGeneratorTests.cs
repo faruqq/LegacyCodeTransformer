@@ -741,18 +741,6 @@ public sealed class EglCodeGeneratorTests
         Assert.Equal(expected, result);
     }
 
-    /// <summary>
-    /// EGL CALL statement modelinden parametresiz CALL çıktısı üretildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// EglCodeGenerator, EglCallStatement modelini EGL call satırına dönüştürmelidir.
-    ///
-    /// Hangi input'u test eder?
-    /// EglCallStatement ProcedureName FetchCursor, Arguments boş.
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// call FetchCursor(); çıktısı üretilmelidir.
-    /// </summary>
     [Fact]
     public void Generate_WithCallStatement_ShouldGenerateCallStatement()
     {
@@ -772,22 +760,10 @@ public sealed class EglCodeGeneratorTests
         var result = generator.Generate(syntaxTree);
 
         Assert.Equal(
-            "call FetchCursor();" + Environment.NewLine,
+            "FetchCursor();" + Environment.NewLine,
             result);
     }
 
-    /// <summary>
-    /// EGL CALL statement modelinden argument listesiyle CALL çıktısı üretildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Generator, CALL argument listesini virgül ve boşluk standardıyla yazdırmalıdır.
-    ///
-    /// Hangi input'u test eder?
-    /// EglCallStatement ProcedureName Proc1, Arguments CustomerNo ve "ABC".
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// call Proc1(CustomerNo, "ABC"); çıktısı üretilmelidir.
-    /// </summary>
     [Fact]
     public void Generate_WithCallArguments_ShouldGenerateCallStatementWithArguments()
     {
@@ -811,23 +787,89 @@ public sealed class EglCodeGeneratorTests
         var result = generator.Generate(syntaxTree);
 
         Assert.Equal(
-            "call Proc1(CustomerNo, \"ABC\");" + Environment.NewLine,
+            "Proc1(CustomerNo, \"ABC\");" + Environment.NewLine,
             result);
     }
 
     /// <summary>
-    /// EGL IF statement modelinden THEN branch içeren kaynak kod üretildiğini doğrular.
+    /// EGL function invocation modelinden parametresiz function çağrısı
+    /// üretildiğini doğrular.
     ///
     /// Bu test neyi doğrular?
-    /// EglCodeGenerator, EglIfStatement modelini indentation standardına uygun EGL if bloğuna
-    /// dönüştürmelidir.
+    /// EglCodeGenerator, EglCallStatement modelini EGL'de call keyword'ü
+    /// kullanmadan doğrudan function invocation satırına dönüştürmelidir.
     ///
     /// Hangi input'u test eder?
-    /// IF condition CustomerNo = MustNo, THEN call FetchCursor().
+    /// EglCallStatement ProcedureName FetchCursor, Arguments boş.
     ///
     /// Beklenen temel model/çıktı nedir?
-    /// if bloğu, 4 boşluk indentation ile child CALL statement ve end satırı üretilmelidir.
+    /// FetchCursor(); çıktısı üretilmelidir.
     /// </summary>
+    [Fact]
+    public void Generate_WithCallStatement_ShouldGenerateFunctionInvocation()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglCallStatement(
+                procedureName: "FetchCursor",
+                arguments: null,
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        Assert.Equal(
+            "FetchCursor();" + Environment.NewLine,
+            result);
+    }
+
+    /// <summary>
+    /// EGL function invocation modelinden argument listesiyle function çağrısı
+    /// üretildiğini doğrular.
+    ///
+    /// Bu test neyi doğrular?
+    /// Generator, function argument listesini virgül ve boşluk standardıyla
+    /// yazdırmalı ve call keyword'ü üretmemelidir.
+    ///
+    /// Hangi input'u test eder?
+    /// EglCallStatement ProcedureName Proc1, Arguments CustomerNo ve "ABC".
+    ///
+    /// Beklenen temel model/çıktı nedir?
+    /// Proc1(CustomerNo, "ABC"); çıktısı üretilmelidir.
+    /// </summary>
+    [Fact]
+    public void Generate_WithCallArguments_ShouldGenerateFunctionInvocationWithArguments()
+    {
+        var syntaxTree = new EglSyntaxTree(
+            declarations: null,
+            statements: new[]
+            {
+            new EglCallStatement(
+                procedureName: "Proc1",
+                arguments: new[]
+                {
+                    "CustomerNo",
+                    "\"ABC\""
+                },
+                location: SourceLocation.Unknown)
+            },
+            location: SourceLocation.Unknown);
+
+        var generator = new EglCodeGenerator();
+
+        var result = generator.Generate(syntaxTree);
+
+        Assert.Equal(
+            "Proc1(CustomerNo, \"ABC\");" +
+            Environment.NewLine,
+            result);
+    }
+
     [Fact]
     public void Generate_WithIfThenCallStatement_ShouldGenerateIfBlock()
     {
@@ -852,25 +894,14 @@ public sealed class EglCodeGeneratorTests
 
         var expected =
             "if (CustomerNo = MustNo)" + Environment.NewLine +
-            "    call FetchCursor();" + Environment.NewLine +
+            "    FetchCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 
-    /// <summary>
-    /// EGL IF statement modelinden THEN ELSE içeren kaynak kod üretildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// Generator, optional ElseStatement bulunduğunda else satırını ve else branch child
-    /// statement'ını output'a eklemelidir.
-    ///
-    /// Hangi input'u test eder?
-    /// IF A = B THEN call Proc1(); ELSE call Proc2();
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// then ve else branch statementları 4 boşluk indentation ile üretilmelidir.
-    /// </summary>
     [Fact]
     public void Generate_WithIfThenElseCallStatements_ShouldGenerateIfElseBlock()
     {
@@ -898,26 +929,16 @@ public sealed class EglCodeGeneratorTests
 
         var expected =
             "if (A = B)" + Environment.NewLine +
-            "    call Proc1();" + Environment.NewLine +
+            "    Proc1();" + Environment.NewLine +
             "else" + Environment.NewLine +
-            "    call Proc2();" + Environment.NewLine +
+            "    Proc2();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 
-    /// <summary>
-    /// EGL block DO statement modelinden do/end bloğu üretildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// EglCodeGenerator, EglDoStatement Kind Block modelini do/end bloğu olarak yazdırmalıdır.
-    ///
-    /// Hangi input'u test eder?
-    /// do içinde call Proc1().
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// do satırı, 4 boşluk indentation ile child CALL ve end satırı üretilmelidir.
-    /// </summary>
     [Fact]
     public void Generate_WithBlockDoStatement_ShouldGenerateDoBlock()
     {
@@ -945,24 +966,14 @@ public sealed class EglCodeGeneratorTests
 
         var expected =
             "do" + Environment.NewLine +
-            "    call Proc1();" + Environment.NewLine +
+            "    Proc1();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 
-    /// <summary>
-    /// EGL DO WHILE statement modelinden while/end bloğu üretildiğini doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// EglCodeGenerator, EglDoStatement Kind While modelini while bloğu olarak yazdırmalıdır.
-    ///
-    /// Hangi input'u test eder?
-    /// while (Sqlcode = 0) içinde call FetchCursor().
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// while satırı, 4 boşluk indentation ile child CALL ve end satırı üretilmelidir.
-    /// </summary>
     [Fact]
     public void Generate_WithDoWhileStatement_ShouldGenerateWhileBlock()
     {
@@ -990,10 +1001,12 @@ public sealed class EglCodeGeneratorTests
 
         var expected =
             "while (Sqlcode = 0)" + Environment.NewLine +
-            "    call FetchCursor();" + Environment.NewLine +
+            "    FetchCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
-        Assert.Equal(expected, result);
+        Assert.Equal(
+            expected,
+            result);
     }
 
     /// <summary>
@@ -1035,7 +1048,7 @@ public sealed class EglCodeGeneratorTests
 
         var expected =
             "while (!(Eof))" + Environment.NewLine +
-            "    call CloseCursor();" + Environment.NewLine +
+            "    CloseCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, result);

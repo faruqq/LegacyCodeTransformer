@@ -2627,7 +2627,7 @@ public sealed class Pl1ToEglTranspilerTests
         var output = generator.Generate(transpileResult.SyntaxTree!);
 
         Assert.Equal(
-            "call FetchCursor();" + Environment.NewLine,
+            "FetchCursor();" + Environment.NewLine,
             output);
     }
 
@@ -2684,7 +2684,7 @@ public sealed class Pl1ToEglTranspilerTests
         var expected =
             "Param char(8);" + Environment.NewLine +
             "Param = \"ABC\";" + Environment.NewLine +
-            "call FetchCursor();" + Environment.NewLine;
+            "FetchCursor();" + Environment.NewLine;
 
         Assert.Equal(expected, output);
     }
@@ -2940,7 +2940,7 @@ public sealed class Pl1ToEglTranspilerTests
 
         var expected =
             "while (Sqlcode = 0)" + Environment.NewLine +
-            "    call FetchCursor();" + Environment.NewLine +
+            "    FetchCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, output);
@@ -2993,7 +2993,7 @@ public sealed class Pl1ToEglTranspilerTests
 
         var expected =
             "CustomerNo char(10);" + Environment.NewLine +
-            "call FetchCustomer(CustomerNo);" + Environment.NewLine;
+            "FetchCustomer(CustomerNo);" + Environment.NewLine;
 
         Assert.Equal(expected, output);
     }
@@ -3020,25 +3020,12 @@ public sealed class Pl1ToEglTranspilerTests
         var expected =
             "Sqlcode decimal(5);" + Environment.NewLine +
             "if (Sqlcode = 0)" + Environment.NewLine +
-            "    call FetchCursor();" + Environment.NewLine +
+            "    FetchCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, output);
     }
 
-    /// <summary>
-    /// PL/I DO WHILE kodunun EGL while bloğuna dönüştüğünü doğrular.
-    ///
-    /// Bu test neyi doğrular?
-    /// DO WHILE statement gerçek kaynak koddan parse edilip EglDoStatement üzerinden
-    /// generator çıktısına kadar taşınmalıdır.
-    ///
-    /// Hangi input'u test eder?
-    /// DCL SQLCODE FIXED DECIMAL(5); DO WHILE(SQLCODE = 0); CALL FETCH_CURSOR; END;
-    ///
-    /// Beklenen temel model/çıktı nedir?
-    /// Sqlcode declaration ve while/call/end bloğu üretilmelidir.
-    /// </summary>
     [Fact]
     public void Convert_WithDoWhileCall_ShouldGenerateEglOutput()
     {
@@ -3048,7 +3035,7 @@ public sealed class Pl1ToEglTranspilerTests
         var expected =
             "Sqlcode decimal(5);" + Environment.NewLine +
             "while (Sqlcode = 0)" + Environment.NewLine +
-            "    call FetchCursor();" + Environment.NewLine +
+            "    FetchCursor();" + Environment.NewLine +
             "end" + Environment.NewLine;
 
         Assert.Equal(expected, output);
@@ -3076,7 +3063,7 @@ public sealed class Pl1ToEglTranspilerTests
         var expected =
             "if (A = B)" + Environment.NewLine +
             "    do" + Environment.NewLine +
-            "        call Proc1();" + Environment.NewLine +
+            "        Proc1();" + Environment.NewLine +
             "    end" + Environment.NewLine +
             "end" + Environment.NewLine;
 
@@ -3116,10 +3103,10 @@ public sealed class Pl1ToEglTranspilerTests
             "CustomerNo char(10);" + Environment.NewLine +
             "Sqlcode decimal(5);" + Environment.NewLine +
             "CustomerNo = \"ABC\";" + Environment.NewLine +
-            "call FetchCustomer(CustomerNo);" + Environment.NewLine +
+            "FetchCustomer(CustomerNo);" + Environment.NewLine +
             "if (Sqlcode = 0)" + Environment.NewLine +
             "    do" + Environment.NewLine +
-            "        call ProcessCustomer(CustomerNo);" + Environment.NewLine +
+            "        ProcessCustomer(CustomerNo);" + Environment.NewLine +
             "    end" + Environment.NewLine +
             "end" + Environment.NewLine;
 

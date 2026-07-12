@@ -5,40 +5,51 @@
     ///
     /// Neden var?
     /// ----------------------
-    /// Komut satırı argümanlarının Program.cs içinde dağınık if/switch bloklarıyla
-    /// yönetilmesi, dosya tabanlı kullanım genişledikçe bakım maliyetini artırır.
+    /// Komut satırı argümanlarının Program.cs içinde dağınık koşullarla
+    /// yönetilmesi, dosya ve case tabanlı kullanımlar arttıkça bakım
+    /// maliyetini yükseltir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// CLI tarafından kullanılacak giriş ve çıkış dosyası yollarını güçlü tipli
-    /// tek bir model altında toplar.
+    /// Tek dosya ve case klasörü çalışma seçeneklerini güçlü tipli tek bir
+    /// model altında toplar.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// --input "samples/Case001/input.pl1"
     /// --output "samples/Case001/actual.egl"
     ///
+    /// --case "samples/Case001"
+    ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// CliArgumentParser çıktısında ve Program.cs dosya dönüşüm akışında kullanılır.
+    /// CliArgumentParser çıktısında ve Program.cs dosya dönüşüm akışında
+    /// kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Case klasörü çalıştırma, diagnostic gösterim seçenekleri veya verbose mod
-    /// gibi gerçek CLI ihtiyaçları oluştuğunda kontrollü biçimde genişletilebilir.
+    /// Gerçek ihtiyaç oluştuğunda diagnostic veya verbose seçeneklerinin
+    /// kontrollü biçimde eklenmesine temel olur.
     /// </summary>
     public sealed class CliOptions
     {
-        public string InputFilePath { get; }
+        public string? InputFilePath { get; }
 
         public string? OutputFilePath { get; }
 
+        public string? CaseDirectoryPath { get; }
+
+        public bool IsCaseMode =>
+            !string.IsNullOrWhiteSpace(CaseDirectoryPath);
+
         public CliOptions(
-            string inputFilePath,
-            string? outputFilePath)
+            string? inputFilePath,
+            string? outputFilePath,
+            string? caseDirectoryPath)
         {
             InputFilePath = inputFilePath;
             OutputFilePath = outputFilePath;
+            CaseDirectoryPath = caseDirectoryPath;
         }
     }
 }

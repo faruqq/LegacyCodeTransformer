@@ -6,19 +6,21 @@
     /// Neden var?
     /// ----------------------
     /// Program.cs yalnızca uygulama akışını koordine etmelidir. Komut satırı
-    /// argümanlarının doğrulanması ve seçenek modeline dönüştürülmesi ayrı bir
-    /// sorumluluktur.
+    /// argümanlarının doğrulanması ve seçenek modeline dönüştürülmesi ayrı
+    /// bir sorumluluktur.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// --input ve --output argümanlarını case-insensitive olarak parse eder.
-    /// Eksik değer, tekrar eden seçenek veya bilinmeyen argüman durumlarında
-    /// kullanıcıya anlamlı hata mesajı döndürür.
+    /// --input, --output ve --case argümanlarını case-insensitive parse eder.
+    /// Eksik değer, tekrar eden seçenek, çakışan çalışma modu veya bilinmeyen
+    /// argüman durumlarında anlamlı hata mesajı döndürür.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// --input samples/Case001/input.pl1
     /// --output samples/Case001/actual.egl
+    ///
+    /// --case samples/Case001
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -26,30 +28,34 @@
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Gerçek ihtiyaç oluştuğunda --case veya --help gibi yeni seçeneklerin
+    /// Gerçek ihtiyaç oluştuğunda --help veya diagnostic seçeneklerinin
     /// merkezi biçimde eklenmesine temel olur.
     /// </summary>
     public sealed class CliArgumentParser
     {
         private const string InputArgument = "--input";
         private const string OutputArgument = "--output";
+        private const string CaseArgument = "--case";
 
         /// <summary>
         /// Komut satırı argümanlarını parse etmeye çalışır.
         ///
         /// Neden var?
         /// ----------------------
-        /// CLI girişinin conversion pipeline çalıştırılmadan önce doğrulanması gerekir.
+        /// CLI girişinin conversion pipeline çalıştırılmadan önce doğrulanması
+        /// gerekir.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Geçerli argümanlarda CliOptions üretir. Geçersiz argümanlarda exception
-        /// fırlatmadan false ve açıklayıcı hata mesajı döndürür.
+        /// Geçerli argümanlarda CliOptions üretir. Geçersiz argümanlarda
+        /// exception fırlatmadan false ve açıklayıcı hata mesajı döndürür.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         /// --input "samples/Case001/input.pl1"
         /// --output "samples/Case001/actual.egl"
+        ///
+        /// --case "samples/Case001"
         ///
         /// Nerede kullanılır?
         /// ----------------------
@@ -57,8 +63,8 @@
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Case runner seçenekleri eklendiğinde aynı doğrulama giriş noktası
-        /// genişletilebilir.
+        /// Yeni CLI çalışma seçenekleri gerektiğinde aynı doğrulama giriş
+        /// noktası genişletilebilir.
         /// </summary>
         public bool TryParse(
             IReadOnlyList<string>? args,
@@ -71,14 +77,16 @@
             if (args is null || args.Count == 0)
             {
                 errorMessage =
-                    "Giriş dosyası belirtilmelidir. Kullanım: " +
-                    "--input <input.pl1> [--output <actual.egl>]";
+                    "Giriş belirtilmelidir. Kullanım: " +
+                    "--input <input.pl1> [--output <actual.egl>] " +
+                    "veya --case <case-klasörü>";
 
                 return false;
             }
 
             string? inputFilePath = null;
             string? outputFilePath = null;
+            string? caseDirectoryPath = null;
 
             for (var index = 0; index < args.Count; index++)
             {
@@ -136,21 +144,70 @@
                     continue;
                 }
 
-                errorMessage = $"Bilinmeyen CLI argümanı: {argument}.";
+                if (string.Equals(
+                        argument,
+                        CaseArgument,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (caseDirectoryPath is not null)
+                    {
+                        errorMessage =
+                            "--case argümanı birden fazla kez kullanılamaz.";
+
+                        return false;
+                    }
+
+                    if (!TryReadValue(
+                            args,
+                            ref index,
+                            CaseArgument,
+                            out caseDirectoryPath,
+                            out errorMessage))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                errorMessage =
+                    $"Bilinmeyen CLI argümanı: {argument}.";
 
                 return false;
             }
 
+            if (!string.IsNullOrWhiteSpace(caseDirectoryPath))
+            {
+                if (!string.IsNullOrWhiteSpace(inputFilePath) ||
+                    !string.IsNullOrWhiteSpace(outputFilePath))
+                {
+                    errorMessage =
+                        "--case argümanı --input veya --output ile " +
+                        "birlikte kullanılamaz.";
+
+                    return false;
+                }
+
+                options = new CliOptions(
+                    inputFilePath: null,
+                    outputFilePath: null,
+                    caseDirectoryPath);
+
+                return true;
+            }
+
             if (string.IsNullOrWhiteSpace(inputFilePath))
             {
-                errorMessage = "--input argümanı zorunludur.";
+                errorMessage =
+                    "--input veya --case argümanlarından biri zorunludur.";
 
                 return false;
             }
 
             options = new CliOptions(
                 inputFilePath,
-                outputFilePath);
+                outputFilePath,
+                caseDirectoryPath: null);
 
             return true;
         }
@@ -174,7 +231,7 @@
                     StringComparison.Ordinal))
             {
                 errorMessage =
-                    $"{argumentName} argümanı için dosya yolu bekleniyordu.";
+                    $"{argumentName} argümanı için yol bekleniyordu.";
 
                 return false;
             }

@@ -24,7 +24,7 @@ namespace LegacyCodeTransformer.Egl.Tests.Generation;
 /// ----------------------
 /// Param char(8);
 /// Param = "ABC";
-/// call FetchCustomer();
+/// FetchCustomer();
 ///
 /// Nerede kullanılır?
 /// ----------------------
@@ -91,9 +91,9 @@ public sealed class EglGeneratorQualityTests
         var result = generator.Generate(syntaxTree);
 
         var expected =
-            "Param char(8);" + Environment.NewLine +
-            "Param = \"ABC\";" + Environment.NewLine +
-            "call FetchCustomer();" + Environment.NewLine;
+             "Param char(8);" + Environment.NewLine +
+             "Param = \"ABC\";" + Environment.NewLine +
+             "FetchCustomer();" + Environment.NewLine;
 
         Assert.Equal(expected, result);
     }

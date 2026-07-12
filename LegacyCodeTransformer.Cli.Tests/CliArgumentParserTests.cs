@@ -104,7 +104,7 @@ namespace LegacyCodeTransformer.Cli.Tests
             Assert.False(success);
             Assert.Null(options);
             Assert.Equal(
-                "--input argümanı zorunludur.",
+                "--input veya --case argümanlarından biri zorunludur.",
                 errorMessage);
         }
 
@@ -126,7 +126,7 @@ namespace LegacyCodeTransformer.Cli.Tests
             Assert.False(success);
             Assert.Null(options);
             Assert.Equal(
-                "--input argümanı için dosya yolu bekleniyordu.",
+                "--input argümanı için yol bekleniyordu.",
                 errorMessage);
         }
 
@@ -175,6 +175,110 @@ namespace LegacyCodeTransformer.Cli.Tests
             Assert.Null(options);
             Assert.Equal(
                 "--input argümanı birden fazla kez kullanılamaz.",
+                errorMessage);
+        }
+
+        [Fact]
+        public void TryParse_WithCaseArgument_ShouldCreateCaseOptions()
+        {
+            var args = new[]
+            {
+        "--case",
+        "samples/Case001"
+    };
+
+            var parser = new CliArgumentParser();
+
+            var success = parser.TryParse(
+                args,
+                out var options,
+                out var errorMessage);
+
+            Assert.True(success);
+            Assert.Null(errorMessage);
+            Assert.NotNull(options);
+            Assert.True(options!.IsCaseMode);
+            Assert.Equal(
+                "samples/Case001",
+                options.CaseDirectoryPath);
+            Assert.Null(options.InputFilePath);
+            Assert.Null(options.OutputFilePath);
+        }
+
+        [Fact]
+        public void TryParse_WithCaseAndInputArguments_ShouldReturnError()
+        {
+            var args = new[]
+            {
+        "--case",
+        "samples/Case001",
+        "--input",
+        "samples/Case002/input.pl1"
+    };
+
+            var parser = new CliArgumentParser();
+
+            var success = parser.TryParse(
+                args,
+                out var options,
+                out var errorMessage);
+
+            Assert.False(success);
+            Assert.Null(options);
+            Assert.Equal(
+                "--case argümanı --input veya --output ile " +
+                "birlikte kullanılamaz.",
+                errorMessage);
+        }
+
+        [Fact]
+        public void TryParse_WithCaseAndOutputArguments_ShouldReturnError()
+        {
+            var args = new[]
+            {
+        "--case",
+        "samples/Case001",
+        "--output",
+        "samples/Case001/actual.egl"
+    };
+
+            var parser = new CliArgumentParser();
+
+            var success = parser.TryParse(
+                args,
+                out var options,
+                out var errorMessage);
+
+            Assert.False(success);
+            Assert.Null(options);
+            Assert.Equal(
+                "--case argümanı --input veya --output ile " +
+                "birlikte kullanılamaz.",
+                errorMessage);
+        }
+
+        [Fact]
+        public void TryParse_WithDuplicateCaseArgument_ShouldReturnError()
+        {
+            var args = new[]
+            {
+        "--case",
+        "samples/Case001",
+        "--case",
+        "samples/Case002"
+    };
+
+            var parser = new CliArgumentParser();
+
+            var success = parser.TryParse(
+                args,
+                out var options,
+                out var errorMessage);
+
+            Assert.False(success);
+            Assert.Null(options);
+            Assert.Equal(
+                "--case argümanı birden fazla kez kullanılamaz.",
                 errorMessage);
         }
     }

@@ -22,7 +22,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
             var expected =
                 "CustomerNo decimal(10);" + Environment.NewLine +
                 "CustomerNo = 12345;" + Environment.NewLine +
-                "call FetchCustomer();" + Environment.NewLine;
+                "FetchCustomer();" + Environment.NewLine;
 
             Assert.Equal(expected, result.Output);
         }
@@ -42,7 +42,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
 
             var expected =
                 "if (CustomerNo = MustNo)" + Environment.NewLine +
-                "    call FetchCustomer();" + Environment.NewLine +
+                "    FetchCustomer();" + Environment.NewLine +
                 "end" + Environment.NewLine;
 
             Assert.Equal(expected, result.Output);
@@ -65,7 +65,7 @@ namespace LegacyCodeTransformer.Application.Tests.Regression
 
             var expected =
                 "while (Sqlcode = 0)" + Environment.NewLine +
-                "    call FetchCursor();" + Environment.NewLine +
+                "    FetchCursor();" + Environment.NewLine +
                 "end" + Environment.NewLine;
 
             Assert.Equal(expected, result.Output);

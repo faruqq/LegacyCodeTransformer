@@ -3,42 +3,44 @@
 namespace LegacyCodeTransformer.Egl.Statements
 {
     /// <summary>
-    /// EGL CALL statement modelini temsil eder.
+    /// PL/I CALL dönüşümünden üretilen EGL function invocation statement
+    /// modelini temsil eder.
     ///
     /// Neden var?
     /// ----------------------
-    /// P05.9 kapsamında PL/I CALL statement modellerinin EGL syntax tree üzerinde
-    /// güçlü tipli statement modeli olarak taşınması gerekir.
+    /// PL/I CALL statement modellerinin EGL syntax tree üzerinde güçlü tipli
+    /// bir function invocation modeli olarak taşınması gerekir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Procedure adı ile argument listesini EGL statement modeli üzerinde taşır.
-    /// Bu aşamada expression AST üretilmez; argument değerleri string olarak korunur.
+    /// Çağrılacak function adını ve argument listesini EGL statement modeli
+    /// üzerinde taşır.
+    ///
+    /// Mevcut sınıf adı geçmişte EglCallStatement olarak belirlenmiştir.
+    /// Ancak generator bu modeli EGL `call` keyword'ü olarak değil,
+    /// doğrudan function invocation olarak üretir.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
     /// PL/I:
     ///
-    ///     CALL FETCH_CURSOR;
-    ///     CALL PROC1(A, B);
+    /// CALL FETCH_CURSOR;
+    /// CALL PROC1(A, B);
     ///
-    /// EGL model:
+    /// EGL:
     ///
-    ///     ProcedureName: FetchCursor
-    ///     Arguments: []
-    ///
-    ///     ProcedureName: Proc1
-    ///     Arguments: [A, B]
+    /// FetchCursor();
+    /// Proc1(A, B);
     ///
     /// Nerede kullanılır?
     /// ----------------------
     /// StatementTranspiler içinde Pl1CallStatement dönüşüm çıktısı olarak ve
-    /// EglCodeGenerator içinde CALL output üretiminde kullanılır.
+    /// EglCodeGenerator içinde function invocation üretiminde kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Full expression parser, named argument, OUT parameter veya service invocation
-    /// desteği gerektiğinde bu model genişletilebilir.
+    /// Full expression parser, parameter direction, service invocation veya
+    /// model adı refactor'u gerektiğinde kontrollü biçimde genişletilebilir.
     /// </summary>
     public sealed class EglCallStatement : EglStatement
     {
@@ -53,7 +55,8 @@ namespace LegacyCodeTransformer.Egl.Statements
             : base(location)
         {
             ProcedureName = procedureName;
-            Arguments = arguments?.ToList() ?? new List<string>();
+            Arguments = arguments?.ToList() ??
+                new List<string>();
         }
     }
 }

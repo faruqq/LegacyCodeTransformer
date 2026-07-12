@@ -59,7 +59,7 @@ namespace LegacyCodeTransformer.Application.Tests.Performance
             Assert.True(result.Success);
             Assert.NotNull(result.Output);
             Assert.Contains("CustomerNo0 decimal(10);", result.Output);
-            Assert.Contains("call FetchCustomer0();", result.Output);
+            Assert.Contains("FetchCustomer0();", result.Output);
             Assert.True(
                 stopwatch.Elapsed < TimeSpan.FromSeconds(10),
                 $"ConversionService smoke threshold aşıldı. Süre: {stopwatch.Elapsed}");
