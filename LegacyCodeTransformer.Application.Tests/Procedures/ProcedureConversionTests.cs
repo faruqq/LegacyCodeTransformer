@@ -72,32 +72,55 @@ namespace LegacyCodeTransformer.Application.Tests.Procedures
         }
 
         [Fact]
-        public void ConvertPl1ToEgl_WithParameterizedProcedure_ShouldStopWithDiagnostic()
+        public void ConvertPl1ToEgl_WithResolvedInputParameter_ShouldGenerateParameterizedEglFunction()
         {
             var source = """
-             DCL ERROR_TEXT CHAR(50);
+     DCL ERROR_TEXT CHAR(50);
 
-             CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
-                 DCL PROCESS_TEXT CHAR(50);
+     CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+         DCL PROCESS_TEXT CHAR(50);
 
-                 ERROR_TEXT = PROCESS_TEXT;
-             END CUSTOMER_PROCESS;
-            """;
+         ERROR_TEXT = PROCESS_TEXT;
+         CALL WRITE_ERROR(ERROR_TEXT);
+     END CUSTOMER_PROCESS;
+
+     CALL CUSTOMER_PROCESS('CUSTOMER NOT FOUND');
+    """;
 
             var service = new ConversionService();
 
-            var result = service.ConvertPl1ToEgl(source);
+            var result = service.ConvertPl1ToEgl(
+                source);
 
-            Assert.False(result.Success);
-            Assert.Null(result.Output);
+            Assert.True(
+                result.Success);
 
-            Assert.Contains(
-                result.Diagnostics,
-                diagnostic =>
-                    diagnostic.Message.Contains(
-                        "Parameter içeren PL/I procedure için EGL " +
-                        "function mapping henüz desteklenmiyor: " +
-                        "CUSTOMER_PROCESS"));
+            Assert.Empty(
+                result.Diagnostics);
+
+            Assert.NotNull(
+                result.Output);
+
+            var expected =
+                "ErrorText char(50);" +
+                Environment.NewLine +
+                Environment.NewLine +
+                "function CustomerProcess(" +
+                "ProcessText char(50) in)" +
+                Environment.NewLine +
+                "    ErrorText = ProcessText;" +
+                Environment.NewLine +
+                "    WriteError(ErrorText);" +
+                Environment.NewLine +
+                "end" +
+                Environment.NewLine +
+                Environment.NewLine +
+                "CustomerProcess(\"CUSTOMER NOT FOUND\");" +
+                Environment.NewLine;
+
+            Assert.Equal(
+                expected,
+                result.Output);
         }
     }
 }

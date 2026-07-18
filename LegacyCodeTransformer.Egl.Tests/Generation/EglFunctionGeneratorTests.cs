@@ -140,5 +140,67 @@ namespace LegacyCodeTransformer.Egl.Tests.Generation
                 expected,
                 result);
         }
+
+        [Fact]
+        public void Generate_WithFunctionParameters_ShouldGenerateTypesDirectionsAndPreserveOrder()
+        {
+            var function = new EglFunction(
+                "ProcessData",
+                statements: null,
+                SourceLocation.Unknown,
+                parameters: new[]
+                {
+            new EglFunctionParameter(
+                "InputText",
+                new EglCharacterType(
+                    30,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                EglFunctionParameterDirection.In),
+
+            new EglFunctionParameter(
+                "OutputText",
+                new EglCharacterType(
+                    50,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                EglFunctionParameterDirection.Out),
+
+            new EglFunctionParameter(
+                "SharedText",
+                new EglCharacterType(
+                    20,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown,
+                EglFunctionParameterDirection.InOut)
+                });
+
+            var syntaxTree = new EglSyntaxTree(
+                declarations: null,
+                functions: new[]
+                {
+            function
+                },
+                statements: null,
+                location: SourceLocation.Unknown);
+
+            var generator = new EglCodeGenerator();
+
+            var result = generator.Generate(
+                syntaxTree);
+
+            var expected =
+                "function ProcessData(" +
+                "InputText char(30) in, " +
+                "OutputText char(50) out, " +
+                "SharedText char(20) inOut)" +
+                Environment.NewLine +
+                "end" +
+                Environment.NewLine;
+
+            Assert.Equal(
+                expected,
+                result);
+        }
     }
 }

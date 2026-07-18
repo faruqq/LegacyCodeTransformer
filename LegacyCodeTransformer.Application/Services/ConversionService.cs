@@ -208,7 +208,8 @@ public sealed class ConversionService
             options ?? Pl1ToEglTranspilerOptions.Default);
 
         var transpilationResult = transpiler.Transpile(
-            normalizationResult.SyntaxTree);
+            normalizationResult.SyntaxTree,
+            semanticResult);
 
         diagnostics.AddRange(transpilationResult.Diagnostics);
 

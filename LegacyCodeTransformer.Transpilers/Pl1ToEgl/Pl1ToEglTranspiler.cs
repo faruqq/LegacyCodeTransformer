@@ -12,6 +12,7 @@ using LegacyCodeTransformer.Pl1.Types;
 using LegacyCodeTransformer.Transpilers.Naming;
 using LegacyCodeTransformer.Egl.Functions;
 using LegacyCodeTransformer.Pl1.Procedures;
+using LegacyCodeTransformer.Pl1.Semantic;
 
 namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
 {
@@ -158,39 +159,80 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
-        /// PL/I syntax tree modelini EGL syntax tree modeline dönüştürür.
+        /// PL/I syntax tree modelini semantic sonuç verilmeden EGL syntax tree
+        /// modeline dönüştürür.
         ///
         /// Neden var?
         /// ----------------------
-        /// Parser tarafından üretilen declaration, procedure ve top-level
-        /// statement modellerinin hedef EGL syntax tree modeline aktarılması
-        /// gerekir.
+        /// Mevcut transpiler çağrılarının ve unit testlerin geriye uyumlu
+        /// biçimde çalışmaya devam etmesi gerekir.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Global declaration'ları, desteklenen parametresiz procedure
-        /// modellerini ve top-level statement'ları sırasıyla EGL declaration,
-        /// function ve statement modellerine dönüştürür.
+        /// Semantic bilgi gerektirmeyen declaration, statement ve parametresiz
+        /// procedure dönüşümlerini mevcut public API üzerinden korur.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
+        /// DCL CUSTOMER_NO FIXED DECIMAL(8);
+        ///
         /// CUSTOMER_PROCESS: PROCEDURE;
         ///     CUSTOMER_NO = MUST_NO;
-        ///     CALL FETCH_CUSTOMER(CUSTOMER_NO);
         /// END CUSTOMER_PROCESS;
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// ConversionService pipeline içinde semantic analysis sonrasında
-        /// çağrılır.
+        /// Mevcut transpiler unit testlerinde ve doğrudan transpiler
+        /// kullanımlarında çağrılır.
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Parameter alan procedure'ler, local declaration'lar ve OPTIONS(MAIN)
-        /// mapping'i aynı procedure dönüşüm zinciri üzerinden genişletilecektir.
+        /// Semantic bilgi gerektiren dönüşümler yeni overload üzerinden
+        /// geliştirilirken mevcut API davranışının korunmasını sağlar.
         /// </summary>
         public Pl1ToEglTranspilationResult Transpile(
             Pl1SyntaxTree syntaxTree)
+        {
+            return Transpile(
+                syntaxTree,
+                semanticResult: null);
+        }
+
+        /// <summary>
+        /// PL/I syntax tree ve semantic analysis sonucunu EGL syntax tree
+        /// modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Parameterized PL/I procedure dönüşümünde header parameter adı ile
+        /// body declaration arasındaki ilişki yalnızca syntax tree üzerinden
+        /// güvenli biçimde belirlenemez.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Global declaration, procedure ve top-level statement dönüşümlerini
+        /// gerçekleştirirken semantic parameter binding bilgisini procedure
+        /// dönüşümüne aktarır.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        ///     DCL PROCESS_TEXT CHAR(50);
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// ConversionService pipeline içinde semantic analyzer aşamasından
+        /// sonra çağrılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Parameter direction, procedure scope, symbol resolution ve diğer
+        /// semantic bilgi gerektiren mapping davranışlarına temel olur.
+        /// </summary>
+        public Pl1ToEglTranspilationResult Transpile(
+            Pl1SyntaxTree syntaxTree,
+            SemanticResult? semanticResult)
         {
             if (syntaxTree is null)
             {
@@ -225,7 +267,8 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
             {
                 var eglFunction = TranspileProcedure(
                     procedure,
-                    statementTranspiler);
+                    statementTranspiler,
+                    semanticResult);
 
                 if (eglFunction is not null)
                 {
@@ -258,57 +301,74 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
         }
 
         /// <summary>
-        /// Desteklenen PL/I procedure modelini EGL function modeline dönüştürür.
+        /// Desteklenen PL/I procedure modelini EGL function modeline
+        /// dönüştürür.
         ///
         /// Neden var?
         /// ----------------------
         /// PL/I procedure modelleri parser ve semantic katmanda korunmasına
-        /// rağmen transpiler tarafından işlenmediğinde kaynak kodun business
-        /// logic bölümü sessizce kaybolmaktadır.
+        /// rağmen transpiler tarafından işlenmediğinde procedure business
+        /// logic'i sessizce kaybolmaktadır.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// İlk kapsamda parameter ve procedure-local declaration taşımayan
-        /// procedure modellerini EGL function modeline dönüştürür.
+        /// Parametresiz procedure modellerini ve semantic binding üzerinden
+        /// type ile direction bilgisi çözümlenmiş parameterized procedure
+        /// modellerini EGL function modeline dönüştürür.
         ///
-        /// Desteklenmeyen parameter veya local declaration bulunduğunda
-        /// procedure'ü sessizce atlamak yerine açık diagnostic üretir.
+        /// Parameter declaration modellerini function parameter olarak
+        /// değerlendirir. Gerçek procedure-local declaration bulunduğunda
+        /// mevcut kapsam gereği açık diagnostic üretir.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
+        /// Parametresiz:
+        ///
         /// CUSTOMER_PROCESS: PROCEDURE;
         ///     CUSTOMER_NO = MUST_NO;
-        ///     CALL FETCH_CUSTOMER(CUSTOMER_NO);
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// Parameterized:
+        ///
+        /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        ///     DCL PROCESS_TEXT CHAR(50);
+        ///
+        ///     ERROR_TEXT = PROCESS_TEXT;
         /// END CUSTOMER_PROCESS;
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// Transpile methodu içinde Pl1SyntaxTree.Procedures koleksiyonu
+        /// Transpile metodu içinde Pl1SyntaxTree.Procedures koleksiyonu
         /// işlenirken kullanılır.
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Procedure parameter binding sonuçlarının EGL function parameter
-        /// modellerine aktarılması ve local declaration dönüşümü bu method
-        /// üzerinden eklenecektir.
+        /// Procedure-local declaration, return type ve OPTIONS(MAIN)
+        /// dönüşümlerine temel olur.
         /// </summary>
         private EglFunction? TranspileProcedure(
             Pl1Procedure procedure,
-            StatementTranspiler statementTranspiler)
+            StatementTranspiler statementTranspiler,
+            SemanticResult? semanticResult)
         {
-            if (procedure.Parameters.Count > 0)
-            {
-                _diagnostics.Add(
-                    new Diagnostic(
-                        DiagnosticSeverity.Error,
-                        $"Parameter içeren PL/I procedure için EGL function " +
-                        $"mapping henüz desteklenmiyor: {procedure.Name}.",
-                        procedure.Location));
+            var parameters = TranspileProcedureParameters(
+                procedure,
+                semanticResult);
 
+            if (parameters is null)
+            {
                 return null;
             }
 
-            if (procedure.Declarations.Count > 0)
+            var localDeclarations = procedure.Declarations
+                .Where(
+                    declaration =>
+                        !IsProcedureParameterDeclaration(
+                            procedure,
+                            declaration))
+                .ToList();
+
+            if (localDeclarations.Count > 0)
             {
                 _diagnostics.Add(
                     new Diagnostic(
@@ -341,7 +401,251 @@ namespace LegacyCodeTransformer.Transpilers.Pl1ToEgl
                     procedure.Name,
                     _options.NamingOptions.Style),
                 statements,
-                procedure.Location);
+                procedure.Location,
+                parameters);
+        }
+
+        /// <summary>
+        /// PL/I procedure header parametrelerini semantic binding üzerinden EGL
+        /// function parameter modellerine dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// Procedure header yalnızca parameter adlarını taşır. Parameter veri
+        /// tipi body içindeki declaration, direction bilgisi ise procedure body
+        /// kullanımları üzerinden semantic analyzer tarafından çözümlenir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Header sırasını koruyarak her resolved binding için parameter adını,
+        /// EGL veri tipini ve direction bilgisini güçlü tipli EGL parameter
+        /// modeline dönüştürür.
+        ///
+        /// Binding, type veya direction çözümlenemıyorsa eksik EGL parameter
+        /// üretmek yerine açık diagnostic oluşturur.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        ///     DCL PROCESS_TEXT CHAR(50);
+        ///
+        ///     ERROR_TEXT = PROCESS_TEXT;
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// Sonuç modeli:
+        ///
+        /// Name = ProcessText
+        /// DataType = EglCharacterType(50)
+        /// Direction = In
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// TranspileProcedure metodu içinde parameterized procedure
+        /// dönüştürülürken kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// EGL generator function parameter declaration üretimine temel olur.
+        /// </summary>
+        private IReadOnlyList<EglFunctionParameter>?
+            TranspileProcedureParameters(
+                Pl1Procedure procedure,
+                SemanticResult? semanticResult)
+        {
+            if (procedure.Parameters.Count == 0)
+            {
+                return new List<EglFunctionParameter>();
+            }
+
+            if (semanticResult is null)
+            {
+                _diagnostics.Add(
+                    new Diagnostic(
+                        DiagnosticSeverity.Error,
+                        $"Parameter içeren PL/I procedure dönüşümü için semantic " +
+                        $"analysis sonucu bulunamadı: {procedure.Name}.",
+                        procedure.Location));
+
+                return null;
+            }
+
+            var bindings = semanticResult.ProcedureParameterBindings
+                .Where(
+                    binding =>
+                        string.Equals(
+                            binding.ProcedureName,
+                            procedure.Name,
+                            StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var parameters = new List<EglFunctionParameter>();
+
+            foreach (var parameterName in procedure.Parameters)
+            {
+                var binding = bindings.FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.ParameterName,
+                            parameterName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (binding is null ||
+                    !binding.IsResolved ||
+                    binding.Declaration is null)
+                {
+                    _diagnostics.Add(
+                        new Diagnostic(
+                            DiagnosticSeverity.Error,
+                            $"PL/I procedure parametresi için declaration " +
+                            $"binding çözümlenemedi: {procedure.Name}." +
+                            $"{parameterName}.",
+                            procedure.Location));
+
+                    return null;
+                }
+
+                if (binding.Direction ==
+                    Pl1ProcedureParameterDirection.Unknown)
+                {
+                    _diagnostics.Add(
+                        new Diagnostic(
+                            DiagnosticSeverity.Error,
+                            $"PL/I procedure parametresi için direction " +
+                            $"çözümlenemedi: {procedure.Name}." +
+                            $"{parameterName}.",
+                            binding.Declaration.Location));
+
+                    return null;
+                }
+
+                var dataType = TranspileDataType(
+                    binding.Declaration.DataType);
+
+                if (dataType is null)
+                {
+                    return null;
+                }
+
+                parameters.Add(
+                    new EglFunctionParameter(
+                        IdentifierNameTransformer.Transform(
+                            parameterName,
+                            _options.NamingOptions.Style),
+                        dataType,
+                        binding.Declaration.Location,
+                        TranspileParameterDirection(
+                            binding.Direction)));
+            }
+
+            return parameters;
+        }
+
+        /// <summary>
+        /// Semantic PL/I procedure parameter direction bilgisini EGL function
+        /// parameter direction modeline dönüştürür.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I semantic modelleri hedef dil modeli değildir. Semantic direction
+        /// bilgisinin EGL katmanına doğrudan sızdırılmaması gerekir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// PL/I semantic analyzer tarafından üretilen In, Out ve InOut
+        /// değerlerini karşılık gelen EGL direction modellerine dönüştürür.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// Pl1ProcedureParameterDirection.In
+        ///     → EglFunctionParameterDirection.In
+        ///
+        /// Pl1ProcedureParameterDirection.Out
+        ///     → EglFunctionParameterDirection.Out
+        ///
+        /// Pl1ProcedureParameterDirection.InOut
+        ///     → EglFunctionParameterDirection.InOut
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// TranspileProcedureParameters metodu içinde EglFunctionParameter
+        /// oluşturulurken kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Yeni semantic veya EGL direction türleri eklendiğinde merkezi mapping
+        /// noktası sağlar.
+        /// </summary>
+        private static EglFunctionParameterDirection
+            TranspileParameterDirection(
+                Pl1ProcedureParameterDirection direction)
+        {
+            return direction switch
+            {
+                Pl1ProcedureParameterDirection.In =>
+                    EglFunctionParameterDirection.In,
+
+                Pl1ProcedureParameterDirection.Out =>
+                    EglFunctionParameterDirection.Out,
+
+                Pl1ProcedureParameterDirection.InOut =>
+                    EglFunctionParameterDirection.InOut,
+
+                _ => EglFunctionParameterDirection.Unknown
+            };
+        }
+
+        /// <summary>
+        /// Procedure body declaration modelinin header parametresine ait olup
+        /// olmadığını belirler.
+        ///
+        /// Neden var?
+        /// ----------------------
+        /// PL/I procedure parametresinin veri tipi body içindeki DCL ile
+        /// tanımlanabilir. Bu declaration normal procedure-local variable gibi
+        /// değerlendirilmemelidir.
+        ///
+        /// Ne çözüyor?
+        /// ----------------------
+        /// Header parameter adıyla eşleşen variable declaration modellerini
+        /// parameter declaration olarak sınıflandırır. Eşleşmeyen declaration
+        /// modellerinin local declaration olarak kalmasını sağlar.
+        ///
+        /// Hangi örneği destekliyor?
+        /// ----------------------
+        /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+        ///     DCL PROCESS_TEXT CHAR(50);
+        ///     DCL LOCAL_TEXT CHAR(20);
+        /// END CUSTOMER_PROCESS;
+        ///
+        /// PROCESS_TEXT parameter declaration olarak,
+        /// LOCAL_TEXT local declaration olarak değerlendirilir.
+        ///
+        /// Nerede kullanılır?
+        /// ----------------------
+        /// TranspileProcedure içinde desteklenmeyen local declaration kontrolü
+        /// yapılırken kullanılır.
+        ///
+        /// Gelecekte neye temel olur?
+        /// ----------------------
+        /// Procedure scope ve local declaration generation eklendiğinde
+        /// parameter ile local variable ayrımının korunmasına temel olur.
+        /// </summary>
+        private static bool IsProcedureParameterDeclaration(
+            Pl1Procedure procedure,
+            Pl1Declaration declaration)
+        {
+            if (declaration is not Pl1VariableDeclaration
+                variableDeclaration)
+            {
+                return false;
+            }
+
+            return procedure.Parameters.Any(
+                parameterName =>
+                    string.Equals(
+                        parameterName,
+                        variableDeclaration.Name,
+                        StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>

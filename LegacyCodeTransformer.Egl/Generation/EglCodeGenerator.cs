@@ -125,42 +125,58 @@ public sealed class EglCodeGenerator
     }
 
     /// <summary>
-    /// Parametresiz EGL function modelinden function kaynak bloğu üretir.
+    /// EGL function modelinden function kaynak kodu üretir.
     ///
     /// Neden var?
     /// ----------------------
-    /// PL/I procedure body statement'larının EGL çıktısında kaybolmadan
-    /// function bloğu içinde üretilmesi gerekir.
+    /// PL/I procedure adı, parameter modelleri ve body statement'ları EGL
+    /// function bloğuna dönüştürülmelidir.
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// Function header'ını, bir seviye içeri girintilenen body
-    /// statement'larını ve function sonlandırma satırını üretir.
+    /// Parametresiz ve parameter taşıyan function header'larını üretir.
+    /// Parameter listesinde ad, veri tipi ve direction bilgisini kaynak
+    /// sırasıyla korur.
+    ///
+    /// Function body statement'larını bir indentation seviyesi içeride
+    /// üretir ve function bloğunu end ile sonlandırır.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
-    /// function CustomerProcess()
+    /// Parametresiz:
+    ///
+    /// function InitializeProcess()
     ///     CustomerNo = MustNo;
-    ///     FetchCustomer(CustomerNo);
+    /// end
+    ///
+    /// Parameter taşıyan:
+    ///
+    /// function CustomerProcess(ProcessText char(50) in)
+    ///     ErrorText = ProcessText;
     /// end
     ///
     /// Nerede kullanılır?
     /// ----------------------
-    /// Generate methodunda EglSyntaxTree.Functions koleksiyonu işlenirken
-    /// kullanılır.
+    /// Generate metodu içinde EglSyntaxTree.Functions koleksiyonu
+    /// işlenirken kullanılır.
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// Function parameter, local declaration ve return type output
-    /// davranışları bu method içinde kontrollü olarak genişletilecektir.
+    /// Çok satırlı function header formatting, local declaration ve return
+    /// type output davranışlarına temel olur.
     /// </summary>
     private static string GenerateFunction(
         EglFunction function)
     {
         var builder = new StringBuilder();
 
+        var parameters = string.Join(
+            ", ",
+            function.Parameters.Select(
+                GenerateFunctionParameter));
+
         builder.AppendLine(
-            $"function {function.Name}()");
+            $"function {function.Name}({parameters})");
 
         foreach (var statement in function.Statements)
         {
@@ -173,6 +189,88 @@ public sealed class EglCodeGenerator
         builder.AppendLine("end");
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// EGL function parameter modelini kaynak koda dönüştürür.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Function parameter adı, veri tipi ve direction bilgisi EGL function
+    /// header içinde doğru sırayla yazılmalıdır.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// Parameter modelini aşağıdaki EGL sırasıyla üretir:
+    ///
+    /// parameterName dataType direction
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// ProcessText char(50) in
+    /// ResultCode decimal(8) out
+    /// CustomerData char(100) inOut
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// GenerateFunction metodu parameter listesini üretirken kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// const, field ve sqlNullable gibi ek EGL parameter modifier
+    /// desteklerine temel olur.
+    /// </summary>
+    private static string GenerateFunctionParameter(
+        EglFunctionParameter parameter)
+    {
+        return
+            $"{parameter.Name} " +
+            $"{GenerateDataType(parameter.DataType)} " +
+            $"{GenerateFunctionParameterDirection(parameter.Direction)}";
+    }
+
+    /// <summary>
+    /// EGL function parameter direction modelini EGL keyword değerine
+    /// dönüştürür.
+    ///
+    /// Neden var?
+    /// ----------------------
+    /// Direction enum adlarının kaynak koda doğrudan yazılması hedef EGL
+    /// casing standardını garanti etmez.
+    ///
+    /// Ne çözüyor?
+    /// ----------------------
+    /// In, Out ve InOut modellerini sırasıyla in, out ve inOut EGL keyword
+    /// değerlerine dönüştürür.
+    ///
+    /// Unknown direction için kaynak kod üretmez. Bu durumun generator
+    /// aşamasından önce transpiler diagnostic'i ile engellenmesi beklenir.
+    ///
+    /// Hangi örneği destekliyor?
+    /// ----------------------
+    /// EglFunctionParameterDirection.In → in
+    /// EglFunctionParameterDirection.Out → out
+    /// EglFunctionParameterDirection.InOut → inOut
+    ///
+    /// Nerede kullanılır?
+    /// ----------------------
+    /// GenerateFunctionParameter metodunda kullanılır.
+    ///
+    /// Gelecekte neye temel olur?
+    /// ----------------------
+    /// Yeni direction veya parameter modifier kuralları gerektiğinde
+    /// merkezi output noktası sağlar.
+    /// </summary>
+    private static string GenerateFunctionParameterDirection(
+        EglFunctionParameterDirection direction)
+    {
+        return direction switch
+        {
+            EglFunctionParameterDirection.In => "in",
+            EglFunctionParameterDirection.Out => "out",
+            EglFunctionParameterDirection.InOut => "inOut",
+            _ => string.Empty
+        };
     }
 
     private static string GenerateDeclaration(

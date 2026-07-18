@@ -102,36 +102,45 @@ namespace LegacyCodeTransformer.Pl1.Semantic
         }
 
         /// <summary>
-        /// Procedure header parameter adlarını procedure body içindeki
-        /// variable declaration modelleriyle eşleştirir.
+        /// Procedure header parameter adlarını procedure body içindeki variable
+        /// declaration modelleriyle eşleştirir ve güvenli direction bilgisini
+        /// çözümler.
         ///
         /// Neden var?
         /// ----------------------
-        /// PL/I procedure header parameter adının veri tipi doğrudan
-        /// header üzerinde bulunmayabilir. Veri tipi body içindeki DCL
-        /// declaration üzerinden tanımlanabilir.
+        /// PL/I procedure header parameter adının veri tipi doğrudan header
+        /// üzerinde bulunmayabilir. Veri tipi body içindeki DCL declaration,
+        /// direction ise procedure body içindeki kullanım şekli üzerinden
+        /// belirlenebilir.
         ///
         /// Ne çözüyor?
         /// ----------------------
-        /// Her header parametresi için aynı procedure içindeki
-        /// case-insensitive eşleşen variable declaration modelini bulur.
-        /// Eşleşme yoksa parameter bilgisini unresolved olarak korur.
+        /// Her header parametresi için aynı procedure içindeki case-insensitive
+        /// eşleşen variable declaration modelini bulur.
+        ///
+        /// Procedure body kullanımı güvenli biçimde analiz edilebiliyorsa In,
+        /// Out veya InOut direction bilgisini üretir. Kesin karar verilemiyorsa
+        /// Unknown olarak korur.
         ///
         /// Hangi örneği destekliyor?
         /// ----------------------
         /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
         ///     DCL PROCESS_TEXT CHAR(50);
+        ///
+        ///     ERROR_TEXT = PROCESS_TEXT;
         /// END CUSTOMER_PROCESS;
+        ///
+        /// Bu örnekte PROCESS_TEXT declaration binding'i resolved ve direction
+        /// değeri In olur.
         ///
         /// Nerede kullanılır?
         /// ----------------------
-        /// Analyze methodu içinde semantic result hazırlanırken
-        /// kullanılır.
+        /// Analyze metodu içinde semantic result hazırlanırken kullanılır.
         ///
         /// Gelecekte neye temel olur?
         /// ----------------------
-        /// Missing parameter declaration diagnostic'i, parameter type
-        /// mapping ve in / out / inOut analizine temel olur.
+        /// Missing parameter declaration diagnostic'i, EGL parameter type ve
+        /// direction mapping ile procedure scope analizine temel olur.
         /// </summary>
         private static IReadOnlyList<
             Pl1ProcedureParameterBinding>
@@ -140,6 +149,9 @@ namespace LegacyCodeTransformer.Pl1.Semantic
         {
             var bindings =
                 new List<Pl1ProcedureParameterBinding>();
+
+            var directionAnalyzer =
+                new Pl1ProcedureParameterDirectionAnalyzer();
 
             foreach (var procedure in procedures)
             {
@@ -160,11 +172,16 @@ namespace LegacyCodeTransformer.Pl1.Semantic
                         parameterName,
                         out var declaration);
 
+                    var direction = directionAnalyzer.Analyze(
+                        procedure,
+                        parameterName);
+
                     bindings.Add(
                         new Pl1ProcedureParameterBinding(
                             procedure.Name,
                             parameterName,
-                            declaration));
+                            declaration,
+                            direction));
                 }
             }
 

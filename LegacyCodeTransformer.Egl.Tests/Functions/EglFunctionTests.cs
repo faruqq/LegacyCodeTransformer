@@ -40,18 +40,18 @@ namespace LegacyCodeTransformer.Egl.Tests.Functions
         {
             var statements = new EglStatement[]
             {
-                new EglAssignmentStatement(
-                    "CustomerNo",
-                    "MustNo",
-                    SourceLocation.Unknown),
+        new EglAssignmentStatement(
+            "CustomerNo",
+            "MustNo",
+            SourceLocation.Unknown),
 
-                new EglCallStatement(
-                    "FetchCustomer",
-                    new[]
-                    {
-                        "CustomerNo"
-                    },
-                    SourceLocation.Unknown)
+        new EglCallStatement(
+            "FetchCustomer",
+            new[]
+            {
+                "CustomerNo"
+            },
+            SourceLocation.Unknown)
             };
 
             var function = new EglFunction(
@@ -63,6 +63,9 @@ namespace LegacyCodeTransformer.Egl.Tests.Functions
                 "CustomerProcess",
                 function.Name);
 
+            Assert.Empty(
+                function.Parameters);
+
             Assert.Equal(
                 2,
                 function.Statements.Count);
@@ -72,6 +75,76 @@ namespace LegacyCodeTransformer.Egl.Tests.Functions
 
             Assert.IsType<EglCallStatement>(
                 function.Statements[1]);
+        }
+
+        [Fact]
+        public void Constructor_WithParameters_ShouldPreserveParameterList()
+        {
+            var parameter = new EglFunctionParameter(
+                "ProcessText",
+                new LegacyCodeTransformer.Egl.Types.EglCharacterType(
+                    50,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown);
+
+            var function = new EglFunction(
+                "CustomerProcess",
+                statements: null,
+                SourceLocation.Unknown,
+                parameters: new[]
+                {
+            parameter
+                });
+
+            var result = Assert.Single(
+                function.Parameters);
+
+            Assert.Same(
+                parameter,
+                result);
+
+            Assert.Empty(
+                function.Statements);
+        }
+
+        [Fact]
+        public void Constructor_WithMultipleParameters_ShouldPreserveParameterOrder()
+        {
+            var inputParameter = new EglFunctionParameter(
+                "InputText",
+                new LegacyCodeTransformer.Egl.Types.EglCharacterType(
+                    30,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown);
+
+            var outputParameter = new EglFunctionParameter(
+                "OutputText",
+                new LegacyCodeTransformer.Egl.Types.EglCharacterType(
+                    50,
+                    SourceLocation.Unknown),
+                SourceLocation.Unknown);
+
+            var function = new EglFunction(
+                "ProcessData",
+                statements: null,
+                SourceLocation.Unknown,
+                parameters: new[]
+                {
+            inputParameter,
+            outputParameter
+                });
+
+            Assert.Equal(
+                2,
+                function.Parameters.Count);
+
+            Assert.Same(
+                inputParameter,
+                function.Parameters[0]);
+
+            Assert.Same(
+                outputParameter,
+                function.Parameters[1]);
         }
 
         [Fact]

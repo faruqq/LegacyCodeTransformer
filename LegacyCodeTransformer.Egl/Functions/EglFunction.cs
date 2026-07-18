@@ -14,15 +14,26 @@ namespace LegacyCodeTransformer.Egl.Functions
     ///
     /// Ne çözüyor?
     /// ----------------------
-    /// İlk kapsamda parametresiz EGL function adını ve function body
-    /// statement listesini güçlü tipli bir syntax modelinde taşır.
+    /// EGL function adını, kaynak sırasıyla korunan parameter listesini
+    /// ve function body statement listesini güçlü tipli bir syntax
+    /// modelinde taşır.
     ///
     /// Hangi örneği destekliyor?
     /// ----------------------
+    /// Parametresiz function:
+    ///
     /// function CustomerProcess()
     ///     CustomerNo = MustNo;
-    ///     FetchCustomer(CustomerNo, CustomerName);
     /// end
+    ///
+    /// Parameter modeli taşıyan function:
+    ///
+    /// CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+    ///     DCL PROCESS_TEXT CHAR(50);
+    /// END CUSTOMER_PROCESS;
+    ///
+    /// Bu aşamada parameter bilgisi syntax modelinde korunur; generator
+    /// output'u ve direction bilgisi henüz üretilmez.
     ///
     /// Nerede kullanılır?
     /// ----------------------
@@ -31,23 +42,29 @@ namespace LegacyCodeTransformer.Egl.Functions
     ///
     /// Gelecekte neye temel olur?
     /// ----------------------
-    /// EGL function parameter modelleri, local declaration'lar, return
-    /// type bilgisi ve function-level metadata gerektiğinde gerçek
-    /// ihtiyaçlara göre bu model kontrollü biçimde genişletilecektir.
+    /// Parameter type mapping, parameter direction, local declaration,
+    /// return type ve function-level metadata ihtiyaçlarına temel olur.
     /// </summary>
     public sealed class EglFunction : SyntaxNode
     {
         public string Name { get; }
+
+        public IReadOnlyList<EglFunctionParameter> Parameters { get; }
 
         public IReadOnlyList<EglStatement> Statements { get; }
 
         public EglFunction(
             string name,
             IEnumerable<EglStatement>? statements,
-            SourceLocation location)
+            SourceLocation location,
+            IEnumerable<EglFunctionParameter>? parameters = null)
             : base(location)
         {
             Name = name;
+
+            Parameters = parameters?.ToList() ??
+                new List<EglFunctionParameter>();
+
             Statements = statements?.ToList() ??
                 new List<EglStatement>();
         }

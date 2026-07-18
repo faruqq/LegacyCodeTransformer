@@ -39,23 +39,26 @@ namespace LegacyCodeTransformer.PL1.Tests.Semantic
     public sealed class Pl1ProcedureParameterBindingTests
     {
         [Fact]
-        public void Analyze_WithDeclaredProcedureParameter_ShouldCreateResolvedBinding()
+        public void Analyze_WithReadOnlyProcedureParameter_ShouldCreateResolvedInBinding()
         {
             var syntaxTree = ParseSyntaxTree(
-                """
-                 CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
-                     DCL PROCESS_TEXT CHAR(50);
+                    """
+             CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+                 DCL PROCESS_TEXT CHAR(50);
 
-                     ERROR_TEXT = PROCESS_TEXT;
-                 END CUSTOMER_PROCESS;
-                """);
+                 ERROR_TEXT = PROCESS_TEXT;
+             END CUSTOMER_PROCESS;
+            """);
 
             var analyzer = new Pl1SemanticAnalyzer();
 
             var result = analyzer.Analyze(syntaxTree);
 
-            Assert.True(result.Success);
-            Assert.Empty(result.Diagnostics);
+            Assert.True(
+                result.Success);
+
+            Assert.Empty(
+                result.Diagnostics);
 
             var binding = Assert.Single(
                 result.ProcedureParameterBindings);
@@ -68,8 +71,12 @@ namespace LegacyCodeTransformer.PL1.Tests.Semantic
                 "PROCESS_TEXT",
                 binding.ParameterName);
 
-            Assert.True(binding.IsResolved);
-            Assert.NotNull(binding.Declaration);
+            Assert.True(
+                binding.IsResolved);
+
+            Assert.NotNull(
+                binding.Declaration);
+
             Assert.Equal(
                 "PROCESS_TEXT",
                 binding.Declaration!.Name);
@@ -81,6 +88,143 @@ namespace LegacyCodeTransformer.PL1.Tests.Semantic
             Assert.Equal(
                 50,
                 characterType.Length);
+
+            Assert.Equal(
+                Pl1ProcedureParameterDirection.In,
+                binding.Direction);
+        }
+
+        [Fact]
+        public void Analyze_WithWriteOnlyProcedureParameter_ShouldResolveOutDirection()
+        {
+            var syntaxTree = ParseSyntaxTree(
+                        """
+                CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+                    DCL PROCESS_TEXT CHAR(50);
+
+                    PROCESS_TEXT = ERROR_TEXT;
+                END CUSTOMER_PROCESS;
+            """);
+
+            var analyzer = new Pl1SemanticAnalyzer();
+
+            var result = analyzer.Analyze(syntaxTree);
+
+            Assert.True(
+                result.Success);
+
+            Assert.Empty(
+                result.Diagnostics);
+
+            var binding = Assert.Single(
+                result.ProcedureParameterBindings);
+
+            Assert.True(
+                binding.IsResolved);
+
+            Assert.Equal(
+                Pl1ProcedureParameterDirection.Out,
+                binding.Direction);
+        }
+
+        [Fact]
+        public void Analyze_WithReadAndWriteProcedureParameter_ShouldResolveInOutDirection()
+        {
+            var syntaxTree = ParseSyntaxTree(
+                """
+         CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+             DCL PROCESS_TEXT CHAR(50);
+
+             ERROR_TEXT = PROCESS_TEXT;
+             PROCESS_TEXT = SOURCE_TEXT;
+         END CUSTOMER_PROCESS;
+        """);
+
+            var analyzer = new Pl1SemanticAnalyzer();
+
+            var result = analyzer.Analyze(syntaxTree);
+
+            Assert.True(
+                result.Success);
+
+            Assert.Empty(
+                result.Diagnostics);
+
+            var binding = Assert.Single(
+                result.ProcedureParameterBindings);
+
+            Assert.True(
+                binding.IsResolved);
+
+            Assert.Equal(
+                Pl1ProcedureParameterDirection.InOut,
+                binding.Direction);
+        }
+
+        [Fact]
+        public void Analyze_WithProcedureParameterPassedToCall_ShouldKeepUnknownDirection()
+        {
+            var syntaxTree = ParseSyntaxTree(
+                """
+         CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+             DCL PROCESS_TEXT CHAR(50);
+
+             CALL WRITE_TEXT(PROCESS_TEXT);
+         END CUSTOMER_PROCESS;
+        """);
+
+            var analyzer = new Pl1SemanticAnalyzer();
+
+            var result = analyzer.Analyze(syntaxTree);
+
+            Assert.True(
+                result.Success);
+
+            Assert.Empty(
+                result.Diagnostics);
+
+            var binding = Assert.Single(
+                result.ProcedureParameterBindings);
+
+            Assert.True(
+                binding.IsResolved);
+
+            Assert.Equal(
+                Pl1ProcedureParameterDirection.Unknown,
+                binding.Direction);
+        }
+
+        [Fact]
+        public void Analyze_WithUnusedProcedureParameter_ShouldKeepUnknownDirection()
+        {
+            var syntaxTree = ParseSyntaxTree(
+                """
+         CUSTOMER_PROCESS: PROCEDURE(PROCESS_TEXT);
+             DCL PROCESS_TEXT CHAR(50);
+
+             ERROR_TEXT = SOURCE_TEXT;
+         END CUSTOMER_PROCESS;
+        """);
+
+            var analyzer = new Pl1SemanticAnalyzer();
+
+            var result = analyzer.Analyze(syntaxTree);
+
+            Assert.True(
+                result.Success);
+
+            Assert.Empty(
+                result.Diagnostics);
+
+            var binding = Assert.Single(
+                result.ProcedureParameterBindings);
+
+            Assert.True(
+                binding.IsResolved);
+
+            Assert.Equal(
+                Pl1ProcedureParameterDirection.Unknown,
+                binding.Direction);
         }
 
         [Fact]
